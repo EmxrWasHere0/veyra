@@ -449,8 +449,7 @@ veyra/
 │   ├── hello.vey
 │   ├── fib.vey
 │   └── full_test.vey
-├── editors/
-│   └── vscode/              # VSCode syntax extension
+├── veyra-vscode             # VSCode syntax extension
 └── README.md
 ```
 
