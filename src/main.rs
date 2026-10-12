@@ -52,7 +52,7 @@ impl Value {
     fn number(&self) -> Result<f64, String> {
         match self {
             Value::Num(n) => Ok(*n),
-            other => Err(format!("Sayı bekleniyordu, bulunan: {}", other)),
+            other => Err(format!("Number expected, found: {}", other)),
         }
     }
 
@@ -70,7 +70,7 @@ impl Value {
     fn index(&self) -> Result<usize, String> {
         let n = self.number()?;
         if n < 0.0 || n.fract() != 0.0 || n > usize::MAX as f64 {
-            Err("Liste indeksi negatif olmayan bir tam sayı olmalı".into())
+            Err("The list index must be a non-negative integer.".into())
         } else {
             Ok(n as usize)
         }
@@ -117,23 +117,23 @@ fn binop(op: &str, a: Value, b: Value) -> Result<Value, String> {
             (Value::Num(x), Value::Num(y)) => Value::Num(x + y),
             (Value::Text(x), y) => Value::Text(format!("{}{}", x, y)),
             (x, Value::Text(y)) => Value::Text(format!("{}{}", x, y)),
-            _ => return Err("'+' için uyumlu değerler gerekli".into()),
+            _ => return Err("Compatible values ​​are required for '+'".into()),
         },
         "/" => {
             let d = b.number()?;
             if d == 0.0 {
-                return Err("Sıfıra bölme yapılamaz".into());
+                return Err("Division by zero is not possible.z".into());
             }
             Value::Num(a.number()? / d)
         }
         "%" => {
             let d = b.number()?;
             if d == 0.0 {
-                return Err("Sıfıra göre mod alınamaz".into());
+                return Err("The modulo operation cannot be performed with zero.".into());
             }
             Value::Num(a.number()? % d)
         }
-        _ => return Err(format!("Desteklenmeyen operatör: {}", op)),
+        _ => return Err(format!("Unsupported operator: {}", op)),
     })
 }
 
@@ -146,7 +146,7 @@ fn call_native(name: &str, args: Vec<Value>) -> Result<Value, String> {
         if args.len() == n {
             Ok(())
         } else {
-            Err(format!("{}() {} argüman alır, {} verildi", name, n, args.len()))
+            Err(format!("{}() takes {} arguments, {} were given", name, n, args.len()))
         }
     };
 
@@ -158,7 +158,7 @@ fn call_native(name: &str, args: Vec<Value>) -> Result<Value, String> {
                 Value::Text(s) => s.chars().count() as f64,
                 other => {
                     return Err(format!(
-                        "len için liste veya metin gerekli, bulunan: {}",
+                        "A list or text is required for len; found: {}",
                         other
                     ))
                 }
@@ -171,9 +171,9 @@ fn call_native(name: &str, args: Vec<Value>) -> Result<Value, String> {
                 Value::Bool(b) => Value::Num(if *b { 1.0 } else { 0.0 }),
                 Value::Text(s) => match s.trim().parse::<f64>() {
                     Ok(n) => Value::Num(n),
-                    Err(_) => return Err(format!("Sayıya çevrilemedi: {:?}", s)),
+                    Err(_) => return Err(format!("Could not be converted to a number: {:?}", s)),
                 },
-                other => return Err(format!("Sayıya çevrilemedi: {}", other)),
+                other => return Err(format!("Could not be converted to a number: {}", other)),
             })
         }
         "text" => {
@@ -184,17 +184,17 @@ fn call_native(name: &str, args: Vec<Value>) -> Result<Value, String> {
             need(1)?;
             Ok(Value::Text(
                 match &args[0] {
-                    Value::Num(_) => "sayi",
-                    Value::Text(_) => "metin",
-                    Value::Bool(_) => "mantik",
-                    Value::List(_) => "liste",
-                    Value::Func(_) | Value::Native(_) => "fonksiyon",
+                    Value::Num(_) => "number",
+                    Value::Text(_) => "text",
+                    Value::Bool(_) => "bool",
+                    Value::List(_) => "list",
+                    Value::Func(_) | Value::Native(_) => "function",
                     Value::Null => "null",
                 }
                 .into(),
             ))
         }
-        _ => Err(format!("Bilinmeyen yerleşik fonksiyon: {}", name)),
+        _ => Err(format!("Unknown built-in function: {}", name)),
     }
 }
 
@@ -261,7 +261,7 @@ fn lex(input: &str) -> Result<Vec<Tok>, String> {
             }
 
             if !closed {
-                return Err("Kapatılmamış metin ifadesi".into());
+                return Err("Unclosed text expression".into());
             }
             out.push(Tok::Val(Value::Text(value)));
             continue;
@@ -286,7 +286,7 @@ fn lex(input: &str) -> Result<Vec<Tok>, String> {
             let text: String = chars[start..i].iter().collect();
             let n = text
                 .parse::<f64>()
-                .map_err(|_| format!("Geçersiz sayı: {}", text))?;
+                .map_err(|_| format!("Invalid number: {}", text))?;
             out.push(Tok::Val(Value::Num(n)));
             continue;
         }
@@ -343,7 +343,7 @@ fn lex(input: &str) -> Result<Vec<Tok>, String> {
             ',' => Tok::Comma,
             '?' => Tok::Question,
             '+' | '-' | '*' | '/' | '%' | '<' | '>' | '=' | '!' => Tok::Op(c.to_string()),
-            _ => return Err(format!("Bilinmeyen karakter: {}", c)),
+            _ => return Err(format!("Unknown character: {}", c)),
         };
         out.push(tok);
         i += 1;
@@ -446,7 +446,7 @@ impl<'a> Parser<'a> {
 
     fn parse_params(&mut self) -> Result<Vec<Param>, String> {
         if !matches!(self.take(), Tok::LParen) {
-            return Err("'(' bekleniyordu".into());
+            return Err("'(' was expected".into());
         }
 
         let mut params: Vec<Param> = Vec::new();
@@ -461,7 +461,7 @@ impl<'a> Parser<'a> {
             let is_variadic = if matches!(self.peek(), Tok::Spread) {
                 self.take();
                 if variadic_seen {
-                    return Err("Yalnızca bir '...args' parametresi olabilir".into());
+                    return Err("There can be only one '...args' parameter.".into());
                 }
                 variadic_seen = true;
                 true
@@ -472,22 +472,22 @@ impl<'a> Parser<'a> {
             let name = match self.take() {
                 Tok::Id(n) => n,
                 other => {
-                    return Err(format!("Parametre adı bekleniyordu, bulunan: {:?}", other))
+                    return Err(format!("Parameter name expected, found: {:?}", other))
                 }
             };
 
             if params.iter().any(|p| p.name == name) {
-                return Err(format!("Parametre adı tekrar ediyor: {}", name));
+                return Err(format!("Parameter name is duplicated: {}", name));
             }
 
             let default = if matches!(self.peek(), Tok::Op(o) if o == "=") {
                 if is_variadic {
-                    return Err("Variadic parametrenin varsayılan değeri olamaz".into());
+                    return Err("A variadic parameter cannot have a default value.".into());
                 }
                 self.take();
                 let toks = self.collect_tail();
                 if toks.is_empty() {
-                    return Err(format!("'{}' için varsayılan değer eksik", name));
+                    return Err(format!("Missing default value for '{}'", name));
                 }
                 Some(toks_to_source(&toks))
             } else {
@@ -500,7 +500,7 @@ impl<'a> Parser<'a> {
                 Tok::Comma => continue,
                 Tok::RParen => break,
                 other => {
-                    return Err(format!("',' veya ')' bekleniyordu, bulunan: {:?}", other))
+                    return Err(format!("',' or ')' expected, found: {:?}", other))
                 }
             }
         }
@@ -511,7 +511,7 @@ impl<'a> Parser<'a> {
     fn parse(mut self) -> Result<Value, String> {
         let v = self.expr(1)?;
         if !matches!(self.peek(), Tok::Eof) {
-            return Err(format!("Beklenmeyen ifade: {:?}", self.peek()));
+            return Err(format!("Unexpected expression: {:?}", self.peek()));
         }
         Ok(v)
     }
@@ -545,7 +545,7 @@ impl<'a> Parser<'a> {
             Tok::Id(name) => self
                 .rt
                 .get(&name)
-                .ok_or_else(|| format!("Tanımsız değişken: {}", name))?,
+                .ok_or_else(|| format!("Undefined variable: {}", name))?,
 
             Tok::Op(op) if op == "-" => Value::Num(-self.expr(6)?.number()?),
             Tok::Op(op) if op == "+" => Value::Num(self.expr(6)?.number()?),
@@ -555,11 +555,11 @@ impl<'a> Parser<'a> {
             Tok::FuncKw => {
                 let params = self.parse_params()?;
                 if !matches!(self.take(), Tok::Arrow) {
-                    return Err("'=>' bekleniyordu".into());
+                    return Err("'=>' was expected".into());
                 }
                 let body_toks = self.collect_tail();
                 if body_toks.is_empty() {
-                    return Err("Lambda gövdesi boş".into());
+                    return Err("Lambda is empty".into());
                 }
                 let body_src = toks_to_source(&body_toks);
                 let body = vec![Line { number: 0, text: format!("return {}", body_src) }];
@@ -585,12 +585,12 @@ impl<'a> Parser<'a> {
                     }
                 }
                 if !matches!(self.take(), Tok::RBracket) {
-                    return Err("Liste için ']' bekleniyordu".into());
+                    return Err("']' expected for call".into());
                 }
                 Value::List(items)
             }
 
-            other => return Err(format!("Geçersiz ifade: {:?}", other)),
+            other => return Err(format!("Invalid expression: {:?}", other)),
         };
 
         loop {
@@ -609,7 +609,7 @@ impl<'a> Parser<'a> {
                     }
                 }
                 if !matches!(self.take(), Tok::RParen) {
-                    return Err("Çağrı için ')' bekleniyordu".into());
+                    return Err("')' expected for call".into());
                 }
 
                 left = match left {
@@ -617,7 +617,7 @@ impl<'a> Parser<'a> {
                     Value::Native(n) => {
                         call_native(n, args.into_iter().map(|(v, _)| v).collect())?
                     }
-                    other => return Err(format!("Çağrılabilir değil: {}", other)),
+                    other => return Err(format!("Not callable: {}", other)),
                 };
                 continue;
             }
@@ -627,18 +627,18 @@ impl<'a> Parser<'a> {
                 self.take();
                 let idx = self.expr(1)?.index()?;
                 if !matches!(self.take(), Tok::RBracket) {
-                    return Err("İndeks için ']' bekleniyordu".into());
+                    return Err("']' expected for index".into());
                 }
 
                 left = match left {
                     Value::List(items) => {
                         let len = items.len();
                         items.into_iter().nth(idx).ok_or_else(|| {
-                            format!("Liste indeksi aralık dışında: {} (uzunluk: {})", idx, len)
+                            format!("List index out of range: {} (length: {})", idx, len)
                         })?
                     }
                     other => {
-                        return Err(format!("İndeksleme için liste gerekli, bulunan: {}", other))
+                        return Err(format!("A list is required for indexing; found: {}", other))
                     }
                 };
                 continue;
@@ -651,7 +651,7 @@ impl<'a> Parser<'a> {
                 self.take();
                 let written = match self.take() {
                     Tok::Id(n) => n,
-                    other => return Err(format!("Kanal adı bekleniyordu, bulunan: {:?}", other)),
+                    other => return Err(format!("Channel name expected, found: {:?}", other)),
                 };
                 let effective = self.rt.tag_of(&written).unwrap_or(written);
                 left = self.rt.channels.get(&effective).cloned().unwrap_or(left);
@@ -780,7 +780,7 @@ impl Runtime {
 
     fn set_index(&mut self, name: &str, idx: usize, value: Value) -> Result<(), String> {
         if self.is_const(name) {
-            return Err(format!("'{}' sabitinin elemanları değiştirilemez", name));
+            return Err(format!("The elements of the constant '{}' cannot be modified.", name));
         }
         for scope in self.scopes.iter_mut().rev() {
             if let Some(slot) = scope.get_mut(name) {
@@ -788,20 +788,20 @@ impl Runtime {
                     Value::List(items) => {
                         let len = items.len();
                         *items.get_mut(idx).ok_or_else(|| {
-                            format!("Liste indeksi aralık dışında: {} (uzunluk: {})", idx, len)
+                            format!("List index out of range: {} (length: {})", idx, len)
                         })? = value;
                         Ok(())
                     }
-                    other => Err(format!("'{}' bir liste değil: {}", name, other)),
+                    other => Err(format!("'{}' is not a list: {}", name, other)),
                 };
             }
         }
-        Err(format!("Tanımsız değişken: {}", name))
+        Err(format!("Undefined variable: {}", name))
     }
 
     fn eval(&mut self, src: &str) -> Result<Value, String> {
         if src.trim().is_empty() {
-            return Err("İfade eksik".into());
+            return Err("Missing expression".into());
         }
         let toks = lex(src)?;
         Parser { toks, pos: 0, rt: self }.parse()
@@ -820,7 +820,7 @@ impl Runtime {
         args: Vec<(Value, Option<String>)>,
     ) -> Result<Value, String> {
         if self.call_depth >= CALL_LIMIT {
-            return Err(format!("Çağrı yığını sınırına ulaştı ({})", CALL_LIMIT));
+            return Err(format!("Call stack limit reached ({})", CALL_LIMIT));
         }
 
         let mut values = Vec::with_capacity(args.len());
@@ -869,7 +869,7 @@ fn call_inner(
                 Some(src) => rt.eval(src)?,
                 None => {
                     return Err(format!(
-                        "'{}' fonksiyonunda '{}' parametresi eksik",
+                        "The parameter '{}' is missing in the '{}' function.",
                         func.name, p.name
                     ))
                 }
@@ -889,7 +889,7 @@ fn call_inner(
         Flow::Return => Ok(rt.return_value.take().unwrap_or(Value::Null)),
         Flow::Normal => Ok(rt.last_value.take().unwrap_or(Value::Null)),
         Flow::Stop | Flow::Forward => {
-            Err("'stop'/'fwd' yalnızca döngü içinde kullanılabilir".into())
+            Err("'stop'/'fwd' can only be used within a loop.".into())
         }
     }
 }
@@ -904,7 +904,7 @@ fn plan_args(func: &Function, args: Vec<Value>) -> Result<Vec<Option<Value>>, St
         None => {
             if n > params.len() {
                 return Err(format!(
-                    "'{}' en fazla {} argüman alır, {} verildi",
+                    "'{}' takes at most {} arguments, {} were given",
                     func.name,
                     params.len(),
                     n
@@ -1112,18 +1112,18 @@ fn matching_end(lines: &[Line], head: usize) -> Result<usize, String> {
             depth -= 1;
         }
     }
-    Err(format!("{}: Blok için 'end' bulunamadı", lines[head].number))
+    Err(format!("{}: 'end' not found for block", lines[head].number))
 }
 
 /// `add isim(...)` başlığını ada ve "(...)" metnine ayırır.
 fn parse_add_header(rest: &str) -> Result<(String, String), String> {
-    let open = rest.find('(').ok_or("Fonksiyon tanımında '(' bekleniyordu")?;
+    let open = rest.find('(').ok_or("'(' was expected in the function definition.")?;
     let name = rest[..open].trim().to_string();
     if !is_ident(&name) {
-        return Err(format!("Geçersiz fonksiyon adı: {}", name));
+        return Err(format!("Invalid function name: {}", name));
     }
     if !rest.trim_end().ends_with(')') {
-        return Err("Fonksiyon tanımında ')' bekleniyordu".into());
+        return Err("')' expected in function definition".into());
     }
     Ok((name, rest[open..].trim_end().to_string()))
 }
@@ -1150,16 +1150,16 @@ fn run(
         }
 
         if s == "end" {
-            return Err(err("Beklenmeyen 'end'".into()));
+            return Err(err("Unawaited 'end'".into()));
         }
 
         if kw(s, "else").is_some() {
-            return Err(err("Beklenmeyen 'else'".into()));
+            return Err(err("Unawaited 'else'".into()));
         }
 
         if s == "stop" || s == "fwd" {
             if !in_loop {
-                return Err(err(format!("'{}' yalnızca döngü içinde kullanılabilir", s)));
+                return Err(err(format!("'{}' can only be used in loops", s)));
             }
             return Ok(if s == "stop" { Flow::Stop } else { Flow::Forward });
         }
