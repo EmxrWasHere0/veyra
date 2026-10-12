@@ -1,0 +1,21 @@
+say "Merhaba Veyra!"
+
+numbers = [10, 20, 30]
+say numbers
+say numbers[1]
+
+numbers[1] = 99
+say numbers
+
+set app = "Veyra"
+say app
+
+if 10 > 5
+    say "Koşul çalıştı!"
+else
+    say "Koşul yanlış!"
+end
+
+repeat 3
+    say "Döngü çalışıyor"
+end

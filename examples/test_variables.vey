@@ -1,0 +1,12 @@
+set sabit = "Veyra"
+sayi = 10
+
+say sabit
+say sayi
+
+sayi += 5
+say sayi
+
+sabit = "Geçici değer"
+say sabit
+say sabit ? ch

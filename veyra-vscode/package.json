@@ -1,0 +1,53 @@
+{
+  "name": "veyra",
+  "displayName": "Veyra",
+  "description": "Syntax support for Veyra programming language",
+  "version": "0.1.0",
+  "publisher": "veyra-lang",
+  "engines": {
+    "vscode": "^1.75.0"
+  },
+  "categories": [
+    "Programming Languages",
+    "Snippets"
+  ],
+  "keywords": [
+    "veyra",
+    "vey"
+  ],
+  "contributes": {
+    "languages": [
+      {
+        "id": "veyra",
+        "aliases": [
+          "Veyra",
+          "veyra"
+        ],
+        "extensions": [
+          ".vey"
+        ],
+        "configuration": "./language-configuration.json",
+        "icon": {
+          "light": "./icons/veyra.png",
+          "dark": "./icons/veyra.png"
+        }
+      }
+    ],
+    "grammars": [
+      {
+        "language": "veyra",
+        "scopeName": "source.veyra",
+        "path": "./syntaxes/veyra.tmLanguage.json"
+      }
+    ],
+    "snippets": [
+      {
+        "language": "veyra",
+        "path": "./snippets/veyra.json"
+      }
+    ]
+  },
+  "dependencies": {
+    "@vscode/vsce": "^4.0.0"
+  }
+}

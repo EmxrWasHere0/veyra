@@ -1,0 +1,65 @@
+{
+  "if block": {
+    "prefix": "if",
+    "body": ["if ${1:condition}", "\t$0", "end"],
+    "description": "if block"
+  },
+  "if else block": {
+    "prefix": "ife",
+    "body": ["if ${1:condition}", "\t$2", "else", "\t$0", "end"],
+    "description": "if-else block"
+  },
+  "if elseif else": {
+    "prefix": "ifee",
+    "body": [
+      "if ${1:condition1}",
+      "\t$2",
+      "else if ${3:condition2}",
+      "\t$4",
+      "else",
+      "\t$0",
+      "end"
+    ],
+    "description": "if-else if-else block"
+  },
+  "repeat n times": {
+    "prefix": "repeat",
+    "body": ["repeat ${1:n}", "\t$0", "end"],
+    "description": "repeat for n"
+  },
+  "repeat while": {
+    "prefix": "rwhile",
+    "body": ["repeat while ${1:condition}", "\t$0", "end"],
+    "description": "repeat while on condition"
+  },
+  "function": {
+    "prefix": "add",
+    "body": ["add ${1:isim}(${2:parametreler})", "\t$0", "end"],
+    "description": "function defintiion"
+  },
+  "lambda": {
+    "prefix": "func",
+    "body": ["func(${1:x}) => ${0:expression}"],
+    "description": "lambda expression"
+  },
+  "const": {
+    "prefix": "set",
+    "body": ["set ${1:name} = ${0:variable}"],
+    "description": "constant definition"
+  },
+  "say": {
+    "prefix": "say",
+    "body": ["say ${0:expression}"],
+    "description": "print expression"
+  },
+  "get": {
+    "prefix": "get",
+    "body": ["get \"${1:prompt: }\"", "${2:variable} = _input$0"],
+    "description": "get input from user"
+  },
+  "get number": {
+    "prefix": "getnum",
+    "body": ["get \"${1:prompt: }\"", "${2:variable} = num(_input)$0"],
+    "description": "get number from user"
+  }
+}

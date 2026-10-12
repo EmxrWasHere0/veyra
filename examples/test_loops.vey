@@ -1,0 +1,29 @@
+repeat 3
+    say "Veyra çalışıyor!"
+end
+
+x = 0
+
+repeat while x < 3
+    say x
+    x += 1
+end
+
+
+repeat 5
+    say "Başladı"
+    stop
+    say "Bu yazılmamalı"
+end
+
+x = 0
+
+repeat 5
+    x += 1
+
+    if x == 2
+        fwd
+    end
+
+    say x
+end

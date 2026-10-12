@@ -1,0 +1,14 @@
+say 2 + 3 * 4
+say (2 + 3) * 4
+say 10 / 2 + 3
+say 10 % 3
+
+x = 15
+
+say x > 10 and x < 20
+say x < 10 or x == 15
+say not false
+
+if x >= 10 and x <= 20
+    say "Koşul doğru!"
+end
