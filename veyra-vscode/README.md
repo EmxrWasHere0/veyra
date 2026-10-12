@@ -1,21 +1,21 @@
 # Veyra for VSCode
 
-Veyra programlama dili için söz dizimi vurgulama, otomatik girinti, kod katlama ve snippet desteği.
+Syntax highlighting, auto-indentation, code folding, and snippet support for the Veyra programming language.
 
-## Özellikler
+## Features
 
-- Söz dizimi vurgulama (`.vey` dosyaları)
-- `#` ile yorum desteği
-- Otomatik parantez ve tırnak kapatma
-- Blok katlama (`if`, `repeat`, `add`)
-- Hazır snippet'ler: `if`, `ife`, `ifee`, `repeat`, `rwhile`, `add`, `func`, `set`, `say`, `get`
+- Syntax highlighting (`.vey` files)
+- Comment support using `#`
+- Automatic bracket and quote closing
+- Block folding (`if`, `repeat`, `add`)
+- Built-in snippets: `if`, `ife`, `ifee`, `repeat`, `rwhile`, `add`, `func`, `set`, `say`, `get`
 
-## Kurulum
+## Installation
 
-### Geliştirici modu
+### Developer mode
 
 ```bash
 cd veyra-vscode
 code .
-# F5'e bas → yeni VSCode penceresi açılır
+# Press F5 → a new VSCode window opens
 ```
