@@ -1367,15 +1367,31 @@ fn run(
 
 fn main() {
     let args: Vec<String> = std::env::args().collect();
-    let Some(filename) = args.get(1) else {
-        eprintln!("Veyra v0.1.0\nTo run a Veyra file, please provide file name as the first argument.\ne.g. `veyra filename.vey`");
-        return;
-    };
 
+    if args.len() < 2 {
+        print_help();
+        return;
+    }
+
+    let first_arg = &args[1];
+
+    match first_arg.as_str() {
+        "--help" | "-h" => {
+            print_help();
+            return;
+        }
+        "--version" | "-v" => {
+            println!("Veyra v0.1.0");
+            return;
+        }
+        _ => {}
+    }
+
+    let filename = first_arg;
     let source = match std::fs::read_to_string(filename) {
         Ok(c) => c,
         Err(e) => {
-            eprintln!("Couldn't read the file: {}", e);
+            eprintln!("Couldn't read file: {}", e);
             std::process::exit(1);
         }
     };
@@ -1391,4 +1407,13 @@ fn main() {
         eprintln!("Veyra error: {}", e);
         std::process::exit(1);
     }
+}
+
+fn print_help() {
+    println!("Veyra Interpreter v0.1.0");
+    println!("Usage: veyra [OPTIONS] <file.vey>");
+    println!();
+    println!("Options:");
+    println!("  -h, --help     Shows this dialogue");
+    println!("  -v, --version  Shows the version of Veyra");
 }
