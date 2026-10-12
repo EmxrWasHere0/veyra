@@ -1,4 +1,6 @@
-# Veyra
+<div align="center">
+<img src="media/veyra-banner.png">
+</div>
 
 A small, dynamically-typed, interpreted programming language with easy-to-understand keywords and a unique **channel** mechanism for runtime value overrides.
 
