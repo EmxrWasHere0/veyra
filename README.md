@@ -1,6 +1,6 @@
 # Veyra
 
-A small, dynamically-typed, interpreted programming language with Turkish-flavored keywords and a unique **channel** mechanism for runtime value overrides.
+A small, dynamically-typed, interpreted programming language with easy-to-understand keywords and a unique **channel** mechanism for runtime value overrides.
 
 ```veyra
 set port = 8080
