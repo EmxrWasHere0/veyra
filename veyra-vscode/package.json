@@ -1,9 +1,10 @@
 {
   "name": "veyra",
   "displayName": "Veyra",
-  "description": "Syntax support for Veyra programming language",
+  "description": "Syntax highlighting and language support for the Veyra programming language.",
   "version": "0.1.0",
   "publisher": "veyra-lang",
+  "license": "GPL-3.0-only",
   "engines": {
     "vscode": "^1.75.0"
   },
@@ -13,8 +14,24 @@
   ],
   "keywords": [
     "veyra",
-    "vey"
+    "vey",
+    "syntax-highlighting",
+    "language-support"
   ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/EmxrWasHere0/veyra.git"
+  },
+  "files": [
+    "README.md",
+    "package.json",
+    "icons/**",
+    "syntaxes/**",
+    "snippets/**",
+    "language-configuration.json",
+    "LICENSE"
+  ],
+  "icon": "icons/veyra.png",
   "contributes": {
     "languages": [
       {
@@ -24,7 +41,9 @@
           "veyra"
         ],
         "extensions": [
-          ".vey"
+          ".vey",
+          ".veyra",
+          ".vy"
         ],
         "configuration": "./language-configuration.json",
         "icon": {
@@ -47,7 +66,7 @@
       }
     ]
   },
-  "dependencies": {
+  "devDependencies": {
     "@vscode/vsce": "^4.0.0"
   }
 }
