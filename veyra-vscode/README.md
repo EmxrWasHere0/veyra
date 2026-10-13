@@ -1,5 +1,5 @@
 <div align="center">
-<img src="icons/veyra-vscode.png">
+<img src="https://raw.githubusercontent.com/EmxrWasHere0/veyra/refs/heads/main/veyra-vscode/icons/veyra-vscode.png">
 </div>
 
 Syntax highlighting, auto-indentation, code folding, and snippet support for the Veyra programming language.
