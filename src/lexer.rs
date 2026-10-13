@@ -14,6 +14,7 @@ pub enum Tok {
     Spread,
     Arrow,
     FuncKw,
+    Dot,
     Eof,
 }
 
@@ -37,9 +38,8 @@ pub fn lex(input: &str) -> Result<Vec<Tok>, String> {
             continue;
         }
 
-        if c.is_ascii_digit()
-            || (c == '.' && matches!(chars.get(i + 1), Some(d) if d.is_ascii_digit()))
-        {
+        // Numbers (digit or dot-digit)
+        if c.is_ascii_digit() {
             out.push(read_number(&chars, &mut i)?);
             continue;
         }
@@ -49,6 +49,7 @@ pub fn lex(input: &str) -> Result<Vec<Tok>, String> {
             continue;
         }
 
+        // Spread ...
         if c == '.'
             && matches!(chars.get(i + 1), Some('.'))
             && matches!(chars.get(i + 2), Some('.'))
@@ -58,12 +59,27 @@ pub fn lex(input: &str) -> Result<Vec<Tok>, String> {
             continue;
         }
 
+        // Number starting with dot: .5 etc
+        if c == '.' && matches!(chars.get(i + 1), Some(d) if d.is_ascii_digit()) {
+            out.push(read_number(&chars, &mut i)?);
+            continue;
+        }
+
+        // Dot (member access)
+        if c == '.' {
+            out.push(Tok::Dot);
+            i += 1;
+            continue;
+        }
+
+        // Arrow =>
         if c == '=' && matches!(chars.get(i + 1), Some('>')) {
             out.push(Tok::Arrow);
             i += 2;
             continue;
         }
 
+        // Two-char operators
         let pair: String = chars[i..(i + 2).min(chars.len())].iter().collect();
         if TWO_CHAR_OPS.contains(&pair.as_str()) {
             out.push(Tok::Op(pair));
@@ -71,6 +87,7 @@ pub fn lex(input: &str) -> Result<Vec<Tok>, String> {
             continue;
         }
 
+        // Single-char tokens
         let tok = match c {
             '(' => Tok::LParen,
             ')' => Tok::RParen,
@@ -155,7 +172,6 @@ fn read_ident(chars: &[char], i: &mut usize) -> Tok {
     }
 }
 
-/// Converts a token sequence back into a re-lexable source string.
 pub fn toks_to_source(toks: &[Tok]) -> String {
     let mut out = String::new();
     for t in toks {
@@ -176,6 +192,7 @@ pub fn toks_to_source(toks: &[Tok]) -> String {
             Tok::Spread => out.push_str("..."),
             Tok::Arrow => out.push_str("=>"),
             Tok::FuncKw => out.push_str("func"),
+            Tok::Dot => out.push('.'),
             Tok::Eof => {}
         }
     }

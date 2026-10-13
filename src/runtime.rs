@@ -3,6 +3,7 @@ use std::fmt;
 use std::rc::Rc;
 
 use crate::lexer::{lex, toks_to_source, Tok};
+use crate::modules::{self, VeyraModule};
 use crate::{run, Line};
 
 pub const LOOP_LIMIT: usize = 1_000_000;
@@ -124,16 +125,12 @@ pub fn binop(op: &str, a: Value, b: Value) -> Result<Value, String> {
         },
         "/" => {
             let d = b.number()?;
-            if d == 0.0 {
-                return Err("Division by zero".into());
-            }
+            if d == 0.0 { return Err("Division by zero".into()); }
             Value::Num(a.number()? / d)
         }
         "%" => {
             let d = b.number()?;
-            if d == 0.0 {
-                return Err("Modulo by zero".into());
-            }
+            if d == 0.0 { return Err("Modulo by zero".into()); }
             Value::Num(a.number()? % d)
         }
         _ => return Err(format!("Unsupported operator: {}", op)),
@@ -146,16 +143,8 @@ pub const NATIVES: [&str; 4] = ["len", "num", "text", "type"];
 
 pub fn call_native(name: &str, args: Vec<Value>) -> Result<Value, String> {
     let need = |n: usize| -> Result<(), String> {
-        if args.len() == n {
-            Ok(())
-        } else {
-            Err(format!(
-                "{}() takes {} argument(s), {} given",
-                name,
-                n,
-                args.len()
-            ))
-        }
+        if args.len() == n { Ok(()) }
+        else { Err(format!("{}() takes {} argument(s), {} given", name, n, args.len())) }
     };
 
     match name {
@@ -164,12 +153,7 @@ pub fn call_native(name: &str, args: Vec<Value>) -> Result<Value, String> {
             Ok(Value::Num(match &args[0] {
                 Value::List(v) => v.len() as f64,
                 Value::Text(s) => s.chars().count() as f64,
-                other => {
-                    return Err(format!(
-                        "len requires a list or text, found: {}",
-                        other
-                    ))
-                }
+                other => return Err(format!("len requires a list or text, found: {}", other)),
             }))
         }
         "num" => {
@@ -177,31 +161,22 @@ pub fn call_native(name: &str, args: Vec<Value>) -> Result<Value, String> {
             Ok(match &args[0] {
                 Value::Num(n) => Value::Num(*n),
                 Value::Bool(b) => Value::Num(if *b { 1.0 } else { 0.0 }),
-                Value::Text(s) => s
-                    .trim()
-                    .parse::<f64>()
-                    .map(Value::Num)
+                Value::Text(s) => s.trim().parse::<f64>().map(Value::Num)
                     .map_err(|_| format!("Cannot convert to number: {:?}", s))?,
                 other => return Err(format!("Cannot convert to number: {}", other)),
             })
         }
-        "text" => {
-            need(1)?;
-            Ok(Value::Text(args[0].to_string()))
-        }
+        "text" => { need(1)?; Ok(Value::Text(args[0].to_string())) }
         "type" => {
             need(1)?;
-            Ok(Value::Text(
-                match &args[0] {
-                    Value::Num(_) => "num",
-                    Value::Text(_) => "text",
-                    Value::Bool(_) => "bool",
-                    Value::List(_) => "list",
-                    Value::Func(_) | Value::Native(_) => "function",
-                    Value::Null => "null",
-                }
-                .into(),
-            ))
+            Ok(Value::Text(match &args[0] {
+                Value::Num(_) => "num",
+                Value::Text(_) => "text",
+                Value::Bool(_) => "bool",
+                Value::List(_) => "list",
+                Value::Func(_) | Value::Native(_) => "function",
+                Value::Null => "null",
+            }.into()))
         }
         _ => Err(format!("Unknown built-in function: {}", name)),
     }
@@ -226,6 +201,11 @@ pub struct Runtime {
     pub call_depth: usize,
     pub return_value: Option<Value>,
     pub last_value: Option<Value>,
+
+    // Module system
+    available_modules: HashMap<String, Box<dyn VeyraModule>>,
+    pub loaded_modules: HashSet<String>,
+    pub imported_names: HashMap<String, (String, String)>, // bare name -> (module, member)
 }
 
 impl Runtime {
@@ -239,6 +219,9 @@ impl Runtime {
             call_depth: 0,
             return_value: None,
             last_value: None,
+            available_modules: modules::builtin_modules(),
+            loaded_modules: HashSet::new(),
+            imported_names: HashMap::new(),
         }
     }
 
@@ -263,13 +246,24 @@ impl Runtime {
     }
 
     pub fn tag_as(&mut self, var: &str, channel: &str) {
-        self.tags
-            .last_mut()
-            .unwrap()
-            .insert(var.to_string(), channel.to_string());
+        self.tags.last_mut().unwrap().insert(var.to_string(), channel.to_string());
     }
 
     pub fn get(&self, name: &str) -> Option<Value> {
+        // Check if it's a bare-imported module member
+        if let Some((mod_name, member)) = self.imported_names.get(name) {
+            if let Some(m) = self.available_modules.get(mod_name) {
+                if m.is_function(member) {
+                    // Cannot return a function value for module functions;
+                    // they are called via finish_module_call or as bare names.
+                    // For now, return null — actual calls are handled in parser.
+                    return Some(Value::Null); // placeholder
+                } else {
+                    return m.get_value(member);
+                }
+            }
+        }
+
         if let Some(v) = self.scopes.iter().rev().find_map(|s| s.get(name)) {
             return Some(v.clone());
         }
@@ -323,10 +317,98 @@ impl Runtime {
     }
 
     pub fn eval(&mut self, src: &str) -> Result<Value, String> {
-        if src.trim().is_empty() {
-            return Err("Missing expression".into());
-        }
+        if src.trim().is_empty() { return Err("Missing expression".into()); }
         Parser::new(lex(src)?, self).parse()
+    }
+
+    // ---- Module system ----
+
+    pub fn load_module(&mut self, name: &str) -> Result<(), String> {
+        if !self.available_modules.contains_key(name) {
+            return Err(format!("Unknown module: {}", name));
+        }
+        self.loaded_modules.insert(name.to_string());
+        Ok(())
+    }
+
+    pub fn import_star(&mut self, mod_name: &str) -> Result<(), String> {
+        let members = self.available_modules
+            .get(mod_name)
+            .ok_or_else(|| format!("Unknown module: {}", mod_name))?
+            .members();
+
+        for member in members {
+            self.imported_names.insert(member.clone(), (mod_name.to_string(), member));
+        }
+        Ok(())
+    }
+
+    pub fn import_selective(&mut self, mod_name: &str, names: &[String]) -> Result<(), String> {
+        let m = self.available_modules
+            .get(mod_name)
+            .ok_or_else(|| format!("Unknown module: {}", mod_name))?;
+
+        let available = m.members();
+        for name in names {
+            if !available.contains(name) {
+                return Err(format!("'{}' is not a member of module '{}'", name, mod_name));
+            }
+            self.imported_names.insert(name.clone(), (mod_name.to_string(), name.clone()));
+        }
+        Ok(())
+    }
+
+    pub fn module_get(&self, mod_name: &str, member: &str) -> Result<Value, String> {
+        let m = self.available_modules
+            .get(mod_name)
+            .ok_or_else(|| format!("Module '{}' is not loaded", mod_name))?;
+
+        if !self.loaded_modules.contains(mod_name) {
+            return Err(format!("Module '{}' is not loaded (use: mod {})", mod_name, mod_name));
+        }
+
+        if m.is_function(member) {
+            return Err(format!("{}.{} is a function, use {}.{}()", mod_name, member, mod_name, member));
+        }
+
+        m.get_value(member)
+            .ok_or_else(|| format!("'{}' is not a member of module '{}'", member, mod_name))
+    }
+
+    pub fn module_call(&self, mod_name: &str, member: &str, args: Vec<Value>) -> Result<Value, String> {
+        let m = self.available_modules
+            .get(mod_name)
+            .ok_or_else(|| format!("Module '{}' is not loaded", mod_name))?;
+
+        if !self.loaded_modules.contains(mod_name) {
+            return Err(format!("Module '{}' is not loaded (use: mod {})", mod_name, mod_name));
+        }
+
+        m.call(member, args)
+    }
+
+    pub fn bare_imported_call(&self, name: &str, args: Vec<Value>) -> Result<Value, String> {
+        if let Some((mod_name, member)) = self.imported_names.get(name) {
+            return self.module_call(mod_name, member, args);
+        }
+        Err(format!("Undefined function: {}", name))
+    }
+
+    pub fn is_loaded_module(&self, name: &str) -> bool {
+        self.loaded_modules.contains(name)
+    }
+
+    pub fn is_bare_import(&self, name: &str) -> bool {
+        self.imported_names.contains_key(name)
+    }
+
+    pub fn is_bare_import_function(&self, name: &str) -> bool {
+        if let Some((mod_name, member)) = self.imported_names.get(name) {
+            if let Some(m) = self.available_modules.get(mod_name) {
+                return m.is_function(member);
+            }
+        }
+        false
     }
 
     pub fn call_tagged(
@@ -373,17 +455,13 @@ fn call_inner(
             Some(v) => v,
             None => match &p.default {
                 Some(src) => rt.eval(src)?,
-                None => {
-                    return Err(format!(
-                        "Missing parameter '{}' for function '{}'",
-                        p.name, func.name
-                    ))
-                }
+                None => return Err(format!(
+                    "Missing parameter '{}' for function '{}'", p.name, func.name
+                )),
             },
         };
 
         rt.scopes.last_mut().unwrap().insert(p.name.clone(), value);
-
         if !p.variadic {
             if let Some(t) = tag {
                 rt.tags.last_mut().unwrap().insert(p.name.clone(), t);
@@ -394,9 +472,7 @@ fn call_inner(
     match run(&func.body, 0, func.body.len(), rt, false)? {
         Flow::Return => Ok(rt.return_value.take().unwrap_or(Value::Null)),
         Flow::Normal => Ok(rt.last_value.take().unwrap_or(Value::Null)),
-        Flow::Stop | Flow::Forward => {
-            Err("'stop'/'fwd' can only be used inside a loop".into())
-        }
+        Flow::Stop | Flow::Forward => Err("'stop'/'fwd' can only be used inside a loop".into()),
     }
 }
 
@@ -418,28 +494,18 @@ fn plan_values(func: &Function, args: Vec<Value>) -> Result<Vec<Option<Value>>, 
     match params.iter().position(|p| p.variadic) {
         None => {
             if n > params.len() {
-                return Err(format!(
-                    "'{}' takes at most {} arguments, {} given",
-                    func.name,
-                    params.len(),
-                    n
-                ));
+                return Err(format!("'{}' takes at most {} arguments, {} given",
+                    func.name, params.len(), n));
             }
-            for (i, a) in args.into_iter().enumerate() {
-                out[i] = Some(a);
-            }
+            for (i, a) in args.into_iter().enumerate() { out[i] = Some(a); }
         }
         Some(vp) => {
             let after = params.len() - vp - 1;
             let (head, middle, tail) = split_three(args, vp, after);
-            for (i, a) in head.into_iter().enumerate() {
-                out[i] = Some(a);
-            }
+            for (i, a) in head.into_iter().enumerate() { out[i] = Some(a); }
             out[vp] = Some(Value::List(middle));
             let first = after - tail.len();
-            for (k, a) in tail.into_iter().enumerate() {
-                out[vp + 1 + first + k] = Some(a);
-            }
+            for (k, a) in tail.into_iter().enumerate() { out[vp + 1 + first + k] = Some(a); }
         }
     }
     Ok(out)
@@ -451,20 +517,14 @@ fn plan_tags(func: &Function, args: Vec<Option<String>>) -> Vec<Option<String>> 
 
     match params.iter().position(|p| p.variadic) {
         None => {
-            for (i, t) in args.into_iter().take(params.len()).enumerate() {
-                out[i] = t;
-            }
+            for (i, t) in args.into_iter().take(params.len()).enumerate() { out[i] = t; }
         }
         Some(vp) => {
             let after = params.len() - vp - 1;
             let (head, _mid, tail) = split_three(args, vp, after);
-            for (i, t) in head.into_iter().enumerate() {
-                out[i] = t;
-            }
+            for (i, t) in head.into_iter().enumerate() { out[i] = t; }
             let first = after - tail.len();
-            for (k, t) in tail.into_iter().enumerate() {
-                out[vp + 1 + first + k] = t;
-            }
+            for (k, t) in tail.into_iter().enumerate() { out[vp + 1 + first + k] = t; }
         }
     }
     out
@@ -483,25 +543,19 @@ impl<'a> Parser<'a> {
         Self { toks, pos: 0, rt }
     }
 
-    fn peek(&self) -> &Tok {
-        &self.toks[self.pos]
-    }
+    fn peek(&self) -> &Tok { &self.toks[self.pos] }
 
     fn take(&mut self) -> Tok {
         let t = self.toks[self.pos].clone();
-        if !matches!(t, Tok::Eof) {
-            self.pos += 1;
-        }
+        if !matches!(t, Tok::Eof) { self.pos += 1; }
         t
     }
 
     fn prec(op: &str) -> u8 {
         match op {
-            "or" => 1,
-            "and" => 2,
+            "or" => 1, "and" => 2,
             "==" | "!=" | "<" | ">" | "<=" | ">=" => 3,
-            "+" | "-" => 4,
-            "*" | "/" | "%" => 5,
+            "+" | "-" => 4, "*" | "/" | "%" => 5,
             _ => 0,
         }
     }
@@ -510,80 +564,51 @@ impl<'a> Parser<'a> {
         let start = self.pos;
         let mut dp = 0i32;
         let mut db = 0i32;
-
         loop {
             match self.toks[self.pos] {
                 Tok::Eof => break,
                 Tok::LParen => dp += 1,
-                Tok::RParen => {
-                    if dp == 0 {
-                        break;
-                    }
-                    dp -= 1;
-                }
+                Tok::RParen => { if dp == 0 { break; } dp -= 1; }
                 Tok::LBracket => db += 1,
-                Tok::RBracket => {
-                    if db == 0 {
-                        break;
-                    }
-                    db -= 1;
-                }
+                Tok::RBracket => { if db == 0 { break; } db -= 1; }
                 Tok::Comma if dp == 0 && db == 0 => break,
                 _ => {}
             }
             self.pos += 1;
         }
-
         self.toks[start..self.pos].to_vec()
     }
 
     pub fn parse_params(&mut self) -> Result<Vec<Param>, String> {
-        if !matches!(self.take(), Tok::LParen) {
-            return Err("Expected '('".into());
-        }
-
+        if !matches!(self.take(), Tok::LParen) { return Err("Expected '('".into()); }
         let mut params: Vec<Param> = Vec::new();
         let mut variadic_seen = false;
 
-        if matches!(self.peek(), Tok::RParen) {
-            self.take();
-            return Ok(params);
-        }
+        if matches!(self.peek(), Tok::RParen) { self.take(); return Ok(params); }
 
         loop {
             let is_variadic = if matches!(self.peek(), Tok::Spread) {
                 self.take();
-                if variadic_seen {
-                    return Err("Only one '...args' parameter is allowed".into());
-                }
+                if variadic_seen { return Err("Only one '...args' parameter is allowed".into()); }
                 variadic_seen = true;
                 true
-            } else {
-                false
-            };
+            } else { false };
 
             let name = match self.take() {
                 Tok::Id(n) => n,
                 other => return Err(format!("Expected parameter name, found: {:?}", other)),
             };
-
             if params.iter().any(|p| p.name == name) {
                 return Err(format!("Duplicate parameter name: {}", name));
             }
 
             let default = if matches!(self.peek(), Tok::Op(o) if o == "=") {
-                if is_variadic {
-                    return Err("Variadic parameter cannot have a default value".into());
-                }
+                if is_variadic { return Err("Variadic parameter cannot have a default value".into()); }
                 self.take();
                 let toks = self.collect_tail();
-                if toks.is_empty() {
-                    return Err(format!("Missing default value for '{}'", name));
-                }
+                if toks.is_empty() { return Err(format!("Missing default value for '{}'", name)); }
                 Some(toks_to_source(&toks))
-            } else {
-                None
-            };
+            } else { None };
 
             params.push(Param { name, default, variadic: is_variadic });
 
@@ -593,7 +618,6 @@ impl<'a> Parser<'a> {
                 other => return Err(format!("Expected ',' or ')', found: {:?}", other)),
             }
         }
-
         Ok(params)
     }
 
@@ -612,15 +636,8 @@ impl<'a> Parser<'a> {
                 self.toks.get(self.pos + 1),
                 Some(Tok::Comma) | Some(Tok::RParen) | Some(Tok::Eof)
             );
-            if standalone {
-                self.rt.tag_of(&n)
-            } else {
-                None
-            }
-        } else {
-            None
-        };
-
+            if standalone { self.rt.tag_of(&n) } else { None }
+        } else { None };
         Ok((self.expr(min_prec)?, hint))
     }
 
@@ -632,27 +649,18 @@ impl<'a> Parser<'a> {
                 left = self.finish_call(left)?;
                 continue;
             }
-
             if matches!(self.peek(), Tok::LBracket) {
                 left = self.finish_index(left)?;
                 continue;
             }
-
             if matches!(self.peek(), Tok::Question) {
                 left = self.finish_channel(left)?;
                 continue;
             }
 
-            let op = match self.peek() {
-                Tok::Op(o) => o.clone(),
-                _ => break,
-            };
-
+            let op = match self.peek() { Tok::Op(o) => o.clone(), _ => break };
             let p = Self::prec(&op);
-            if p == 0 || p < min_prec {
-                break;
-            }
-
+            if p == 0 || p < min_prec { break; }
             self.take();
             let right = self.expr(p + 1)?;
             left = binop(&op, left, right)?;
@@ -665,82 +673,108 @@ impl<'a> Parser<'a> {
         match self.take() {
             Tok::Val(v) => Ok(v),
 
-            Tok::Id(name) => self
-                .rt
-                .get(&name)
-                .ok_or_else(|| format!("Undefined variable: {}", name)),
+            Tok::Id(name) => {
+                // Module member access: module.member or module.func()
+                if matches!(self.peek(), Tok::Dot) && self.rt.is_loaded_module(&name) {
+                    self.take(); // consume '.'
+                    let member = match self.take() {
+                        Tok::Id(m) => m,
+                        other => return Err(format!("Expected member name after '.', found: {:?}", other)),
+                    };
+
+                    // If followed by '(' it's a function call
+                    if matches!(self.peek(), Tok::LParen) {
+                        self.take(); // '('
+                        let mut args = Vec::new();
+                        if !matches!(self.peek(), Tok::RParen) {
+                            loop {
+                                args.push(self.expr(1)?);
+                                if matches!(self.peek(), Tok::Comma) { self.take(); }
+                                else { break; }
+                            }
+                        }
+                        if !matches!(self.take(), Tok::RParen) {
+                            return Err("Expected ')' for module function call".into());
+                        }
+                        return self.rt.module_call(&name, &member, args);
+                    }
+
+                    // Otherwise it's a constant
+                    return self.rt.module_get(&name, &member);
+                }
+
+                // Bare imported function call
+                if matches!(self.peek(), Tok::LParen) && self.rt.is_bare_import_function(&name) {
+                    self.take(); // '('
+                    let mut args = Vec::new();
+                    if !matches!(self.peek(), Tok::RParen) {
+                        loop {
+                            args.push(self.expr(1)?);
+                            if matches!(self.peek(), Tok::Comma) { self.take(); }
+                            else { break; }
+                        }
+                    }
+                    if !matches!(self.take(), Tok::RParen) {
+                        return Err("Expected ')' for function call".into());
+                    }
+                    return self.rt.bare_imported_call(&name, args);
+                }
+
+                // Bare imported constant
+                if self.rt.is_bare_import(&name) && !self.rt.is_bare_import_function(&name) {
+                    if let Some((mod_name, member)) = self.rt.imported_names.get(&name) {
+                        return self.rt.module_get(mod_name, member);
+                    }
+                }
+
+                self.rt.get(&name)
+                    .ok_or_else(|| format!("Undefined variable: {}", name))
+            }
 
             Tok::Op(op) if op == "-" => Ok(Value::Num(-self.expr(6)?.number()?)),
             Tok::Op(op) if op == "+" => Ok(Value::Num(self.expr(6)?.number()?)),
             Tok::Op(op) if op == "not" || op == "!" => Ok(Value::Bool(!self.expr(6)?.truthy())),
-
             Tok::FuncKw => self.parse_lambda(),
-
             Tok::LParen => {
                 let v = self.expr(1)?;
-                if !matches!(self.take(), Tok::RParen) {
-                    return Err("Expected ')'".into());
-                }
+                if !matches!(self.take(), Tok::RParen) { return Err("Expected ')'".into()); }
                 Ok(v)
             }
-
             Tok::LBracket => self.parse_list(),
-
             other => Err(format!("Invalid expression: {:?}", other)),
         }
     }
 
     fn parse_lambda(&mut self) -> Result<Value, String> {
         let params = self.parse_params()?;
-        if !matches!(self.take(), Tok::Arrow) {
-            return Err("Expected '=>'".into());
-        }
+        if !matches!(self.take(), Tok::Arrow) { return Err("Expected '=>'".into()); }
         let body_toks = self.collect_tail();
-        if body_toks.is_empty() {
-            return Err("Empty lambda body".into());
-        }
+        if body_toks.is_empty() { return Err("Empty lambda body".into()); }
         let body_src = toks_to_source(&body_toks);
         let body = vec![Line { number: 0, text: format!("return {}", body_src) }];
-        Ok(Value::Func(Rc::new(Function {
-            name: "lambda".into(),
-            params,
-            body,
-        })))
+        Ok(Value::Func(Rc::new(Function { name: "lambda".into(), params, body })))
     }
 
     fn parse_list(&mut self) -> Result<Value, String> {
         let mut items = Vec::new();
         while !matches!(self.peek(), Tok::RBracket) {
             items.push(self.expr(1)?);
-            if matches!(self.peek(), Tok::Comma) {
-                self.take();
-            } else {
-                break;
-            }
+            if matches!(self.peek(), Tok::Comma) { self.take(); } else { break; }
         }
-        if !matches!(self.take(), Tok::RBracket) {
-            return Err("Expected ']' for list".into());
-        }
+        if !matches!(self.take(), Tok::RBracket) { return Err("Expected ']' for list".into()); }
         Ok(Value::List(items))
     }
 
     fn finish_call(&mut self, callee: Value) -> Result<Value, String> {
-        self.take(); // '('
+        self.take();
         let mut args: Vec<(Value, Option<String>)> = Vec::new();
         if !matches!(self.peek(), Tok::RParen) {
             loop {
                 args.push(self.expr_tagged(1)?);
-                if matches!(self.peek(), Tok::Comma) {
-                    self.take();
-                } else {
-                    break;
-                }
+                if matches!(self.peek(), Tok::Comma) { self.take(); } else { break; }
             }
         }
-        if !matches!(self.take(), Tok::RParen) {
-            return Err("Expected ')' for call".into());
-        }
-
+        if !matches!(self.take(), Tok::RParen) { return Err("Expected ')' for call".into()); }
         match callee {
             Value::Func(f) => self.rt.call_tagged(&f, args),
             Value::Native(n) => call_native(n, args.into_iter().map(|(v, _)| v).collect()),
@@ -749,25 +783,21 @@ impl<'a> Parser<'a> {
     }
 
     fn finish_index(&mut self, target: Value) -> Result<Value, String> {
-        self.take(); // '['
+        self.take();
         let idx = self.expr(1)?.index()?;
-        if !matches!(self.take(), Tok::RBracket) {
-            return Err("Expected ']' for index".into());
-        }
-
+        if !matches!(self.take(), Tok::RBracket) { return Err("Expected ']' for index".into()); }
         match target {
             Value::List(items) => {
                 let len = items.len();
-                items.into_iter().nth(idx).ok_or_else(|| {
-                    format!("List index out of range: {} (length: {})", idx, len)
-                })
+                items.into_iter().nth(idx).ok_or_else(||
+                    format!("List index out of range: {} (length: {})", idx, len))
             }
             other => Err(format!("Indexing requires a list, found: {}", other)),
         }
     }
 
     fn finish_channel(&mut self, default: Value) -> Result<Value, String> {
-        self.take(); // '?'
+        self.take();
         let written = match self.take() {
             Tok::Id(n) => n,
             other => return Err(format!("Expected channel name, found: {:?}", other)),
