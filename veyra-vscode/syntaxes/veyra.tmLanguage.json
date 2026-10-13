@@ -7,9 +7,11 @@
     { "include": "#strings" },
     { "include": "#numbers" },
     { "include": "#constants" },
+    { "include": "#mod-statement" },
     { "include": "#keywords" },
     { "include": "#function-definition" },
     { "include": "#lambda" },
+    { "include": "#module-access" },
     { "include": "#function-call" },
     { "include": "#builtins" },
     { "include": "#channel-operator" },
@@ -68,6 +70,49 @@
         }
       ]
     },
+    "mod-statement": {
+      "patterns": [
+        {
+          "comment": "mod name [a, b, c]  -> selective import",
+          "match": "^\\s*(mod)\\s+([a-zA-Z_][a-zA-Z0-9_]*)\\s*(\\[)([^\\]]*)(\\])",
+          "captures": {
+            "1": { "name": "keyword.control.import.veyra" },
+            "2": { "name": "entity.name.namespace.veyra" },
+            "3": { "name": "punctuation.definition.list.begin.veyra" },
+            "4": {
+              "patterns": [
+                {
+                  "match": "([a-zA-Z_][a-zA-Z0-9_]*)",
+                  "name": "variable.other.imported.veyra"
+                },
+                {
+                  "match": ",",
+                  "name": "punctuation.separator.comma.veyra"
+                }
+              ]
+            },
+            "5": { "name": "punctuation.definition.list.end.veyra" }
+          }
+        },
+        {
+          "comment": "mod name *  -> star import",
+          "match": "^\\s*(mod)\\s+([a-zA-Z_][a-zA-Z0-9_]*)\\s*(\\*)",
+          "captures": {
+            "1": { "name": "keyword.control.import.veyra" },
+            "2": { "name": "entity.name.namespace.veyra" },
+            "3": { "name": "keyword.operator.wildcard.veyra" }
+          }
+        },
+        {
+          "comment": "mod name  -> simple import",
+          "match": "^\\s*(mod)\\s+([a-zA-Z_][a-zA-Z0-9_]*)\\s*$",
+          "captures": {
+            "1": { "name": "keyword.control.import.veyra" },
+            "2": { "name": "entity.name.namespace.veyra" }
+          }
+        }
+      ]
+    },
     "keywords": {
       "patterns": [
         {
@@ -115,6 +160,46 @@
         }
       ]
     },
+    "module-access": {
+      "patterns": [
+        {
+          "comment": "Known built-in module function call: system.arch(), io.read(), base.hostname()",
+          "match": "\\b(system|io|base)\\s*(\\.)\\s*([a-zA-Z_][a-zA-Z0-9_]*)\\s*(?=\\()",
+          "captures": {
+            "1": { "name": "support.class.module.builtin.veyra" },
+            "2": { "name": "punctuation.accessor.dot.veyra" },
+            "3": { "name": "support.function.module.veyra" }
+          }
+        },
+        {
+          "comment": "Known built-in module constant access: system.os, base.arch",
+          "match": "\\b(system|io|base)\\s*(\\.)\\s*([a-zA-Z_][a-zA-Z0-9_]*)",
+          "captures": {
+            "1": { "name": "support.class.module.builtin.veyra" },
+            "2": { "name": "punctuation.accessor.dot.veyra" },
+            "3": { "name": "support.constant.module.veyra" }
+          }
+        },
+        {
+          "comment": "Generic module function call: anyName.something()",
+          "match": "\\b([a-zA-Z_][a-zA-Z0-9_]*)\\s*(\\.)\\s*([a-zA-Z_][a-zA-Z0-9_]*)\\s*(?=\\()",
+          "captures": {
+            "1": { "name": "entity.name.namespace.veyra" },
+            "2": { "name": "punctuation.accessor.dot.veyra" },
+            "3": { "name": "entity.name.function.module.veyra" }
+          }
+        },
+        {
+          "comment": "Generic module constant access: anyName.something",
+          "match": "\\b([a-zA-Z_][a-zA-Z0-9_]*)\\s*(\\.)\\s*([a-zA-Z_][a-zA-Z0-9_]*)",
+          "captures": {
+            "1": { "name": "entity.name.namespace.veyra" },
+            "2": { "name": "punctuation.accessor.dot.veyra" },
+            "3": { "name": "variable.other.member.veyra" }
+          }
+        }
+      ]
+    },
     "function-call": {
       "patterns": [
         {
@@ -146,6 +231,10 @@
         {
           "name": "keyword.operator.spread.veyra",
           "match": "\\.\\.\\."
+        },
+        {
+          "name": "keyword.operator.accessor.veyra",
+          "match": "\\."
         },
         {
           "name": "keyword.operator.comparison.veyra",

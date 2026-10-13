@@ -36,6 +36,7 @@ connect(port)
   - [Lists](#lists)
   - [Functions](#functions)
   - [Built-ins](#built-ins)
+  - [Modules [WIP]](#modules-wip)
 - [VSCode Extension](#vscode-extension)
 - [Project Layout](#project-layout)
 - [Limitations](#limitations)
@@ -425,6 +426,18 @@ Call stack limit: **1,000** frames.
 | `text(x)` | Convert to text                                                             |
 | `type(x)` | Returns `"number"`, `"text"`, `"bool"`, `"list"`, `"function"`, or `"null"` |
 
+### Modules [WIP]
+
+Imported with `mod`
+
+Modules help the code run with more capabilities than built-in functions and communicate better with the computer/hardware its working on.
+
+**Available Modules**
+
+- **`system`** — OS/env/process management (like Python's `sys`)
+- **`io`** — File I/O and subprocess (like Python's `os` + `subprocess`)
+- **`base`** — Platform information (like Python's `platform`)
+
 ---
 
 ## VSCode Extension
@@ -445,13 +458,9 @@ code --install-extension veyra-0.1.0.vsix
 ```
 veyra/
 ├── Cargo.toml
-├── src/
-│   └── main.rs              # the entire interpreter (~1500 lines)
-├── examples/
-│   ├── hello.vey
-│   ├── fib.vey
-│   └── full_test.vey
-├── veyra-vscode             # VSCode syntax extension
+├── src                # the entire interpreter (~1850 lines)
+├── examples           # Test codes used
+├── veyra-vscode       # VSCode syntax extension
 └── README.md
 ```
 
@@ -464,12 +473,11 @@ Veyra is intentionally small. The following are **not** supported (yet):
 - Dictionary / map type
 - List mutation helpers (`push`, `pop`, `slice`, `map`, `filter`)
 - Exception handling (`try` / `catch`)
-- Module / import system
-- File I/O
-- Standard library beyond the handful of built-ins
+- Extended standard library (`math`, `str`, `time`, `json`, `random`, etc.)
 - String interpolation (`f"hello {name}"`)
 - Pattern matching
 - Real closures (functions capture no outer state — this is a deliberate design choice)
+- User-defined modules in `.veymod` files _(planned)_
 
 Contributions and ideas are welcome.
 
