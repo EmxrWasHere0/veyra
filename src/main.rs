@@ -36,11 +36,24 @@ fn kw<'a>(line: &'a str, word: &str) -> Option<&'a str> {
     }
 }
 
+/// If the line starts with `@label`, returns (label, rest_of_line_without_label).
+fn parse_label(line: &str) -> Option<(String, &str)> {
+    let line = line.trim_start();
+    let rest = line.strip_prefix('@')?;
+    let end = rest.find(char::is_whitespace).unwrap_or(rest.len());
+    let name = &rest[..end];
+    if !is_ident(name) { return None; }
+    Some((name.to_string(), rest[end..].trim_start()))
+}
+
+/// Checks if a line (after optional label) starts a block.
 fn is_block_start(t: &str) -> bool {
-    kw(t, "if").is_some()
-        || kw(t, "repeat").is_some()
-        || kw(t, "add").is_some()
-        || kw(t, "test").is_some()
+    let effective = parse_label(t).map(|(_, r)| r).unwrap_or(t);
+    kw(effective, "if").is_some()
+        || kw(effective, "repeat").is_some()
+        || kw(effective, "add").is_some()
+        || kw(effective, "test").is_some()
+        || kw(effective, "try").is_some()
 }
 
 fn strip_comment(line: &str) -> &str {
@@ -56,7 +69,6 @@ fn strip_comment(line: &str) -> &str {
     line
 }
 
-/// Splits by top-level commas (ignoring commas inside parens/brackets/strings).
 pub fn split_top_level_commas(src: &str) -> Vec<String> {
     let ch: Vec<char> = src.chars().collect();
     let mut parts = Vec::new();
@@ -133,7 +145,7 @@ fn split_assignment(src: &str) -> Option<(String, String, String)> {
 
 fn split_index_target(lhs: &str) -> Option<(String, String)> {
     let lhs = lhs.trim();
-    if lhs.starts_with('[') { return None; } // this is destructuring, not index assign
+    if lhs.starts_with('[') { return None; }
     let open = lhs.strip_suffix(']')?.rfind('[')?;
     let name = lhs[..open].trim();
     let index = lhs[open + 1..lhs.len() - 1].trim();
@@ -141,15 +153,12 @@ fn split_index_target(lhs: &str) -> Option<(String, String)> {
     else { None }
 }
 
-/* ------- Destructuring patterns ------- */
-
 #[derive(Debug)]
 pub enum Pattern {
     Name(String),
     Rest(String),
 }
 
-/// Parses `[a, b, ...c]` into patterns. Returns None if not a destructuring target.
 fn parse_destructure(src: &str) -> Option<Vec<Pattern>> {
     let s = src.trim();
     if !s.starts_with('[') || !s.ends_with(']') { return None; }
@@ -269,31 +278,64 @@ fn parse_mod_command(rest: &str) -> Result<(String, Option<ImportKind>), String>
     Ok((rest.to_string(), None))
 }
 
+/// Parses `stop` / `stop @label` / `fwd` / `fwd @label`.
+/// Returns (kind, Option<label>) where kind is "stop" or "fwd".
+fn parse_flow_command(s: &str) -> Option<(&'static str, Option<String>)> {
+    let s = s.trim();
+    if s == "stop" { return Some(("stop", None)); }
+    if s == "fwd" { return Some(("fwd", None)); }
+    if let Some(rest) = s.strip_prefix("stop ") {
+        let rest = rest.trim();
+        if let Some(label) = rest.strip_prefix('@') {
+            if is_ident(label) { return Some(("stop", Some(label.to_string()))); }
+        }
+    }
+    if let Some(rest) = s.strip_prefix("fwd ") {
+        let rest = rest.trim();
+        if let Some(label) = rest.strip_prefix('@') {
+            if is_ident(label) { return Some(("fwd", Some(label.to_string()))); }
+        }
+    }
+    None
+}
+
 /* ============================ EXECUTION =========================== */
 
+/// `active_loop`: the label (if any) of the innermost enclosing loop.
+///                None means we're inside an unlabeled loop or no loop.
+///                We also track whether we're in ANY loop separately via `in_loop_count`.
 pub fn run(
     lines: &[Line],
     from: usize,
     to: usize,
     rt: &mut Runtime,
-    in_loop: bool,
+    in_loop: Option<&LoopContext>,
 ) -> Result<Flow, String> {
     let mut i = from;
 
     while i < to {
-        let s = lines[i].text.as_str();
+        let raw = lines[i].text.as_str();
         let no = lines[i].number;
         let err = move |e: String| format!("{}: {}", no, e);
+
+        // Strip optional label from the beginning
+        let (line_label, s): (Option<String>, &str) = match parse_label(raw) {
+            Some((lbl, rest)) => (Some(lbl), rest),
+            None => (None, raw),
+        };
 
         if s.is_empty() { i += 1; continue; }
         if s == "end" { return Err(err("Unexpected 'end'".into())); }
         if kw(s, "else").is_some() { return Err(err("Unexpected 'else'".into())); }
+        if kw(s, "catch").is_some() { return Err(err("Unexpected 'catch'".into())); }
 
-        if s == "stop" || s == "fwd" {
-            if !in_loop {
-                return Err(err(format!("'{}' can only be used inside a loop", s)));
+        // Flow commands: stop / fwd / stop @label / fwd @label
+        if let Some((kind, label)) = parse_flow_command(s) {
+            if in_loop.is_none() {
+                return Err(err(format!("'{}' can only be used inside a loop", kind)));
             }
-            return Ok(if s == "stop" { Flow::Stop } else { Flow::Forward });
+            let flow = if kind == "stop" { Flow::Stop(label) } else { Flow::Forward(label) };
+            return Ok(flow);
         }
 
         if let Some(rest) = kw(s, "return") {
@@ -324,12 +366,7 @@ pub fn run(
 
         if let Some(rest) = kw(s, "test") {
             let end = matching_end(lines, i)?;
-
-            if !rt.test_mode {
-                // Normal çalıştırma — testi atla
-                i = end + 1;
-                continue;
-            }
+            if !rt.test_mode { i = end + 1; continue; }
 
             let test_name = if rest.is_empty() {
                 format!("test at line {}", no)
@@ -338,7 +375,7 @@ pub fn run(
             };
 
             rt.push_scope();
-            let test_result = run(lines, i + 1, end, rt, false);
+            let test_result = run(lines, i + 1, end, rt, None);
             rt.pop_scope();
 
             match test_result {
@@ -355,6 +392,77 @@ pub fn run(
 
             i = end + 1;
             continue;
+        }
+
+        // try / catch block
+        if let Some(_) = kw(s, "try") {
+            let end = matching_end(lines, i)?;
+            // Find top-level `catch` within this try block
+            let mut depth = 0usize;
+            let mut catch_line: Option<usize> = None;
+            for j in i + 1..end {
+                let t = lines[j].text.as_str();
+                let (_, tt) = match parse_label(t) {
+                    Some((lbl, rest)) => (Some(lbl), rest),
+                    None => (None, t),
+                };
+                if is_block_start(tt) { depth += 1; }
+                else if tt == "end" { depth = depth.saturating_sub(1); }
+                else if depth == 0 && kw(tt, "catch").is_some() {
+                    catch_line = Some(j);
+                    break;
+                }
+            }
+
+            let (try_end, catch_info) = match catch_line {
+                Some(cl) => {
+                    let tail = &lines[cl].text;
+                    let catch_rest = kw(tail, "catch").unwrap_or("");
+                    let err_var = if catch_rest.is_empty() { None }
+                        else {
+                            let name = catch_rest.trim();
+                            if !is_ident(name) {
+                                return Err(err(format!("Invalid catch variable: {}", name)));
+                            }
+                            Some(name.to_string())
+                        };
+                    (cl, Some((cl + 1, err_var)))
+                }
+                None => (end, None),
+            };
+
+            rt.push_scope();
+            let try_result = run(lines, i + 1, try_end, rt, in_loop);
+            rt.pop_scope();
+
+            match try_result {
+                Ok(Flow::Normal) => {
+                    // try succeeded, skip catch
+                    i = end + 1;
+                    continue;
+                }
+                Ok(flow) => {
+                    // return/stop/fwd propagates up through try
+                    return Ok(flow);
+                }
+                Err(e) => {
+                    if let Some((catch_start, err_var)) = catch_info {
+                        rt.push_scope();
+                        if let Some(var) = err_var {
+                            rt.assign(&var, Value::Text(e)).map_err(err)?;
+                        }
+                        let catch_result = run(lines, catch_start, end, rt, in_loop);
+                        rt.pop_scope();
+                        match catch_result {
+                            Ok(Flow::Normal) => { i = end + 1; continue; }
+                            Ok(flow) => return Ok(flow),
+                            Err(e2) => return Err(e2),
+                        }
+                    } else {
+                        return Err(e);
+                    }
+                }
+            }
         }
 
         if let Some(rest) = kw(s, "say") {
@@ -447,12 +555,41 @@ pub fn run(
         if let Some(rest) = kw(s, "repeat") {
             let end = matching_end(lines, i)?;
             let body_start = i + 1;
+            let my_label = line_label.clone();
+
+            let ctx = LoopContext { label: my_label.clone() };
 
             let run_body = |rt: &mut Runtime| -> Result<Flow, String> {
                 rt.push_scope();
-                let r = run(lines, body_start, end, rt, true);
+                let r = run(lines, body_start, end, rt, Some(&ctx));
                 rt.pop_scope();
                 r
+            };
+
+            // Helper to decide what to do with a Stop/Forward signal
+            // Returns Some(Flow) to re-propagate, or None to consume locally.
+            let handle_signal = |flow: Flow| -> (bool, Option<Flow>) {
+                // (should_break_loop, propagate_flow)
+                match flow {
+                    Flow::Normal => (false, None),
+                    Flow::Return => (true, Some(Flow::Return)),
+                    Flow::Stop(None) => (true, None), // break innermost
+                    Flow::Forward(None) => (false, None), // continue innermost
+                    Flow::Stop(Some(ref lbl)) => {
+                        if my_label.as_deref() == Some(lbl.as_str()) {
+                            (true, None) // this loop is the target
+                        } else {
+                            (true, Some(flow.clone())) // propagate upward
+                        }
+                    }
+                    Flow::Forward(Some(ref lbl)) => {
+                        if my_label.as_deref() == Some(lbl.as_str()) {
+                            (false, None) // this loop is the target; continue
+                        } else {
+                            (true, Some(flow.clone())) // propagate
+                        }
+                    }
+                }
             };
 
             if let Some(cond) = kw(rest, "while") {
@@ -460,11 +597,10 @@ pub fn run(
                 while rt.eval(cond).map_err(err)?.truthy() {
                     if turns >= LOOP_LIMIT { return Err(err("Loop safety limit reached".into())); }
                     turns += 1;
-                    match run_body(rt)? {
-                        Flow::Stop => break,
-                        Flow::Return => return Ok(Flow::Return),
-                        _ => {}
-                    }
+                    let flow = run_body(rt)?;
+                    let (should_break, propagate) = handle_signal(flow);
+                    if let Some(f) = propagate { return Ok(f); }
+                    if should_break { break; }
                 }
             } else {
                 let n = rt.eval(rest).map_err(err)?.number().map_err(err)?;
@@ -472,11 +608,10 @@ pub fn run(
                     return Err(err("repeat requires an integer between 0 and 1,000,000".into()));
                 }
                 for _ in 0..n as usize {
-                    match run_body(rt)? {
-                        Flow::Stop => break,
-                        Flow::Return => return Ok(Flow::Return),
-                        _ => {}
-                    }
+                    let flow = run_body(rt)?;
+                    let (should_break, propagate) = handle_signal(flow);
+                    if let Some(f) = propagate { return Ok(f); }
+                    if should_break { break; }
                 }
             }
             i = end + 1; continue;
@@ -485,7 +620,6 @@ pub fn run(
         if let Some((target, op, rhs)) = split_assignment(s) {
             let value = rt.eval(&rhs).map_err(err)?;
 
-            // Destructuring: [a, b, ...c] = ...
             if let Some(patterns) = parse_destructure(&target) {
                 if op != "=" {
                     return Err(err("Only '=' is supported with destructuring".into()));
@@ -494,7 +628,6 @@ pub fn run(
                 i += 1; continue;
             }
 
-            // Indexed assignment: a[0] = ...
             if let Some((name, idx_expr)) = split_index_target(&target) {
                 if op != "=" {
                     return Err(err("Only '=' is supported on list elements".into()));
@@ -504,7 +637,6 @@ pub fn run(
                 i += 1; continue;
             }
 
-            // Simple assignment
             if !is_ident(&target) {
                 return Err(err(format!("Invalid assignment target: {}", target)));
             }
@@ -513,7 +645,7 @@ pub fn run(
                 value
             } else if op == "?=" {
                 if rt.is_filled(&target) {
-                    i += 1; continue; // kanal/değişken dolu, dokunma
+                    i += 1; continue;
                 }
                 value
             } else {
@@ -531,6 +663,11 @@ pub fn run(
     }
 
     Ok(Flow::Normal)
+}
+
+/// Context passed to `run()` indicating the innermost loop (if any) and its label.
+pub struct LoopContext {
+    pub label: Option<String>,
 }
 
 /* ============================== MAIN ============================== */
@@ -551,11 +688,7 @@ fn main() {
         }
     }
 
-    let Some(filename) = filename else {
-        print_help();
-        return;
-    };
-
+    let Some(filename) = filename else { print_help(); return; };
     run_file(filename, test_mode);
 }
 
@@ -576,7 +709,7 @@ fn run_file(filename: &str, test_mode: bool) {
         println!("Running tests in {}...\n", filename);
     }
 
-    if let Err(e) = run(&lines, 0, lines.len(), &mut rt, false) {
+    if let Err(e) = run(&lines, 0, lines.len(), &mut rt, None) {
         eprintln!("Veyra error: {}", e);
         process::exit(1);
     }
@@ -586,9 +719,7 @@ fn run_file(filename: &str, test_mode: bool) {
         let total = stats.passed + stats.failed;
         println!();
         println!("Results: {} passed, {} failed, {} total", stats.passed, stats.failed, total);
-        if stats.failed > 0 {
-            process::exit(1);
-        }
+        if stats.failed > 0 { process::exit(1); }
     }
 }
 

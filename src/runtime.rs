@@ -77,6 +77,10 @@ impl Value {
             Ok(n as usize)
         }
     }
+
+    pub fn is_null(&self) -> bool {
+        matches!(self, Value::Null)
+    }
 }
 
 impl fmt::Display for Value {
@@ -104,6 +108,7 @@ impl fmt::Display for Value {
 
 pub fn binop(op: &str, a: Value, b: Value) -> Result<Value, String> {
     Ok(match op {
+        "??" => if a.is_null() { b } else { a },
         "or" => Value::Bool(a.truthy() || b.truthy()),
         "and" => Value::Bool(a.truthy() && b.truthy()),
         "==" => Value::Bool(a == b),
@@ -177,11 +182,12 @@ pub fn call_native(name: &str, args: Vec<Value>) -> Result<Value, String> {
     }
 }
 
-#[derive(Clone, Copy, PartialEq, Debug)]
+/// Control flow signals. Carries optional label for `stop @label`/`fwd @label`.
+#[derive(Clone, PartialEq, Debug)]
 pub enum Flow {
     Normal,
-    Stop,
-    Forward,
+    Stop(Option<String>),
+    Forward(Option<String>),
     Return,
 }
 
@@ -206,7 +212,6 @@ pub struct Runtime {
     pub loaded_modules: HashSet<String>,
     pub imported_names: HashMap<String, (String, String)>,
 
-    // Test mode
     pub test_mode: bool,
     pub test_stats: TestStats,
 }
@@ -286,7 +291,6 @@ impl Runtime {
         Ok(())
     }
 
-    /// Returns true if the channel/variable is "filled" for `?=` purposes.
     pub fn is_filled(&self, name: &str) -> bool {
         if self.is_const(name) {
             let channel = self.tag_of(name).unwrap_or_else(|| name.to_string());
@@ -332,8 +336,7 @@ impl Runtime {
 
     pub fn import_star(&mut self, mod_name: &str) -> Result<(), String> {
         let members = self.available_modules.get(mod_name)
-            .ok_or_else(|| format!("Unknown module: {}", mod_name))?
-            .members();
+            .ok_or_else(|| format!("Unknown module: {}", mod_name))?.members();
         for member in members {
             self.imported_names.insert(member.clone(), (mod_name.to_string(), member));
         }
@@ -382,14 +385,8 @@ impl Runtime {
         Err(format!("Undefined function: {}", name))
     }
 
-    pub fn is_loaded_module(&self, name: &str) -> bool {
-        self.loaded_modules.contains(name)
-    }
-
-    pub fn is_bare_import(&self, name: &str) -> bool {
-        self.imported_names.contains_key(name)
-    }
-
+    pub fn is_loaded_module(&self, name: &str) -> bool { self.loaded_modules.contains(name) }
+    pub fn is_bare_import(&self, name: &str) -> bool { self.imported_names.contains_key(name) }
     pub fn is_bare_import_function(&self, name: &str) -> bool {
         if let Some((mod_name, member)) = self.imported_names.get(name) {
             if let Some(m) = self.available_modules.get(mod_name) {
@@ -456,10 +453,11 @@ fn call_inner(
         }
     }
 
-    match run(&func.body, 0, func.body.len(), rt, false)? {
+    match run(&func.body, 0, func.body.len(), rt, None)? {
         Flow::Return => Ok(rt.return_value.take().unwrap_or(Value::Null)),
         Flow::Normal => Ok(rt.last_value.take().unwrap_or(Value::Null)),
-        Flow::Stop | Flow::Forward => Err("'stop'/'fwd' can only be used inside a loop".into()),
+        Flow::Stop(_) | Flow::Forward(_) =>
+            Err("'stop'/'fwd' can only be used inside a loop".into()),
     }
 }
 
@@ -529,7 +527,6 @@ impl<'a> Parser<'a> {
     }
 
     fn peek(&self) -> &Tok { &self.toks[self.pos] }
-
     fn take(&mut self) -> Tok {
         let t = self.toks[self.pos].clone();
         if !matches!(t, Tok::Eof) { self.pos += 1; }
@@ -538,9 +535,12 @@ impl<'a> Parser<'a> {
 
     fn prec(op: &str) -> u8 {
         match op {
-            "or" => 1, "and" => 2,
-            "==" | "!=" | "<" | ">" | "<=" | ">=" => 3,
-            "+" | "-" => 4, "*" | "/" | "%" => 5,
+            "??" => 1,
+            "or" => 2,
+            "and" => 3,
+            "==" | "!=" | "<" | ">" | "<=" | ">=" => 4,
+            "+" | "-" => 5,
+            "*" | "/" | "%" => 6,
             _ => 0,
         }
     }
@@ -702,9 +702,9 @@ impl<'a> Parser<'a> {
                 self.rt.get(&name).ok_or_else(|| format!("Undefined variable: {}", name))
             }
 
-            Tok::Op(op) if op == "-" => Ok(Value::Num(-self.expr(6)?.number()?)),
-            Tok::Op(op) if op == "+" => Ok(Value::Num(self.expr(6)?.number()?)),
-            Tok::Op(op) if op == "not" || op == "!" => Ok(Value::Bool(!self.expr(6)?.truthy())),
+            Tok::Op(op) if op == "-" => Ok(Value::Num(-self.expr(7)?.number()?)),
+            Tok::Op(op) if op == "+" => Ok(Value::Num(self.expr(7)?.number()?)),
+            Tok::Op(op) if op == "not" || op == "!" => Ok(Value::Bool(!self.expr(7)?.truthy())),
             Tok::FuncKw => self.parse_lambda(),
             Tok::LParen => {
                 let v = self.expr(1)?;

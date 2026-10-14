@@ -11,11 +11,12 @@ pub enum Tok {
     RBracket,
     Comma,
     Question,
-    QuestionEq,   // NEW: ?=
+    QuestionEq,
     Spread,
     Arrow,
     FuncKw,
     Dot,
+    At,
     Eof,
 }
 
@@ -46,7 +47,6 @@ pub fn lex(input: &str) -> Result<Vec<Tok>, String> {
             continue;
         }
 
-        // Spread ...
         if c == '.'
             && matches!(chars.get(i + 1), Some('.'))
             && matches!(chars.get(i + 2), Some('.'))
@@ -56,20 +56,25 @@ pub fn lex(input: &str) -> Result<Vec<Tok>, String> {
             continue;
         }
 
-        // Number starting with dot
         if c == '.' && matches!(chars.get(i + 1), Some(d) if d.is_ascii_digit()) {
             out.push(read_number(&chars, &mut i)?);
             continue;
         }
 
-        // Dot (member access)
         if c == '.' {
             out.push(Tok::Dot);
             i += 1;
             continue;
         }
 
-        // ?= (conditional assignment)
+        // ?? (null-coalesce)
+        if c == '?' && matches!(chars.get(i + 1), Some('?')) {
+            out.push(Tok::Op("??".into()));
+            i += 2;
+            continue;
+        }
+
+        // ?=
         if c == '?' && matches!(chars.get(i + 1), Some('=')) {
             out.push(Tok::QuestionEq);
             i += 2;
@@ -83,7 +88,13 @@ pub fn lex(input: &str) -> Result<Vec<Tok>, String> {
             continue;
         }
 
-        // Two-char operators
+        // @ (label)
+        if c == '@' {
+            out.push(Tok::At);
+            i += 1;
+            continue;
+        }
+
         let pair: String = chars[i..(i + 2).min(chars.len())].iter().collect();
         if TWO_CHAR_OPS.contains(&pair.as_str()) {
             out.push(Tok::Op(pair));
@@ -112,15 +123,10 @@ pub fn lex(input: &str) -> Result<Vec<Tok>, String> {
 fn read_string(chars: &[char], i: &mut usize, quote: char) -> Result<Tok, String> {
     *i += 1;
     let mut value = String::new();
-
     while *i < chars.len() {
         let ch = chars[*i];
         *i += 1;
-
-        if ch == quote {
-            return Ok(Tok::Val(Value::Text(value)));
-        }
-
+        if ch == quote { return Ok(Tok::Val(Value::Text(value))); }
         if ch == '\\' && *i < chars.len() {
             let esc = chars[*i];
             *i += 1;
@@ -132,14 +138,12 @@ fn read_string(chars: &[char], i: &mut usize, quote: char) -> Result<Tok, String
             value.push(ch);
         }
     }
-
     Err("Unterminated string literal".into())
 }
 
 fn read_number(chars: &[char], i: &mut usize) -> Result<Tok, String> {
     let start = *i;
     let mut dot = false;
-
     while *i < chars.len() {
         match chars[*i] {
             d if d.is_ascii_digit() => *i += 1,
@@ -147,7 +151,6 @@ fn read_number(chars: &[char], i: &mut usize) -> Result<Tok, String> {
             _ => break,
         }
     }
-
     let text: String = chars[start..*i].iter().collect();
     text.parse::<f64>()
         .map(|n| Tok::Val(Value::Num(n)))
@@ -190,6 +193,7 @@ pub fn toks_to_source(toks: &[Tok]) -> String {
             Tok::Arrow => out.push_str("=>"),
             Tok::FuncKw => out.push_str("func"),
             Tok::Dot => out.push('.'),
+            Tok::At => out.push('@'),
             Tok::Eof => {}
         }
     }
