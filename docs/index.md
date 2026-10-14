@@ -20,11 +20,8 @@ connect(port)
 
 ## Table of Contents
 
-Table of contents are given in the Naviagtion tab.
-
 ```{toctree}
 :maxdepth: 3
-:caption: Documentation
 
 why-veyra
 features
