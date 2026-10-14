@@ -14,7 +14,7 @@ Syntax highlighting, auto-indentation, code folding, and snippet support for the
 
 ## Installation
 
-Extension should be already packed at [veyra-0.1.0.vsix](veyra-0.1.0.vsix). If you want to modify the extension and install it follow these steps:
+Extension should be already packed at [veyra-0.1.3.vsix](veyra-0.1.3.vsix). If you want to modify the extension and install it follow these steps:
 
 ```bash
 cd veyra-vscode
