@@ -36,10 +36,12 @@ connect(port)
   - [Lists](#lists)
   - [Functions](#functions)
   - [Built-ins](#built-ins)
-  - [Modules [WIP]](#modules-wip)
+  - [Error Handling](#error-handling)
+  - [Modules](#modules)
 - [VSCode Extension](#vscode-extension)
 - [Project Layout](#project-layout)
 - [Limitations](#limitations)
+- [Future Plans](#future-plans)
 - [License](#license)
 
 ---
@@ -63,7 +65,13 @@ This is the "channel" mechanism — a built-in override pattern that works like 
 - **Closed-scope functions** — no accidental access to outer variables
 - **Channels** — the `? ` operator for runtime overrides
 - **Line-based syntax** — no significant whitespace, blocks closed with `end`
-- **Zero dependencies** — the interpreter is pure Rust, under 1500 lines
+- **Zero dependencies** — Implemented in Rust with zero external dependencies
+- **Multiple return values** and list destructuring, including rest elements
+- **Conditional assignment** with `?=`
+- **Null coalescing** with `??`
+- **Labeled loop control** for targeting outer loops
+- **Inline testing** with `test` blocks and `assert`
+- **Built-in system and I/O modules** for environment, file, directory, and process operations
 
 ---
 
@@ -271,15 +279,17 @@ say age + 1
 
 ### Operators
 
-| Category     | Operators          |
-| ------------ | ------------------ |
-| Arithmetic   | `+ - * / %`        |
-| Comparison   | `== != < > <= >=`  |
-| Logical      | `and or not !`     |
-| Assignment   | `= += -= *= /= %=` |
-| Channel      | `?`                |
-| Lambda arrow | `=>`               |
-| Spread       | `...`              |
+| Category               | Operators          |
+| ---------------------- | ------------------ |
+| Arithmetic             | `+ - * / %`        |
+| Comparison             | `== != < > <= >=`  |
+| Logical                | `and or not !`     |
+| Assignment             | `= += -= *= /= %=` |
+| Channel                | `?`                |
+| Lambda arrow           | `=>`               |
+| Spread                 | `...`              |
+| Conditional assignment | `?=`               |
+| Null coalescing        | `??`               |
 
 `+` also concatenates strings: `"n=" + 42` → `"n=42"`.
 
@@ -328,6 +338,22 @@ end
 `stop` and `fwd` are **only valid inside loops**. In functions, use `return`.
 
 Safety limit: **1,000,000 iterations** per loop.
+
+**Labeled loops:**
+
+Labels let you control an outer loop from inside a nested loop.
+
+```veyra
+@outer repeat 3
+    repeat 3
+        stop @outer
+    end
+end
+```
+
+Use `stop @label` to exit the labeled loop and `fwd @label` to continue with the next iteration of that loop.
+
+See [`examples/stage2_test.vy`](examples/stage2_test.vy) for more examples.
 
 ### Lists
 
@@ -417,6 +443,37 @@ Only parameters, locals, other `add` functions (globally registered), and built-
 
 Call stack limit: **1,000** frames.
 
+### Error Handling
+
+Veyra supports `try` / `catch` blocks for handling runtime errors.
+
+```veyra
+try
+    x = 10 / 0
+catch err
+    say "caught: " + err
+end
+```
+
+The catch variable is optional:
+
+```veyra
+try
+    x = undefined_variable
+catch
+    say "Something went wrong"
+end
+```
+
+You can also use `??` to provide a fallback when a value is `null`.
+
+```veyra
+value = null
+say value ?? "fallback"
+```
+
+See [`examples/stage2_test.vy`](examples/stage2_test.vy) for nested error handling and additional examples.
+
 ### Built-ins
 
 | Function  | Description                                                                 |
@@ -426,17 +483,41 @@ Call stack limit: **1,000** frames.
 | `text(x)` | Convert to text                                                             |
 | `type(x)` | Returns `"number"`, `"text"`, `"bool"`, `"list"`, `"function"`, or `"null"` |
 
-### Modules [WIP]
+### Modules
 
-Imported with `mod`
+Veyra includes built-in modules for interacting with the operating system, environment, files, directories, and external processes.
 
-Modules help the code run with more capabilities than built-in functions and communicate better with the computer/hardware its working on.
+**Available modules:**
 
-**Available Modules**
+- **`system`** — Operating system information, environment variables, command-line arguments, and process exit control.
+- **`io`** — File and directory operations, working directory management, and external command execution.
+- **`base`** — Basic system information, including hostname, username, home directory, process ID, and CPU core count.
 
-- **`system`** — OS/env/process management (like Python's `sys`)
-- **`io`** — File I/O and subprocess (like Python's `os` + `subprocess`)
-- **`base`** — Platform information (like Python's `platform`)
+Import a module with `mod`:
+
+```veyra
+mod system
+mod io
+```
+
+Import all exported names from `base`:
+
+```veyra
+mod base *
+say hostname()
+say pid()
+```
+
+Import selected names:
+
+```veyra
+mod system [get_env, args]
+say get_env("HOME")
+```
+
+For more examples, see [`examples/mod_test.vy`](examples/mod_test.vy).
+
+**Note:** Functions that access files, environment variables, or external processes interact with the host system.
 
 ---
 
@@ -458,9 +539,18 @@ code --install-extension veyra-0.1.0.vsix
 ```
 veyra/
 ├── Cargo.toml
-├── src                # the entire interpreter (~1850 lines)
-├── examples           # Test codes used
-├── veyra-vscode       # VSCode syntax extension
+├── src/
+│   ├── main.rs
+│   ├── lexer.rs
+│   ├── runtime.rs
+│   └── modules/
+│       ├── base.rs
+│       ├── io.rs
+│       ├── mod.rs
+│       └── system.rs
+├── examples/
+├── media/
+├── veyra-vscode/
 └── README.md
 ```
 
@@ -472,7 +562,6 @@ Veyra is intentionally small. The following are **not** supported (yet):
 
 - Dictionary / map type
 - List mutation helpers (`push`, `pop`, `slice`, `map`, `filter`)
-- Exception handling (`try` / `catch`)
 - Extended standard library (`math`, `str`, `time`, `json`, `random`, etc.)
 - String interpolation (`f"hello {name}"`)
 - Pattern matching
@@ -483,6 +572,29 @@ Contributions and ideas are welcome.
 
 ---
 
+## Future Plans
+
+Veyra is an experimental language, and there is still plenty of room to grow. Here are some of the features and improvements planned for future releases.
+
+- [ ] **Improved error messages** — Clearer runtime errors with line numbers and source context.
+- [ ] **Standard library expansion** — Additional modules for math, strings, time, JSON, and random number generation.
+- [ ] **Better module system** — Support for importing user-defined modules from separate files.
+- [ ] **List utilities** — Built-in helpers for common operations such as `push`, `pop`, `slice`, `map`, and `filter`.
+- [ ] **Improved testing tools** — Better test reporting and a dedicated way to run test blocks.
+- [ ] **Language documentation** — Comprehensive documentation covering syntax, built-ins, modules, and examples.
+- [ ] **VS Code improvements** — Better diagnostics, autocomplete, and editor integration.
+- [ ] **Performance improvements** — Optimize the interpreter and runtime as the language grows.
+- [ ] **More examples and tutorials** — Practical projects to help users learn Veyra.
+- [ ] **Hybrid Language** — Support both interpreted execution and compilation, allowing Veyra programs to run through the interpreter or be compiled into standalone executables.
+
+These plans may change as Veyra evolves. Contributions, suggestions, and feature requests are welcome!
+
+---
+
 ## License
 
 GNU GPLv3 © 2026 — See [LICENSE](LICENSE) for details.
+
+---
+
+This project contains support by variable AI models.
