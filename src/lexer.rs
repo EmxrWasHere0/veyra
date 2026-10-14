@@ -11,6 +11,7 @@ pub enum Tok {
     RBracket,
     Comma,
     Question,
+    QuestionEq,   // NEW: ?=
     Spread,
     Arrow,
     FuncKw,
@@ -28,17 +29,13 @@ pub fn lex(input: &str) -> Result<Vec<Tok>, String> {
     while i < chars.len() {
         let c = chars[i];
 
-        if c.is_whitespace() {
-            i += 1;
-            continue;
-        }
+        if c.is_whitespace() { i += 1; continue; }
 
         if c == '"' || c == '\'' {
             out.push(read_string(&chars, &mut i, c)?);
             continue;
         }
 
-        // Numbers (digit or dot-digit)
         if c.is_ascii_digit() {
             out.push(read_number(&chars, &mut i)?);
             continue;
@@ -59,7 +56,7 @@ pub fn lex(input: &str) -> Result<Vec<Tok>, String> {
             continue;
         }
 
-        // Number starting with dot: .5 etc
+        // Number starting with dot
         if c == '.' && matches!(chars.get(i + 1), Some(d) if d.is_ascii_digit()) {
             out.push(read_number(&chars, &mut i)?);
             continue;
@@ -72,7 +69,14 @@ pub fn lex(input: &str) -> Result<Vec<Tok>, String> {
             continue;
         }
 
-        // Arrow =>
+        // ?= (conditional assignment)
+        if c == '?' && matches!(chars.get(i + 1), Some('=')) {
+            out.push(Tok::QuestionEq);
+            i += 2;
+            continue;
+        }
+
+        // =>
         if c == '=' && matches!(chars.get(i + 1), Some('>')) {
             out.push(Tok::Arrow);
             i += 2;
@@ -87,7 +91,6 @@ pub fn lex(input: &str) -> Result<Vec<Tok>, String> {
             continue;
         }
 
-        // Single-char tokens
         let tok = match c {
             '(' => Tok::LParen,
             ')' => Tok::RParen,
@@ -122,9 +125,7 @@ fn read_string(chars: &[char], i: &mut usize, quote: char) -> Result<Tok, String
             let esc = chars[*i];
             *i += 1;
             value.push(match esc {
-                'n' => '\n',
-                't' => '\t',
-                'r' => '\r',
+                'n' => '\n', 't' => '\t', 'r' => '\r',
                 other => other,
             });
         } else {
@@ -142,10 +143,7 @@ fn read_number(chars: &[char], i: &mut usize) -> Result<Tok, String> {
     while *i < chars.len() {
         match chars[*i] {
             d if d.is_ascii_digit() => *i += 1,
-            '.' if !dot => {
-                dot = true;
-                *i += 1;
-            }
+            '.' if !dot => { dot = true; *i += 1; }
             _ => break,
         }
     }
@@ -175,9 +173,7 @@ fn read_ident(chars: &[char], i: &mut usize) -> Tok {
 pub fn toks_to_source(toks: &[Tok]) -> String {
     let mut out = String::new();
     for t in toks {
-        if !out.is_empty() {
-            out.push(' ');
-        }
+        if !out.is_empty() { out.push(' '); }
         match t {
             Tok::Val(Value::Text(s)) => out.push_str(&format!("{:?}", s)),
             Tok::Val(v) => out.push_str(&v.to_string()),
@@ -189,6 +185,7 @@ pub fn toks_to_source(toks: &[Tok]) -> String {
             Tok::RBracket => out.push(']'),
             Tok::Comma => out.push(','),
             Tok::Question => out.push('?'),
+            Tok::QuestionEq => out.push_str("?="),
             Tok::Spread => out.push_str("..."),
             Tok::Arrow => out.push_str("=>"),
             Tok::FuncKw => out.push_str("func"),

@@ -9,8 +9,6 @@ use crate::{run, Line};
 pub const LOOP_LIMIT: usize = 1_000_000;
 pub const CALL_LIMIT: usize = 1_000;
 
-/* ============================= VALUES ============================= */
-
 #[derive(Clone, Debug)]
 pub struct Param {
     pub name: String,
@@ -92,8 +90,7 @@ impl fmt::Display for Value {
             Value::Func(fun) => write!(f, "<func {}>", fun.name),
             Value::Native(n) => write!(f, "<native {}>", n),
             Value::List(items) => {
-                let body: Vec<String> = items
-                    .iter()
+                let body: Vec<String> = items.iter()
                     .map(|v| match v {
                         Value::Text(t) => format!("{:?}", t),
                         _ => v.to_string(),
@@ -136,8 +133,6 @@ pub fn binop(op: &str, a: Value, b: Value) -> Result<Value, String> {
         _ => return Err(format!("Unsupported operator: {}", op)),
     })
 }
-
-/* =========================== BUILT-INS ============================ */
 
 pub const NATIVES: [&str; 4] = ["len", "num", "text", "type"];
 
@@ -182,14 +177,19 @@ pub fn call_native(name: &str, args: Vec<Value>) -> Result<Value, String> {
     }
 }
 
-/* ============================ RUNTIME ============================= */
-
 #[derive(Clone, Copy, PartialEq, Debug)]
 pub enum Flow {
     Normal,
     Stop,
     Forward,
     Return,
+}
+
+#[derive(Default, Debug)]
+pub struct TestStats {
+    pub passed: usize,
+    pub failed: usize,
+    pub failures: Vec<String>,
 }
 
 pub struct Runtime {
@@ -202,10 +202,13 @@ pub struct Runtime {
     pub return_value: Option<Value>,
     pub last_value: Option<Value>,
 
-    // Module system
     available_modules: HashMap<String, Box<dyn VeyraModule>>,
     pub loaded_modules: HashSet<String>,
-    pub imported_names: HashMap<String, (String, String)>, // bare name -> (module, member)
+    pub imported_names: HashMap<String, (String, String)>,
+
+    // Test mode
+    pub test_mode: bool,
+    pub test_stats: TestStats,
 }
 
 impl Runtime {
@@ -222,6 +225,8 @@ impl Runtime {
             available_modules: modules::builtin_modules(),
             loaded_modules: HashSet::new(),
             imported_names: HashMap::new(),
+            test_mode: false,
+            test_stats: TestStats::default(),
         }
     }
 
@@ -250,20 +255,6 @@ impl Runtime {
     }
 
     pub fn get(&self, name: &str) -> Option<Value> {
-        // Check if it's a bare-imported module member
-        if let Some((mod_name, member)) = self.imported_names.get(name) {
-            if let Some(m) = self.available_modules.get(mod_name) {
-                if m.is_function(member) {
-                    // Cannot return a function value for module functions;
-                    // they are called via finish_module_call or as bare names.
-                    // For now, return null — actual calls are handled in parser.
-                    return Some(Value::Null); // placeholder
-                } else {
-                    return m.get_value(member);
-                }
-            }
-        }
-
         if let Some(v) = self.scopes.iter().rev().find_map(|s| s.get(name)) {
             return Some(v.clone());
         }
@@ -295,6 +286,16 @@ impl Runtime {
         Ok(())
     }
 
+    /// Returns true if the channel/variable is "filled" for `?=` purposes.
+    pub fn is_filled(&self, name: &str) -> bool {
+        if self.is_const(name) {
+            let channel = self.tag_of(name).unwrap_or_else(|| name.to_string());
+            self.channels.contains_key(&channel)
+        } else {
+            self.get(name).is_some()
+        }
+    }
+
     pub fn set_index(&mut self, name: &str, idx: usize, value: Value) -> Result<(), String> {
         if self.is_const(name) {
             return Err(format!("Cannot modify elements of constant '{}'", name));
@@ -321,8 +322,6 @@ impl Runtime {
         Parser::new(lex(src)?, self).parse()
     }
 
-    // ---- Module system ----
-
     pub fn load_module(&mut self, name: &str) -> Result<(), String> {
         if !self.available_modules.contains_key(name) {
             return Err(format!("Unknown module: {}", name));
@@ -332,11 +331,9 @@ impl Runtime {
     }
 
     pub fn import_star(&mut self, mod_name: &str) -> Result<(), String> {
-        let members = self.available_modules
-            .get(mod_name)
+        let members = self.available_modules.get(mod_name)
             .ok_or_else(|| format!("Unknown module: {}", mod_name))?
             .members();
-
         for member in members {
             self.imported_names.insert(member.clone(), (mod_name.to_string(), member));
         }
@@ -344,10 +341,8 @@ impl Runtime {
     }
 
     pub fn import_selective(&mut self, mod_name: &str, names: &[String]) -> Result<(), String> {
-        let m = self.available_modules
-            .get(mod_name)
+        let m = self.available_modules.get(mod_name)
             .ok_or_else(|| format!("Unknown module: {}", mod_name))?;
-
         let available = m.members();
         for name in names {
             if !available.contains(name) {
@@ -359,31 +354,24 @@ impl Runtime {
     }
 
     pub fn module_get(&self, mod_name: &str, member: &str) -> Result<Value, String> {
-        let m = self.available_modules
-            .get(mod_name)
+        let m = self.available_modules.get(mod_name)
             .ok_or_else(|| format!("Module '{}' is not loaded", mod_name))?;
-
         if !self.loaded_modules.contains(mod_name) {
             return Err(format!("Module '{}' is not loaded (use: mod {})", mod_name, mod_name));
         }
-
         if m.is_function(member) {
             return Err(format!("{}.{} is a function, use {}.{}()", mod_name, member, mod_name, member));
         }
-
         m.get_value(member)
             .ok_or_else(|| format!("'{}' is not a member of module '{}'", member, mod_name))
     }
 
     pub fn module_call(&self, mod_name: &str, member: &str, args: Vec<Value>) -> Result<Value, String> {
-        let m = self.available_modules
-            .get(mod_name)
+        let m = self.available_modules.get(mod_name)
             .ok_or_else(|| format!("Module '{}' is not loaded", mod_name))?;
-
         if !self.loaded_modules.contains(mod_name) {
             return Err(format!("Module '{}' is not loaded (use: mod {})", mod_name, mod_name));
         }
-
         m.call(member, args)
     }
 
@@ -460,7 +448,6 @@ fn call_inner(
                 )),
             },
         };
-
         rt.scopes.last_mut().unwrap().insert(p.name.clone(), value);
         if !p.variadic {
             if let Some(t) = tag {
@@ -490,7 +477,6 @@ fn plan_values(func: &Function, args: Vec<Value>) -> Result<Vec<Option<Value>>, 
     let params = &func.params;
     let n = args.len();
     let mut out: Vec<Option<Value>> = vec![None; params.len()];
-
     match params.iter().position(|p| p.variadic) {
         None => {
             if n > params.len() {
@@ -514,7 +500,6 @@ fn plan_values(func: &Function, args: Vec<Value>) -> Result<Vec<Option<Value>>, 
 fn plan_tags(func: &Function, args: Vec<Option<String>>) -> Vec<Option<String>> {
     let params = &func.params;
     let mut out: Vec<Option<String>> = vec![None; params.len()];
-
     match params.iter().position(|p| p.variadic) {
         None => {
             for (i, t) in args.into_iter().take(params.len()).enumerate() { out[i] = t; }
@@ -583,7 +568,6 @@ impl<'a> Parser<'a> {
         if !matches!(self.take(), Tok::LParen) { return Err("Expected '('".into()); }
         let mut params: Vec<Param> = Vec::new();
         let mut variadic_seen = false;
-
         if matches!(self.peek(), Tok::RParen) { self.take(); return Ok(params); }
 
         loop {
@@ -643,7 +627,6 @@ impl<'a> Parser<'a> {
 
     fn expr(&mut self, min_prec: u8) -> Result<Value, String> {
         let mut left = self.primary()?;
-
         loop {
             if matches!(self.peek(), Tok::LParen) {
                 left = self.finish_call(left)?;
@@ -657,7 +640,6 @@ impl<'a> Parser<'a> {
                 left = self.finish_channel(left)?;
                 continue;
             }
-
             let op = match self.peek() { Tok::Op(o) => o.clone(), _ => break };
             let p = Self::prec(&op);
             if p == 0 || p < min_prec { break; }
@@ -665,7 +647,6 @@ impl<'a> Parser<'a> {
             let right = self.expr(p + 1)?;
             left = binop(&op, left, right)?;
         }
-
         Ok(left)
     }
 
@@ -674,23 +655,19 @@ impl<'a> Parser<'a> {
             Tok::Val(v) => Ok(v),
 
             Tok::Id(name) => {
-                // Module member access: module.member or module.func()
                 if matches!(self.peek(), Tok::Dot) && self.rt.is_loaded_module(&name) {
-                    self.take(); // consume '.'
+                    self.take();
                     let member = match self.take() {
                         Tok::Id(m) => m,
                         other => return Err(format!("Expected member name after '.', found: {:?}", other)),
                     };
-
-                    // If followed by '(' it's a function call
                     if matches!(self.peek(), Tok::LParen) {
-                        self.take(); // '('
+                        self.take();
                         let mut args = Vec::new();
                         if !matches!(self.peek(), Tok::RParen) {
                             loop {
                                 args.push(self.expr(1)?);
-                                if matches!(self.peek(), Tok::Comma) { self.take(); }
-                                else { break; }
+                                if matches!(self.peek(), Tok::Comma) { self.take(); } else { break; }
                             }
                         }
                         if !matches!(self.take(), Tok::RParen) {
@@ -698,20 +675,16 @@ impl<'a> Parser<'a> {
                         }
                         return self.rt.module_call(&name, &member, args);
                     }
-
-                    // Otherwise it's a constant
                     return self.rt.module_get(&name, &member);
                 }
 
-                // Bare imported function call
                 if matches!(self.peek(), Tok::LParen) && self.rt.is_bare_import_function(&name) {
-                    self.take(); // '('
+                    self.take();
                     let mut args = Vec::new();
                     if !matches!(self.peek(), Tok::RParen) {
                         loop {
                             args.push(self.expr(1)?);
-                            if matches!(self.peek(), Tok::Comma) { self.take(); }
-                            else { break; }
+                            if matches!(self.peek(), Tok::Comma) { self.take(); } else { break; }
                         }
                     }
                     if !matches!(self.take(), Tok::RParen) {
@@ -720,15 +693,13 @@ impl<'a> Parser<'a> {
                     return self.rt.bare_imported_call(&name, args);
                 }
 
-                // Bare imported constant
                 if self.rt.is_bare_import(&name) && !self.rt.is_bare_import_function(&name) {
                     if let Some((mod_name, member)) = self.rt.imported_names.get(&name) {
                         return self.rt.module_get(mod_name, member);
                     }
                 }
 
-                self.rt.get(&name)
-                    .ok_or_else(|| format!("Undefined variable: {}", name))
+                self.rt.get(&name).ok_or_else(|| format!("Undefined variable: {}", name))
             }
 
             Tok::Op(op) if op == "-" => Ok(Value::Num(-self.expr(6)?.number()?)),
