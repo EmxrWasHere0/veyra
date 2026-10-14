@@ -1,32 +1,62 @@
 {
   "mod import": {
     "prefix": "mod",
-    "body": ["mod ${1:name}"],
-    "description": "Load a module"
+    "body": ["mod ${1:name}", "$0"],
+    "description": "Import a Veyra module"
   },
   "mod star import": {
     "prefix": "mods",
-    "body": ["mod ${1:name} *"],
-    "description": "Star import a module"
+    "body": ["mod ${1:name} *", "$0"],
+    "description": "Import all available members from a module"
   },
   "mod selective import": {
     "prefix": "modi",
-    "body": ["mod ${1:name} [${2:member1}, ${3:member2}]"],
-    "description": "Selective import from a module"
+    "body": ["mod ${1:name} [${2:member1}, ${3:member2}]", "$0"],
+    "description": "Import selected members from a module"
   },
   "mod system": {
     "prefix": "modsys",
     "body": ["mod system", "$0"],
     "description": "Import the system module"
   },
+  "mod system star import": {
+    "prefix": "modsyss",
+    "body": ["mod system *", "$0"],
+    "description": "Import all system module members"
+  },
+  "mod system selective import": {
+    "prefix": "modsysi",
+    "body": ["mod system [${1:get_env}, ${2:args}]", "$0"],
+    "description": "Import selected members from the system module"
+  },
   "mod io": {
     "prefix": "modio",
     "body": ["mod io", "$0"],
     "description": "Import the io module"
   },
+  "mod io star import": {
+    "prefix": "modios",
+    "body": ["mod io *", "$0"],
+    "description": "Import all io module members"
+  },
+  "mod io selective import": {
+    "prefix": "modioi",
+    "body": ["mod io [${1:read}, ${2:write}]", "$0"],
+    "description": "Import selected members from the io module"
+  },
   "mod base": {
     "prefix": "modbase",
     "body": ["mod base", "$0"],
     "description": "Import the base module"
+  },
+  "mod base star import": {
+    "prefix": "modbases",
+    "body": ["mod base *", "$0"],
+    "description": "Import all base module members"
+  },
+  "mod base selective import": {
+    "prefix": "modbasei",
+    "body": ["mod base [${1:hostname}, ${2:pid}]", "$0"],
+    "description": "Import selected members from the base module"
   }
 }
