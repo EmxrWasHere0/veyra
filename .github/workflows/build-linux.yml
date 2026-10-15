@@ -31,7 +31,7 @@ jobs:
       - name: Install Python dependencies
         run: |
           python -m pip install --upgrade pip
-          python -m pip install -r installers/windows/requirements.txt
+          python -m pip install -r installers/main/requirements.txt
 
       - name: Build Linux executable
         run: |
@@ -40,8 +40,8 @@ jobs:
             --clean \
             --onefile \
             --name VeyraInstaller \
-            --add-data "installers/windows/veyra-installer/veyra.png:." \
-            installers/windows/veyra-installer/app.py
+            --add-data "installers/main/veyra-installer/veyra.png:." \
+            installers/main/veyra-installer/app.py
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
