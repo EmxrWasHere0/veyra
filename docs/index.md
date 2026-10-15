@@ -30,6 +30,7 @@ features
 installation
 quick-start
 language-overview
+learn
 vscode-extension
 project-layout
 limitations
