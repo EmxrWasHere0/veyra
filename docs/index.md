@@ -1,4 +1,4 @@
-This document is just a copy of [README.md](https://github.com/EmxrWasHere0/veyra/blob/main/README.md) with betetr navigation. Educational documents will be out soon.
+This document is just a copy of [README.md](https://github.com/EmxrWasHere0/veyra/blob/main/README.md) with better navigation. Educational documents will be out soon.
 
 <div align="center">
 <img src="https://raw.githubusercontent.com/EmxrWasHere0/veyra/refs/heads/main/media/veyra-banner.png">
