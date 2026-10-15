@@ -1,11 +1,10 @@
-name: Build Veyra Windows Installer
+name: Build Veyra Installer - Windows
 
 on:
   workflow_dispatch:
   push:
     paths:
-      - "installers/windows/veyra-installer/**"
-      - "installers/windows/requirements.txt"
+      - "installers/main/**"
       - ".github/workflows/build-windows.yml"
 
 permissions:
@@ -23,22 +22,25 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-          cache: "pip"
 
       - name: Install dependencies
-        run: python -m pip install -r installers/windows/requirements.txt
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -r installers/windows/requirements.txt
 
-      - name: Build installer EXE
-        run: >
-          python -m PyInstaller
-          --noconfirm
-          --clean
-          --onefile
-          --windowed
-          --name VeyraInstaller
-          installers/windows/veyra-installer/app.py
+      - name: Build Windows executable
+        shell: pwsh
+        run: |
+          python -m PyInstaller `
+            --noconfirm `
+            --clean `
+            --onefile `
+            --windowed `
+            --name VeyraInstaller `
+            --add-data "installers/windows/veyra-installer/veyra.png;." `
+            installers/windows/veyra-installer/app.py
 
-      - name: Upload installer artifact
+      - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
           name: VeyraInstaller-Windows

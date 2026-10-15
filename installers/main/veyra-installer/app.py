@@ -6,6 +6,7 @@ import socket
 import subprocess
 import threading
 from pathlib import Path
+from PIL import Image
 
 import customtkinter as ctk
 
@@ -67,12 +68,17 @@ class VeyraInstaller(ctk.CTk):
         logo.pack(side="left", padx=(26, 13), pady=18)
         logo.pack_propagate(False)
 
+        logo_image = ctk.CTkImage(
+            light_image=Image.open(Path(__file__).parent / "veyra.png"),
+            dark_image=Image.open(Path(__file__).parent / "veyra.png"),
+            size=(36, 36),
+        )
+
         ctk.CTkLabel(
             logo,
-            text="V",
-            text_color="white",
-            font=ctk.CTkFont(size=28, weight="bold"),
-        ).place(relx=0.5, rely=0.47, anchor="center")
+            text="",
+            image=logo_image,
+        ).place(relx=0.5, rely=0.5, anchor="center")
 
         brand = ctk.CTkFrame(header, fg_color="transparent")
         brand.pack(side="left", pady=16)
@@ -86,7 +92,7 @@ class VeyraInstaller(ctk.CTk):
 
         ctk.CTkLabel(
             brand,
-            text="Windows Installer",
+            text="Global Installer",
             text_color=self.muted,
             font=ctk.CTkFont(size=12),
         ).pack(anchor="w")
@@ -182,7 +188,7 @@ class VeyraInstaller(ctk.CTk):
 
             self.heading(
                 "Welcome to Veyra",
-                "Install the Veyra language tools on this Windows PC.",
+                "Install the Veyra language tools on this computer.",
             )
 
             card = ctk.CTkFrame(
@@ -446,8 +452,8 @@ class VeyraInstaller(ctk.CTk):
 
             if not git:
                 raise RuntimeError(
-                    "Git was not found. Install Git for Windows "
-                    "from https://git-scm.com/download/win "
+                    "Git was not found. Install Git "
+                    "from https://git-scm.com/download/ "
                     "and restart the installer."
                 )
 

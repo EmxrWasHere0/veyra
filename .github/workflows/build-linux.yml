@@ -1,0 +1,51 @@
+name: Build Veyra Installer - Linux
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - "installers/main/**"
+      - ".github/workflows/build-linux.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y python3-tk
+
+      - name: Install Python dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -r installers/windows/requirements.txt
+
+      - name: Build Linux executable
+        run: |
+          python -m PyInstaller \
+            --noconfirm \
+            --clean \
+            --onefile \
+            --name VeyraInstaller \
+            --add-data "installers/windows/veyra-installer/veyra.png:." \
+            installers/windows/veyra-installer/app.py
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: VeyraInstaller-Linux
+          path: dist/VeyraInstaller
+          if-no-files-found: error
