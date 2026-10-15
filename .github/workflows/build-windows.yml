@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
   push:
     paths:
-      - "installers/windows/veyra_installer/**"
+      - "installers/windows/veyra-installer/**"
       - "installers/windows/requirements.txt"
       - ".github/workflows/build-windows.yml"
 
@@ -36,7 +36,7 @@ jobs:
           --onefile
           --windowed
           --name VeyraInstaller
-          installers/windows/veyra_installer/app.py
+          installers/windows/veyra-installer/app.py
 
       - name: Upload installer artifact
         uses: actions/upload-artifact@v4
