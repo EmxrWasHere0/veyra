@@ -1,16 +1,28 @@
 # Functions
 
-Functions are reusable blocks of code that perform a specific task. They help you organize your program, avoid repeating code, and divide complex problems into smaller, manageable parts.
+Functions allow you to organize code into reusable blocks. Instead of writing the same instructions repeatedly, you can define a function once and call it whenever you need it.
 
-In Veyra, you can define functions, pass arguments to them, return values, use recursion, and create anonymous functions with lambda expressions.
+Veyra supports named functions, parameters, default parameter values, variadic parameters, and lambda expressions.
 
-## Defining a Function
+## What You Will Learn
 
-Define a function using the `add` keyword, followed by its name and parameter list. Use `end` to mark the end of the function.
+By the end of this lesson, you will know how to:
 
-```text
+- Define and call functions.
+- Pass arguments to functions.
+- Return values with `return`.
+- Use default parameter values.
+- Accept multiple arguments with variadic parameters.
+- Create lambda expressions.
+- Understand function scope.
+
+## 1. Defining a Function
+
+Use `add` to define a named function.
+
+```veyra
 add greet()
-    say "Hello, world!"
+    say "Hello, World!"
 end
 
 greet()
@@ -19,241 +31,367 @@ greet()
 Output:
 
 ```text
-Hello, world!
+Hello, World!
 ```
 
-In this example:
+Here's how it works:
 
-1. `add greet()` defines a function named `greet`.
-2. The code between `add` and `end` forms the function body.
-3. `greet()` calls the function and executes its body.
+- `add` begins the function definition.
+- `greet` is the function's name.
+- `()` contains the parameter list.
+- `end` closes the function definition.
+- `greet()` calls the function.
 
-Defining a function does not necessarily execute its body. The function runs when it is called.
+Defining a function does not execute its body. The body runs when the function is called.
 
-## Parameters and Arguments
+## 2. Using Parameters
 
-**Parameters** are variables declared in a function definition. **Arguments** are the actual values passed to the function when it is called.
+Parameters allow functions to receive values from their callers.
 
-```text
+```veyra
 add greet(name)
-    say "Hello, " + name
+    say "Hello, " + name + "!"
 end
 
-greet("Alice")
-greet("Bob")
+greet("Alex")
+greet("Sam")
 ```
 
 Output:
 
 ```text
-Hello, Alice
-Hello, Bob
+Hello, Alex!
+Hello, Sam!
 ```
 
-Here, `name` is a parameter. `"Alice"` and `"Bob"` are arguments.
+In this example, `name` is a parameter. When the function is called, the supplied argument becomes the parameter's value.
 
-You can define multiple parameters by separating them with commas.
+You can define multiple parameters:
 
-```text
-add add_numbers(a, b)
-    a + b
+```veyra
+add introduce(name, age)
+    say "Name: " + name
+    say "Age: " + age
 end
 
-say add_numbers(10, 20)  # 30
+introduce("Alex", 20)
 ```
 
-The function evaluates `a + b` and returns the result.
-
-## Returning Values
-
-Functions can return values that you can store in variables or use in expressions.
+Output:
 
 ```text
-add square(x)
-    return x * x
+Name: Alex
+Age: 20
+```
+
+Arguments are supplied in the order of the parameters.
+
+## 3. Returning Values
+
+Use `return` to send a value back to the caller.
+
+```veyra
+add square(number)
+    return number * number
 end
 
 result = square(5)
-say result  # 25
-```
-
-The `return` keyword immediately exits the current function and returns the specified value.
-
-Veyra also allows the final expression of a function to provide its result, as shown here:
-
-```text
-add square(x)
-    x * x
-end
-
-say square(5)  # 25
-```
-
-This makes simple functions shorter and easier to read.
-
-**Tip:** Use `return` when you want to return early from a function or make the intended return point explicit.
-
-## Default Parameters
-
-Default parameters provide a value when an argument is omitted from a function call.
-
-```text
-add greet(name = "Guest")
-    say "Hello, " + name
-end
-
-greet("Alice")  # Hello, Alice
-greet()         # Hello, Guest
-```
-
-When you pass `"Alice"`, the function uses that value. When you omit the argument, it uses `"Guest"` instead.
-
-Default parameters are useful when a function has a common value that callers do not always need to specify.
-
-## Variadic Parameters
-
-A variadic parameter allows a function to accept multiple arguments through a single parameter. In Veyra, prefix the parameter name with `...`.
-
-```text
-add sum_all(...nums)
-    total = 0
-    i = 0
-
-    repeat while i < len(nums)
-        total += nums[i]
-        i += 1
-    end
-
-    total
-end
-
-say sum_all(1, 2, 3)       # 6
-say sum_all(10, 20, 30, 40) # 100
-```
-
-The `...nums` parameter collects the supplied arguments into a list named `nums`. The function then iterates over the list and adds its elements together.
-
-Variadic parameters are useful when the number of arguments can change between calls.
-
-## Lambda Functions
-
-A lambda is an anonymous function, meaning it is a function without a traditional named definition. In Veyra, use the `func` keyword and the `=>` operator to create a lambda expression.
-
-```text
-square = func(x) => x * x
-
-say square(9)  # 81
-```
-
-The expression before `=>` contains the parameters, while the expression after it is the function body.
-
-Lambdas are useful when you want to create a small function and assign it to a variable.
-
-### Passing a Lambda to Another Function
-
-You can pass a lambda as an argument to another function.
-
-```text
-add apply(f, x, y)
-    f(x, y)
-end
-
-subtract = func(a, b) => a - b
-
-say apply(subtract, 10, 3)  # 7
-say apply(func(a, b) => a + b, 10, 3)  # 13
-```
-
-In this example, `apply` receives a function as its first argument and calls it with `x` and `y`.
-
-This technique allows you to reuse the same function structure with different operations.
-
-**Note:** Veyra's lambdas use closed scope and do not capture local variables from their surrounding scope. If a lambda needs a value, pass it as an argument.
-
-## Recursion
-
-Recursion occurs when a function calls itself. It is useful for problems that can be broken down into smaller versions of the same problem.
-
-For example, a factorial function can be defined recursively:
-
-```text
-add factorial(n)
-    if n <= 1
-        return 1
-    end
-
-    return n * factorial(n - 1)
-end
-
-say factorial(5)  # 120
-```
-
-The function calculates the factorial by multiplying `n` by the factorial of `n - 1`. When `n` reaches `1` or less, the base case returns `1` and stops the recursive calls.
-
-For `factorial(5)`, the calculation is:
-
-`5 * 4 * 3 * 2 * 1 = 120`
-
-**Important:** Every recursive function needs a base case that eventually stops the recursion. Without one, the function may continue calling itself until a runtime limit or error occurs.
-
-## Nested Functions
-
-Veyra supports defining functions inside other functions.
-
-```text
-add outer()
-    add inner()
-        say "Inside inner"
-    end
-
-    inner()
-end
-
-outer()
+say result
 ```
 
 Output:
 
 ```text
-Inside inner
+25
 ```
 
-Here, `inner` is defined inside `outer` and called from within it.
+The expression `number * number` is returned by the function and assigned to `result`.
 
-Nested functions can help organize helper logic that belongs to a larger operation.
+You can use a returned value directly:
 
-## Multiple Return Values
-
-Veyra supports returning multiple values from a function. You can use list destructuring to assign those values to separate variables.
-
-```text
-add get_coordinates()
-    return 10, 20
+```veyra
+add add_numbers(a, b)
+    return a + b
 end
 
-[x, y] = get_coordinates()
-
-say x  # 10
-say y  # 20
+say add_numbers(10, 20)
 ```
 
-This example returns two values and assigns them to `x` and `y`.
+Output:
 
-Multiple return values are useful when a function needs to provide several related results.
+```text
+30
+```
 
-## Summary
+Returning a value is useful when a function calculates something that another part of your program needs.
 
-| Feature                 | Description                                   |
-| ----------------------- | --------------------------------------------- |
-| `add name()`            | Defines a named function                      |
-| `name()`                | Calls a function                              |
-| Parameters              | Receive arguments passed to a function        |
-| `return`                | Exits a function and returns a value          |
-| Default parameters      | Provide fallback values for omitted arguments |
-| `...args`               | Collects multiple arguments into a list       |
-| `func(x) => expression` | Creates an anonymous lambda function          |
-| Recursion               | Allows a function to call itself              |
-| Nested functions        | Defines a function inside another function    |
-| Multiple return values  | Returns several values from one function      |
+## 4. Functions Without an Explicit Return Value
 
-Functions are one of the most important building blocks in Veyra. By combining parameters, return values, lambdas, and recursion, you can write code that is easier to reuse, test, and maintain.
+A function does not have to return a meaningful result.
+
+```veyra
+add show_message(message)
+    say message
+end
+
+show_message("Welcome to Veyra!")
+```
+
+This function displays a message rather than calculating a result.
+
+If you need a function's result in another expression, explicitly return the value you want to use.
+
+## 5. Default Parameter Values
+
+Veyra supports default values for parameters. A default is used when the corresponding argument is omitted.
+
+```veyra
+add greet(name = "Guest")
+    say "Hello, " + name + "!"
+end
+
+greet()
+greet("Alex")
+```
+
+Output:
+
+```text
+Hello, Guest!
+Hello, Alex!
+```
+
+The first call uses the default value `"Guest"`. The second supplies `"Alex"`.
+
+Default parameters are useful when a function should work even when the caller does not provide every optional argument.
+
+## 6. Variadic Parameters
+
+Variadic parameters allow a function to accept multiple arguments through a single parameter.
+
+Veyra uses `...` for variadic parameters.
+
+```veyra
+add show_items(...items)
+    say items
+end
+
+show_items("apple", "banana", "orange")
+```
+
+The variadic parameter collects the supplied arguments into a list.
+
+You can then process that list:
+
+```veyra
+add sum_numbers(...numbers)
+    index = 0
+    total = 0
+
+    repeat while index < len(numbers)
+        total += numbers[index]
+        index += 1
+    end
+
+    return total
+end
+
+say sum_numbers(10, 20, 30)
+```
+
+Output:
+
+```text
+60
+```
+
+Variadic parameters are useful when the number of arguments is not known in advance.
+
+## 7. Lambda Expressions
+
+A lambda is an anonymous function expression.
+
+Veyra supports the `func` keyword and the `=>` operator for creating lambdas.
+
+```veyra
+double = func(x) => x * 2
+
+say double(5)
+```
+
+Output:
+
+```text
+10
+```
+
+The expression `func(x) => x * 2` creates a function that receives `x` and evaluates `x * 2`.
+
+You can assign a lambda to a variable and call it like a named function.
+
+```veyra
+add_numbers = func(a, b) => a + b
+
+say add_numbers(3, 7)
+```
+
+Output:
+
+```text
+10
+```
+
+Lambda expressions are convenient for short functions.
+
+## 8. Passing Functions Around
+
+Functions can be stored in variables and passed as values.
+
+```veyra
+add apply_twice(operation, value)
+    return operation(operation(value))
+end
+
+double = func(x) => x * 2
+
+say apply_twice(double, 3)
+```
+
+Output:
+
+```text
+12
+```
+
+The function `apply_twice` receives another function as an argument and calls it twice.
+
+This technique can help you reuse behavior without duplicating code.
+
+## 9. Understanding Function Scope
+
+Function scope determines which variables a function can access.
+
+Veyra functions use a closed scope rather than automatically capturing variables from their surrounding scope. If a function needs a value, pass it as a parameter or define it within the function.
+
+For example:
+
+```veyra
+add multiply(a, b)
+    return a * b
+end
+
+say multiply(4, 5)
+```
+
+Output:
+
+```text
+20
+```
+
+The function receives both values explicitly, so it does not depend on variables from its caller's surrounding scope.
+
+**Tip:** Passing required values as parameters makes functions easier to understand, test, and reuse.
+
+## 10. Common Mistakes
+
+### Defining a Function but Never Calling It
+
+```veyra
+add greet()
+    say "Hello!"
+end
+```
+
+This defines the function, but its body does not execute until you call it:
+
+```veyra
+greet()
+```
+
+### Forgetting to Return a Result
+
+```veyra
+add square(number)
+    number * number
+end
+```
+
+If you want to use the calculated result, write:
+
+```veyra
+add square(number)
+    return number * number
+end
+```
+
+### Passing the Wrong Number of Arguments
+
+Check the function's parameter list and make sure the required arguments are supplied. Default and variadic parameters can provide additional flexibility.
+
+### Confusing Parameters and Arguments
+
+In this definition:
+
+```veyra
+add greet(name)
+    say name
+end
+```
+
+`name` is a parameter.
+
+In this call:
+
+```veyra
+greet("Alex")
+```
+
+`"Alex"` is an argument.
+
+### Expecting Automatic Closure Capture
+
+Do not assume that a function automatically inherits variables from its surrounding scope. Pass required values explicitly.
+
+## 11. Practice Exercises
+
+### Exercise 1: Greeting Function
+
+Create a function named `greet` that accepts a name and prints a greeting.
+
+### Exercise 2: Calculator Function
+
+Create a function named `multiply` that accepts two numbers and returns their product.
+
+### Exercise 3: Default Greeting
+
+Create a function with a default name of `"Guest"`. Test it with and without an argument.
+
+### Exercise 4: Variadic Sum
+
+Create a function that accepts any number of numeric arguments and returns their sum.
+
+### Exercise 5: Lambda
+
+Create a lambda that triples a number. Store it in a variable and call it with several values.
+
+### Exercise 6: Function Composition
+
+Create two functions: one that doubles a number and another that adds five. Pass the first function into a function that calls its operation before adding five.
+
+### Exercise 7: Scope
+
+Write a function that receives two values through parameters and returns their result after a calculation. Avoid relying on variables from the surrounding scope.
+
+## What's Next?
+
+You now know the fundamentals of functions in Veyra.
+
+Continue with:
+
+- [Variables and Types](variables.md)
+- [Lists](lists.md)
+- [Control Flow](control-flow.md)
+- [Operators](operators.md)
+- [Modules](modules.md)
+- [Error Handling](error-handling.md)

@@ -1,202 +1,577 @@
 # Control Flow
 
-Control flow determines the order in which a program executes its instructions. Veyra provides conditional statements, loops, and loop-control keywords to help you decide which code to execute and how many times to execute it.
+Control flow determines which instructions a program executes and how many times it executes them.
 
-## Conditionals
+In Veyra, you can use conditions to make decisions, loops to repeat instructions, and loop-control statements to change how a loop executes.
 
-Conditional statements let your program make decisions based on Boolean expressions. Use `if` to check a condition, `else if` to check another condition when the previous one is false, and `else` to handle all remaining cases.
+## What You Will Learn
 
-```text
+By the end of this lesson, you will know how to:
+
+- Use `if`, `else if`, and `else`.
+- Repeat instructions with `repeat`.
+- Create condition-based loops with `repeat while`.
+- Stop a loop using `stop`.
+- Skip to the next iteration using `fwd`.
+- Control nested loops with labels.
+
+## 1. Conditional Statements
+
+Conditional statements allow a program to make decisions.
+
+### The `if` Statement
+
+Use `if` to execute a block when a condition is true.
+
+```veyra
+age = 18
+
 if age >= 18
-    say "adult"
-else if age >= 13
-    say "teen"
+    say "You are an adult."
+end
+```
+
+Output:
+
+```text
+You are an adult.
+```
+
+If the condition is false, the block is skipped.
+
+```veyra
+age = 15
+
+if age >= 18
+    say "You are an adult."
+end
+
+say "Program finished."
+```
+
+Output:
+
+```text
+Program finished.
+```
+
+The `end` keyword closes the conditional block.
+
+### The `else` Statement
+
+Use `else` to execute an alternative block when the condition is false.
+
+```veyra
+temperature = 12
+
+if temperature > 20
+    say "It is warm."
 else
-    say "child"
+    say "It is cool."
 end
 ```
 
-In this example:
-
-1. If `age` is 18 or greater, the program prints `"adult"`.
-2. Otherwise, if `age` is 13 or greater, it prints `"teen"`.
-3. If neither condition is true, it prints `"child"`.
-
-Veyra checks the conditions in order and executes only the first matching branch. The `end` keyword marks the end of the conditional block.
-
-**Tip:** The order of conditions matters. Check more specific conditions before broader ones to avoid matching the wrong branch.
-
-## Counting Loops
-
-Use `repeat N` to execute a block a specified number of times. This is useful when you know how many repetitions you need.
+Output:
 
 ```text
+It is cool.
+```
+
+Only one of the two branches executes.
+
+### The `else if` Statement
+
+Use `else if` to check multiple conditions in sequence.
+
+```veyra
+score = 75
+
+if score >= 90
+    say "Grade: A"
+else if score >= 70
+    say "Grade: B"
+else if score >= 50
+    say "Grade: C"
+else
+    say "Grade: F"
+end
+```
+
+Output:
+
+```text
+Grade: B
+```
+
+Veyra checks the conditions from top to bottom. Once a matching branch is found, the remaining branches are skipped.
+
+**Tip:** Put more specific or higher-priority conditions first when their order affects the result.
+
+## 2. Comparison Operators
+
+Conditions commonly use comparison operators.
+
+| Operator | Meaning                  | Example   |
+| -------- | ------------------------ | --------- |
+| `==`     | Equal to                 | `x == 10` |
+| `!=`     | Not equal to             | `x != 10` |
+| `<`      | Less than                | `x < 10`  |
+| `>`      | Greater than             | `x > 10`  |
+| `<=`     | Less than or equal to    | `x <= 10` |
+| `>=`     | Greater than or equal to | `x >= 10` |
+
+Example:
+
+```veyra
+password = "veyra"
+
+if password == "veyra"
+    say "Correct value."
+else
+    say "Incorrect value."
+end
+```
+
+These operators are useful for checking numbers, comparing text, and controlling program behavior.
+
+## 3. Logical Operators
+
+Logical operators let you combine conditions.
+
+| Operator | Meaning                             |
+| -------- | ----------------------------------- |
+| `and`    | Both conditions must be true        |
+| `or`     | At least one condition must be true |
+| `not`    | Negates a condition                 |
+| `!`      | Another form of logical negation    |
+
+Example using `and`:
+
+```veyra
+age = 20
+has_ticket = true
+
+if age >= 18 and has_ticket
+    say "Access granted."
+else
+    say "Access denied."
+end
+```
+
+Example using `or`:
+
+```veyra
+is_admin = false
+is_owner = true
+
+if is_admin or is_owner
+    say "You can manage this resource."
+end
+```
+
+Example using `not`:
+
+```veyra
+is_ready = false
+
+if not is_ready
+    say "The program is not ready."
+end
+```
+
+Veyra evaluates logical operators using its truthiness rules. Values such as `false`, `null`, numeric zero, and empty text are falsy; other values are truthy.
+
+## 4. Repeating Instructions with `repeat`
+
+Use `repeat` to execute a block a specified number of times.
+
+```veyra
 repeat 5
-    say "hi"
+    say "Hello!"
 end
 ```
 
 Output:
 
 ```text
-hi
-hi
-hi
-hi
-hi
+Hello!
+Hello!
+Hello!
+Hello!
+Hello!
 ```
 
-The loop executes its body five times. Each execution is called an _iteration_.
+The block executes five times.
 
-You can use counting loops for tasks such as repeating a message, processing a fixed number of items, or running a simple sequence of operations.
+### Using a Variable as the Count
 
-## Conditional Loops
+You can also provide a variable containing the number of repetitions.
 
-Use `repeat while` to execute a block repeatedly as long as its condition remains true. This is useful when the number of iterations depends on a condition rather than a fixed count.
+```veyra
+count = 3
 
-```text
-i = 0
-
-repeat while i < 5
-    say i
-    i += 1
+repeat count
+    say "Veyra"
 end
 ```
 
 Output:
 
 ```text
-0
+Veyra
+Veyra
+Veyra
+```
+
+### Counting with a Variable
+
+To control the value displayed on each iteration, update a variable inside the loop.
+
+```veyra
+counter = 1
+
+repeat 5
+    say counter
+    counter += 1
+end
+```
+
+Output:
+
+```text
 1
 2
 3
 4
-```
-
-Here's how it works:
-
-1. `i` starts at `0`.
-2. Before each iteration, Veyra checks whether `i < 5`.
-3. If the condition is true, the loop body runs.
-4. `i += 1` increases `i` by one.
-5. When `i` reaches `5`, the condition becomes false and the loop ends.
-
-**Important:** Make sure a conditional loop can eventually reach a false condition. Otherwise, it may continue indefinitely unless interrupted.
-
-## Loop Control: `stop` and `fwd`
-
-Veyra provides two keywords for changing the normal execution of a loop:
-
-- `stop` exits the current loop immediately. It works like `break` in many other languages.
-- `fwd` skips the rest of the current iteration and moves to the next iteration. It works like `continue` in many other languages.
-
-Both keywords are only valid inside loops.
-
-### Using `stop`
-
-Use `stop` when you want to terminate a loop before its condition becomes false.
-
-```text
-i = 0
-
-repeat while i < 10
-    if i == 5
-        stop
-    end
-
-    say i
-    i += 1
-end
-```
-
-Output:
-
-```text
-0
-1
-2
-3
-4
-```
-
-When `i` reaches `5`, `stop` immediately exits the loop. The `say i` statement is not executed for that iteration.
-
-### Using `fwd`
-
-Use `fwd` when you want to skip the remaining statements in the current iteration without terminating the loop.
-
-```text
-i = 0
-
-repeat while i < 6
-    i += 1
-
-    if i % 2 == 0
-        fwd
-    end
-
-    say i
-end
-```
-
-Output:
-
-```text
-1
-3
 5
 ```
 
-The expression `i % 2 == 0` checks whether `i` is even. When it is, `fwd` skips `say i` and starts the next iteration. As a result, only odd numbers are printed.
+The repetition count is fixed when the loop begins. Changing `counter` affects the displayed value, not the number of repetitions.
 
-**Important:** Update your loop variable before using `fwd` when that update is needed to make progress. Otherwise, you may accidentally create an infinite loop.
+## 5. Condition-Based Loops with `repeat while`
 
-In functions, use `return` to return a value or exit the current function. Unlike `stop` and `fwd`, `return` controls function execution rather than loop execution.
+Use `repeat while` to execute a block as long as a condition remains true.
 
-## Labeled Loops
+```veyra
+counter = 1
 
-Labels allow you to control an outer loop from inside a nested loop. Place `@label` before a loop to give it a name.
-
-```text
-@outer repeat 3
-    repeat 3
-        say "Inside the nested loop"
-        stop @outer
-    end
-
-    say "After the nested loop"
+repeat while counter <= 5
+    say counter
+    counter += 1
 end
-
-say "Done"
 ```
 
 Output:
 
 ```text
-Inside the nested loop
-Done
+1
+2
+3
+4
+5
 ```
 
-Here, `stop @outer` exits the loop labeled `outer`, even though the statement appears inside the inner loop. Therefore, neither loop continues, and execution proceeds to `say "Done"`.
+Before each iteration, Veyra checks the condition.
 
-You can also use `fwd` with a label to continue the next iteration of a specific outer loop.
+If the condition is false before the first iteration, the loop body does not run.
+
+### Avoiding Infinite Loops
+
+Make sure a loop's condition can eventually become false.
+
+For example:
+
+```veyra
+counter = 1
+
+repeat while counter <= 3
+    say counter
+    counter += 1
+end
+```
+
+Here, `counter` increases on every iteration, so the condition eventually becomes false.
+
+If you forget to update the variable, a loop may continue indefinitely or until Veyra's loop execution limit is reached.
+
+## 6. Stopping a Loop with `stop`
+
+Use `stop` to exit the current loop before it finishes naturally.
+
+```veyra
+counter = 1
+
+repeat while counter <= 10
+    if counter == 4
+        stop
+    end
+
+    say counter
+    counter += 1
+end
+```
+
+Output:
 
 ```text
+1
+2
+3
+```
+
+When `counter` reaches `4`, `stop` exits the loop immediately.
+
+Instructions after the loop continue to execute.
+
+```veyra
+repeat 10
+    stop
+end
+
+say "The loop has ended."
+```
+
+Output:
+
+```text
+The loop has ended.
+```
+
+## 7. Skipping an Iteration with `fwd`
+
+Use `fwd` to skip the remainder of the current iteration and continue with the next one.
+
+```veyra
+counter = 0
+
+repeat while counter < 5
+    counter += 1
+
+    if counter == 3
+        fwd
+    end
+
+    say counter
+end
+```
+
+Output:
+
+```text
+1
+2
+4
+5
+```
+
+When `counter` reaches `3`, `fwd` skips the `say counter` instruction for that iteration. The loop then continues.
+
+**Important:** In a `repeat while` loop, make sure the condition's variables are updated before `fwd` when necessary. Otherwise, the loop may fail to make progress.
+
+## 8. Nested Loops
+
+A nested loop is a loop inside another loop.
+
+```veyra
+repeat 3
+    repeat 2
+        say "Hello!"
+    end
+end
+```
+
+Output:
+
+```text
+Hello!
+Hello!
+Hello!
+Hello!
+Hello!
+Hello!
+```
+
+The inner loop executes twice for every iteration of the outer loop. Therefore, the message is printed six times.
+
+Nested loops are useful for working with grids, combinations, and multi-dimensional data.
+
+## 9. Controlling Nested Loops with Labels
+
+Sometimes you want to stop or skip an iteration of an outer loop from inside a nested loop.
+
+Veyra supports loop labels for this purpose.
+
+### Labeling a Loop
+
+Place a label immediately before a loop using `@label`.
+
+```veyra
+@outer repeat 3
+    say "Outer loop"
+
+    repeat 3
+        say "Inner loop"
+        stop @outer
+    end
+end
+
+say "Finished."
+```
+
+Output:
+
+```text
+Outer loop
+Inner loop
+Finished.
+```
+
+The statement `stop @outer` exits the loop labeled `outer`, even though the statement appears inside the inner loop.
+
+### Skipping an Outer Loop Iteration
+
+You can also use `fwd` with a label.
+
+```veyra
 @outer repeat 3
     repeat 3
         fwd @outer
     end
 
-    say "Next outer iteration"
+    say "This line is skipped."
+end
+
+say "Finished."
+```
+
+The labeled `fwd` skips the remainder of the current iteration of the outer loop, including any remaining instructions inside it.
+
+This is useful when a condition inside a nested loop should control the outer loop directly.
+
+## 10. Understanding Loop Limits
+
+Veyra enforces a maximum loop execution count to help prevent runaway loops.
+
+The current runtime uses a limit of 1,000,000 loop iterations. Deeply nested or excessively long loops may reach this limit.
+
+Keep loops efficient and ensure that condition-based loops make progress toward termination.
+
+## 11. Common Mistakes
+
+### Forgetting `end`
+
+Incorrect:
+
+```veyra
+if score >= 50
+    say "Passed."
+```
+
+Correct:
+
+```veyra
+if score >= 50
+    say "Passed."
 end
 ```
 
-The `fwd @outer` statement skips the remaining work in the current outer-loop iteration and moves to its next iteration.
+Always close the block with `end`.
 
-Use labeled loops when nested loops need to exit or continue a specific outer loop. For simple loops, plain `stop` and `fwd` are usually easier to read.
+### Using Assignment Instead of Comparison
 
-## Loop Safety Limit
+Use `==` to compare values.
 
-Veyra enforces a safety limit of **1,000,000 iterations per loop** to help prevent runaway loops from consuming excessive resources.
+```veyra
+if score == 100
+    say "Perfect score!"
+end
+```
 
-This limit is a safeguard, not a replacement for correct loop logic. Always ensure that your loop conditions and variable updates behave as intended.
+Use `=` when assigning a value to a variable.
+
+### Forgetting to Update a Loop Variable
+
+Incorrect:
+
+```veyra
+counter = 1
+
+repeat while counter <= 5
+    say counter
+end
+```
+
+The condition remains true because `counter` never changes.
+
+Correct:
+
+```veyra
+counter = 1
+
+repeat while counter <= 5
+    say counter
+    counter += 1
+end
+```
+
+### Using `fwd` Without Making Progress
+
+In a condition-based loop, skipping the rest of the body may prevent a required update from running.
+
+Place essential updates before `fwd`, or restructure the loop so that its condition can eventually become false.
+
+### Confusing `stop` and `fwd`
+
+- `stop` exits the targeted loop.
+- `fwd` skips the remainder of the targeted iteration and continues with the next iteration.
+
+## 12. Practice Exercises
+
+### Exercise 1: Number Classification
+
+Create a variable named `number`.
+
+Use `if` and `else` to print whether the number is greater than or equal to zero.
+
+### Exercise 2: Grade Calculator
+
+Create a `score` variable and use `else if` to display a grade based on its value.
+
+### Exercise 3: Count to Twenty
+
+Use `repeat while` to display the numbers from `1` through `20`.
+
+### Exercise 4: Print Only Even Numbers
+
+Use a loop and a conditional statement to display the even numbers between `1` and `20`.
+
+Hint: Use the `%` operator to check the remainder after division by `2`.
+
+### Exercise 5: Stop at a Target
+
+Create a loop that counts upward and uses `stop` to exit when the counter reaches a chosen value.
+
+### Exercise 6: Skip a Number
+
+Print the numbers from `1` through `10`, but skip `5` using `fwd`.
+
+### Exercise 7: Nested Loops
+
+Use two nested loops to print a simple grid of messages.
+
+### Exercise 8: Labeled Loop Control
+
+Create nested loops and use a label with `stop` to exit the outer loop from inside the inner loop.
+
+## What's Next?
+
+You now know how to control the execution of a Veyra program.
+
+Continue with:
+
+- [Variables and Types](variables.md)
+- [Input and Output](io.md)
+- [Operators](operators.md)
+- [Lists](lists.md)
+- [Functions](functions.md)
+- [Error Handling](error-handling.md)

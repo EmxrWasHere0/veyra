@@ -1,27 +1,46 @@
 # Learn Veyra
 
-If you would like to learn how to code in **Veyra**, since it's aimed to be easier to learn compared to other languages, this documentation will help you learn everything about **Veyra**. You can navigate through subjects from table of contents.
+Welcome to the Veyra learning guide!
 
-## Table of Contents
+This section teaches Veyra step by step, from installing the language and writing your first program to working with functions, modules, channels, and error handling.
+
+You can follow the lessons in order or jump directly to a topic using the navigation menu.
+
+## Learning Path
+
+The recommended learning order is:
+
+1. Understand what Veyra is.
+2. Install Veyra and run your first program.
+3. Learn variables, values, and operators.
+4. Explore control flow, lists, and functions.
+5. Learn input/output, channels, and modules.
+6. Handle errors and explore advanced features.
 
 ```{toctree}
-:caption: Educational Documentation
+:caption: Learn Veyra
 :maxdepth: 2
 
 learning/what-is-veyra
-learning/how-to-install
+learning/installation
 learning/quickstart
-learning/values
-learning/variables-and-constants
-learning/channels
-learning/io
+learning/variables
 learning/operators
 learning/control-flow
 learning/lists
 learning/functions
+learning/io
+learning/channels
+learning/modules
 learning/error-handling
 learning/built-ins
-learning/modules
-learning/extension
 learning/run
+learning/extension
 ```
+
+## Additional Resources
+
+- [Veyra documentation home](index)
+- [VS Code Extension](vscode-extension)
+- [Project Repository](https://github.com/EmxrWasHere0/veyra)
+- [Report an Issue](https://github.com/EmxrWasHere0/veyra/issues)

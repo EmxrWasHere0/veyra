@@ -1,146 +1,115 @@
 # Modules
 
-Modules extend Veyra's built-in functionality by grouping related operations into reusable components. They allow programs to access system information, work with files and directories, and interact with the environment.
+Modules provide additional functionality in Veyra. They let you access features such as system information, environment variables, file operations, and operating system utilities.
 
-Veyra provides three built-in modules:
+Veyra includes three built-in modules:
 
-| Module   | Description                                                                                           |
-| -------- | ----------------------------------------------------------------------------------------------------- |
-| `system` | Operating system information, environment variables, command-line arguments, and process exit control |
-| `io`     | File operations, directory management, and external command execution                                 |
-| `base`   | Basic system information, including hostname, username, process ID, and CPU core count                |
+- `system` — system information, environment variables, command-line arguments, and process exit.
+- `io` — file operations, directory management, and process execution.
+- `base` — general system utilities such as the hostname, username, and home directory.
 
-## Importing Modules
+## What You Will Learn
 
-Use the `mod` keyword to load a module before accessing its members.
+By the end of this guide, you will understand:
 
-### Importing an Entire Module
+- How to import modules.
+- How to import selected functions.
+- How to use the `system` module.
+- How to read and write files with `io`.
+- How to access basic system information with `base`.
+- How to handle errors when using module functions.
 
-```text
+## 1. Importing Modules
+
+Use `mod` to import a module.
+
+```veyra
 mod system
-mod io
 
 say system.os
-say io.cwd()
+say system.arch
+say system.version
 ```
 
-After importing a module, access its members using dot notation:
-
-```text
-module_name.member
-```
-
-For functions, include parentheses and provide the required arguments.
-
-For example, `system.os` accesses a constant, while `io.cwd()` calls a function.
+The module prefix lets you access its members, such as `system.os`.
 
 ### Importing All Members
 
-Use `mod name *` to import all members of a module into the current namespace.
+You can import all members from a module using `*`.
 
-```text
-mod base *
+```veyra
+mod system *
 
 say os
 say arch
-say hostname()
-say pid()
+say version
 ```
-
-After this import, you can access the imported members directly without the module prefix.
 
 ### Importing Selected Members
 
-Use `mod name [member1, member2]` to import only specific members.
+Use square brackets to import only the members you need.
 
-```text
-mod system [get_env, args]
+```veyra
+mod system [get_env, set_env]
 
-home = get_env("HOME")
-arguments = args()
+value = get_env()
 
-say home
-say arguments
+say value
 ```
 
-This makes the selected members available directly by name.
+Use the selected import syntax when you want to make specific module members available without writing the module prefix each time.
 
-**Tip:** Importing selected members can make it easier to see which module functionality a program actually uses.
+> **Note:** Check the function signatures in the sections below before calling a function. For example, `get_env` requires an environment-variable name in this module API.
 
-## The `system` Module
+## 2. The `system` Module
 
-The `system` module provides operating system information, environment-variable access, command-line arguments, and process exit control.
+The `system` module provides information about the runtime environment and functions for interacting with environment variables and the running process.
 
 Import it with:
 
-```text
+```veyra
 mod system
 ```
 
-### Constants
+### System Constants
 
-| Member           | Description                 | Example              |
-| ---------------- | --------------------------- | -------------------- |
-| `system.os`      | Operating system identifier | `say system.os`      |
-| `system.arch`    | CPU architecture identifier | `say system.arch`    |
-| `system.family`  | Operating system family     | `say system.family`  |
-| `system.version` | Veyra package version       | `say system.version` |
+| Member           | Description             |
+| ---------------- | ----------------------- |
+| `system.os`      | Operating system name   |
+| `system.arch`    | System architecture     |
+| `system.family`  | Operating system family |
+| `system.version` | Veyra version           |
 
-These values are provided by the runtime or build configuration.
+Example:
 
-### `system.args()`
-
-Returns a list of command-line arguments passed to the Veyra program, excluding the interpreter executable and script filename.
-
-```text
+```veyra
 mod system
 
-arguments = system.args()
-say arguments
+say system.os
+say system.arch
+say system.family
+say system.version
 ```
 
-Use this function when a script needs to accept arguments from the command line.
+The exact output depends on the system running Veyra and the version of the program.
 
-### `system.env()`
+### Environment Variables
 
-Returns a list containing environment-variable entries. Each entry is a two-element list containing a variable name and its value.
+Use `get_env(name)` to read an environment variable.
 
-```text
-mod system
-
-variables = system.env()
-say variables
-```
-
-Because the result may contain many entries, consider processing it rather than printing the entire list in larger applications.
-
-### `system.get_env(name)`
-
-Returns the value of an environment variable as text. If the variable does not exist or cannot be read as a valid Unicode string, the function returns `null`.
-
-```text
+```veyra
 mod system
 
 home = system.get_env("HOME")
+
 say home
 ```
 
-Environment-variable names depend on the operating system and environment. For example, Windows commonly uses `USERPROFILE` for a user's home directory.
+The environment variable may not exist, and its value can differ between operating systems. On Windows, for example, the `USERPROFILE` variable is commonly used for the current user's profile directory.
 
-You can use `??` to provide a fallback:
+Use `set_env(name, value)` to set an environment variable for the running process.
 
-```text
-mod system
-
-home = system.get_env("HOME") ?? "unknown"
-say home
-```
-
-### `system.set_env(name, value)`
-
-Sets an environment variable for the running process.
-
-```text
+```veyra
 mod system
 
 system.set_env("VEYRA_MODE", "development")
@@ -148,286 +117,356 @@ system.set_env("VEYRA_MODE", "development")
 say system.get_env("VEYRA_MODE")
 ```
 
-Both arguments must be text. The function returns `null`.
+Environment-variable changes should not be assumed to persist after the process exits.
 
-**Note:** Setting an environment variable this way does not permanently change the operating system's environment. It affects the running process and its environment.
+### Command-Line Arguments
 
-### `system.exit([code])`
+The `system.args()` function provides command-line arguments exposed by the runtime.
 
-Terminates the process with an optional exit code.
+```veyra
+mod system
 
-```text
+args = system.args()
+
+say args
+```
+
+The exact arguments available depend on how Veyra is launched. If you plan to use command-line arguments in a program, verify the behavior of your installed CLI version.
+
+### Exiting a Program
+
+Use `system.exit(code)` to terminate the running process with an exit code.
+
+```veyra
 mod system
 
 system.exit(0)
 ```
 
-- `system.exit()` exits with code `0`.
-- `system.exit(1)` exits with code `1`.
+Conventionally, `0` indicates success, while a nonzero code indicates an error or another unsuccessful outcome.
 
-Exit codes are commonly used to indicate whether a program completed successfully or encountered a problem. Since this function terminates the process, code after the call will not continue executing.
+## 3. The `io` Module
 
-## The `io` Module
-
-The `io` module provides functions for reading and writing files, managing directories, and running external programs.
+The `io` module provides file, directory, and process operations.
 
 Import it with:
 
-```text
+```veyra
 mod io
 ```
 
-### File Operations
+### Reading a File
 
-| Function                   | Description                                        |
-| -------------------------- | -------------------------------------------------- |
-| `io.read(path)`            | Reads a text file and returns its contents         |
-| `io.write(path, content)`  | Writes text to a file, replacing existing contents |
-| `io.append(path, content)` | Appends text to a file, creating it if needed      |
-| `io.exists(path)`          | Returns whether a path exists                      |
-| `io.remove(path)`          | Removes a file                                     |
-| `io.rename(from, to)`      | Renames or moves a file                            |
+Use `io.read(path)` to read a file.
 
-#### Reading a File
-
-```text
+```veyra
 mod io
 
 content = io.read("notes.txt")
+
 say content
 ```
 
-`io.read()` returns the file contents as text. It produces an error if the file cannot be read.
+The file must be accessible to the running process. If reading fails, handle the runtime error where appropriate.
 
-#### Writing a File
+### Writing a File
 
-```text
+Use `io.write(path, content)` to write content to a file.
+
+```veyra
 mod io
 
-io.write("notes.txt", "Hello from Veyra!")
+io.write("hello.txt", "Hello from Veyra!")
+
+say "File written."
 ```
 
-This creates `notes.txt` if necessary or replaces its existing contents.
+Writing may create a file or replace existing content, so use it carefully when working with important files.
 
-#### Appending to a File
+### Appending to a File
 
-```text
+Use `io.append(path, content)` to append content to a file.
+
+```veyra
 mod io
 
-io.append("notes.txt", "\nAnother line")
+io.append("log.txt", "Application started\n")
+
+say "Log updated."
 ```
 
-Unlike `io.write()`, `io.append()` preserves existing contents and adds the supplied text to the end of the file.
+Appending is useful for logs because it adds content rather than intentionally replacing the existing file.
 
-#### Checking Whether a File Exists
+### Checking Whether a File Exists
 
-```text
+Use `io.exists(path)` to check whether a path exists.
+
+```veyra
 mod io
 
-if io.exists("notes.txt")
-    say "The path exists"
+if io.exists("hello.txt")
+    say "The path exists."
 else
-    say "The path does not exist"
+    say "The path does not exist."
 end
 ```
 
-`io.exists()` returns a Boolean. It checks whether the path exists; it does not guarantee that the path is a regular file or that you can read it.
+This checks existence; it does not guarantee that a file is readable or writable.
 
-#### Removing and Renaming Files
+### Removing and Renaming Paths
 
-```text
+Use `io.remove(path)` to remove a file and `io.rename(from, to)` to rename or move a path.
+
+```veyra
 mod io
 
-io.rename("old.txt", "new.txt")
-io.remove("new.txt")
+io.rename("hello.txt", "greeting.txt")
 ```
 
-`io.rename()` renames or moves a path according to the host operating system's filesystem rules. `io.remove()` removes a file.
+Be careful when removing files or changing paths. Verify the target before running operations on important data.
 
-Be careful when using these functions: they modify the filesystem, and removed files may not be recoverable.
+### Creating and Removing Directories
 
-### Directory Operations
+Use `io.mkdir(path)` to create a directory.
 
-| Function           | Description                                               |
-| ------------------ | --------------------------------------------------------- |
-| `io.mkdir(path)`   | Creates a directory, including missing parent directories |
-| `io.rmdir(path)`   | Removes a directory and its contents recursively          |
-| `io.listdir(path)` | Returns a list of entry names in a directory              |
-| `io.cwd()`         | Returns the current working directory                     |
-| `io.chdir(path)`   | Changes the current working directory                     |
-
-#### Listing a Directory
-
-```text
-mod io
-
-entries = io.listdir(".")
-say entries
-```
-
-The `"."` path refers to the current working directory. `io.listdir()` returns a list of entry names rather than full paths.
-
-#### Getting the Current Directory
-
-```text
-mod io
-
-directory = io.cwd()
-say directory
-```
-
-#### Creating and Changing Directories
-
-```text
+```veyra
 mod io
 
 io.mkdir("my_folder")
-io.chdir("my_folder")
-
-say io.cwd()
 ```
 
-`io.mkdir()` creates the requested directory and any missing parent directories. `io.chdir()` changes the working directory of the running process.
+Use `io.rmdir(path)` to remove a directory recursively.
 
-#### Removing a Directory
-
-```text
+```veyra
 mod io
 
 io.rmdir("my_folder")
 ```
 
-**Warning:** `io.rmdir()` removes the specified directory recursively, including its contents. Use it only when you intend to delete everything inside that directory.
+**Warning:** Recursive directory removal can delete files and subdirectories inside the target. Only use it when you are certain the target is safe to remove.
 
-### Running External Programs
+### Listing Directory Contents
 
-Veyra provides two functions for running external commands: `io.run()` and `io.shell()`.
+Use `io.listdir(path)` to list entries in a directory.
 
-Both return a three-element list:
+```veyra
+mod io
 
-```text
-[exit_code, stdout, stderr]
+entries = io.listdir(".")
+
+say entries
 ```
 
-- `exit_code` is the process exit code, or `-1` if the operating system does not provide one.
-- `stdout` contains standard output as text.
-- `stderr` contains standard error as text.
+The path `"."` refers to the current working directory.
 
-#### `io.run(program, [args])`
+### Working with Directories
 
-Runs an executable directly, optionally passing a list of arguments.
+Use `io.cwd()` to get the current working directory and `io.chdir(path)` to change it.
 
-```text
+```veyra
+mod io
+
+say io.cwd()
+
+io.chdir("..")
+
+say io.cwd()
+```
+
+A relative path is interpreted in relation to the current working directory.
+
+## 4. Running External Programs
+
+The `io` module provides functions for running external commands.
+
+### Running a Program
+
+Use `io.run(program, args)` to run a program with an argument list.
+
+```veyra
 mod io
 
 result = io.run("echo", ["Hello from Veyra"])
 
-say result[0]  # Exit code
-say result[1]  # Standard output
-say result[2]  # Standard error
+say result
 ```
 
-The example uses `echo`, which may behave differently depending on the operating system. Replace it with an executable available in your environment when necessary.
+The result is a list containing:
 
-Passing the executable and arguments separately avoids using a shell to interpret the command string.
+1. The exit code.
+2. Standard output.
+3. Standard error.
 
-#### `io.shell(command)`
+An exit code of `-1` may be returned when the operating system does not provide an exit code.
 
-Runs a command string through the system shell. Veyra uses `cmd /C` on Windows and `sh -c` on other supported platforms.
+The availability and behavior of a particular executable depend on the operating system and environment.
 
-```text
+### Running a Shell Command
+
+Use `io.shell(command)` to execute a command through the system shell.
+
+```veyra
 mod io
 
 result = io.shell("echo Hello from Veyra")
 
-say result[0]
-say result[1]
-say result[2]
+say result
 ```
 
-Use `io.shell()` only when shell features are necessary.
+Like `io.run`, the result contains the exit code, standard output, and standard error.
 
-**Security warning:** Avoid placing untrusted input into a shell command. Shell metacharacters can change how a command is interpreted. Prefer `io.run()` with a separate argument list when possible, and be cautious with any operation that executes external programs.
+**Security warning:** Shell commands can perform actions with the permissions of the current user. Avoid passing untrusted input into `io.shell()`. Prefer `io.run()` with a program and separate arguments when possible.
 
-## The `base` Module
+## 5. The `base` Module
 
-The `base` module provides basic information about the current system and process.
+The `base` module provides general system utilities.
 
 Import it with:
 
-```text
+```veyra
 mod base
 ```
 
-### Constants
+### System Information
 
-| Member        | Description                 | Example           |
-| ------------- | --------------------------- | ----------------- |
-| `base.os`     | Operating system identifier | `say base.os`     |
-| `base.arch`   | CPU architecture identifier | `say base.arch`   |
-| `base.family` | Operating system family     | `say base.family` |
+| Member        | Description             |
+| ------------- | ----------------------- |
+| `base.os`     | Operating system name   |
+| `base.arch`   | System architecture     |
+| `base.family` | Operating system family |
 
-These constants provide platform information from the environment in which Veyra was built or is running.
+Example:
 
-### Functions
-
-| Function          | Description                                                     |
-| ----------------- | --------------------------------------------------------------- |
-| `base.hostname()` | Returns the computer's hostname                                 |
-| `base.username()` | Returns the current username, when available                    |
-| `base.home_dir()` | Returns the user's home directory                               |
-| `base.exe_path()` | Returns the path to the Veyra executable                        |
-| `base.pid()`      | Returns the current process ID                                  |
-| `base.cores()`    | Returns the available parallelism count reported by the runtime |
-
-All six functions take no arguments.
-
-#### Example
-
-```text
+```veyra
 mod base
 
 say base.os
 say base.arch
-say base.hostname()
-say base.username()
-say base.home_dir()
-say base.exe_path()
-say base.pid()
-say base.cores()
+say base.family
 ```
 
-The output depends on the computer and environment running the program.
+### Utility Functions
 
-For example, `base.pid()` returns a process identifier, while `base.cores()` reports the parallelism count available to the runtime. This may differ from the total number of physical CPU cores.
+| Function          | Description                                |
+| ----------------- | ------------------------------------------ |
+| `base.hostname()` | Returns the hostname                       |
+| `base.username()` | Returns the current username               |
+| `base.home_dir()` | Returns the home directory                 |
+| `base.exe_path()` | Returns the executable path                |
+| `base.pid()`      | Returns the process ID                     |
+| `base.cores()`    | Returns the available processor-core count |
 
-## Error Handling
+Example:
 
-Module operations may fail because of invalid arguments, missing files, insufficient permissions, or unavailable external programs.
+```veyra
+mod base
 
-Use `try/catch` to handle runtime errors.
+say "Hostname: " + base.hostname()
+say "Username: " + base.username()
+say "Home: " + base.home_dir()
+say "Executable: " + base.exe_path()
+say "PID: " + base.pid()
+say "CPU cores: " + base.cores()
+```
 
-```text
+Returned values depend on the host system and runtime environment.
+
+## 6. Handling Module Errors
+
+Module operations may fail because of missing files, invalid paths, insufficient permissions, or unavailable programs.
+
+Use `try` and `catch` to handle runtime errors.
+
+```veyra
 mod io
 
 try
     content = io.read("missing_file.txt")
     say content
 catch err
-    say "Could not read the file: " + err
+    say "Operation failed: " + err
 end
 ```
 
-The catch variable `err` receives the error message.
+The `catch` variable receives the runtime error message.
 
-Not every unsuccessful operation raises an error. For example, `io.exists()` returns `false` when a path does not exist, and `system.get_env()` returns `null` when an environment variable cannot be retrieved.
+For more information, see the [Error Handling Guide](error-handling.md).
 
-## Summary
+## 7. Module Reference
 
-| Module   | Main capabilities                                                         |
-| -------- | ------------------------------------------------------------------------- |
-| `system` | OS information, environment variables, arguments, process exit            |
-| `io`     | File and directory management, external command execution                 |
-| `base`   | Hostname, username, home directory, executable path, PID, CPU parallelism |
+### `system`
 
-Veyra's built-in modules allow programs to interact with the host environment without implementing these operations from scratch. Since several functions can modify files, change process state, or execute external programs, use them carefully and handle errors where appropriate.
+| Member                            | Purpose                                       |
+| --------------------------------- | --------------------------------------------- |
+| `os`, `arch`, `family`, `version` | Runtime and system information                |
+| `args()`                          | Command-line arguments exposed by the runtime |
+| `env()`                           | Environment information                       |
+| `get_env(name)`                   | Read an environment variable                  |
+| `set_env(name, value)`            | Set an environment variable                   |
+| `exit(code)`                      | Exit the process                              |
+
+### `io`
+
+| Function                | Purpose                              |
+| ----------------------- | ------------------------------------ |
+| `read(path)`            | Read a file                          |
+| `write(path, content)`  | Write a file                         |
+| `append(path, content)` | Append to a file                     |
+| `exists(path)`          | Check whether a path exists          |
+| `remove(path)`          | Remove a file                        |
+| `rename(from, to)`      | Rename or move a path                |
+| `mkdir(path)`           | Create a directory                   |
+| `rmdir(path)`           | Recursively remove a directory       |
+| `listdir(path)`         | List directory entries               |
+| `cwd()`                 | Get the current working directory    |
+| `chdir(path)`           | Change the current working directory |
+| `run(program, args)`    | Run an external program              |
+| `shell(command)`        | Run a shell command                  |
+
+### `base`
+
+| Function     | Purpose                      |
+| ------------ | ---------------------------- |
+| `hostname()` | Get the hostname             |
+| `username()` | Get the current username     |
+| `home_dir()` | Get the home directory       |
+| `exe_path()` | Get the executable path      |
+| `pid()`      | Get the process ID           |
+| `cores()`    | Get the processor-core count |
+
+## 8. Practice Exercises
+
+### Exercise 1: System Information
+
+Write a program that displays the operating system, architecture, and Veyra version.
+
+### Exercise 2: File Operations
+
+Write a short message to a file, read it back, and display its contents.
+
+### Exercise 3: Directory Listing
+
+Display the contents of the current directory.
+
+### Exercise 4: Environment Variables
+
+Set an environment variable and read its value back during the same program execution.
+
+### Exercise 5: Error Handling
+
+Attempt to read a file that does not exist and handle the resulting error using `try` and `catch`.
+
+### Exercise 6: System Utilities
+
+Display the hostname, username, home directory, and process ID.
+
+## What's Next?
+
+You now know how to import Veyra's built-in modules and use their main APIs.
+
+Continue learning:
+
+- [Error Handling](error-handling.md)
+- [Input and Output](io.md)
+- [Functions](functions.md)
+- [Operators](operators.md)
