@@ -1,0 +1,46 @@
+name: Build Veyra Windows Installer
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - "installers/windows/veyra_installer/**"
+      - "installers/windows/requirements.txt"
+      - ".github/workflows/build-windows.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: "pip"
+
+      - name: Install dependencies
+        run: python -m pip install -r requirements.txt
+
+      - name: Build installer EXE
+        run: >
+          python -m PyInstaller
+          --noconfirm
+          --clean
+          --onefile
+          --windowed
+          --name VeyraInstaller
+          veyra_installer/app.py
+
+      - name: Upload installer artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: VeyraInstaller-Windows
+          path: dist/VeyraInstaller.exe
+          if-no-files-found: error
