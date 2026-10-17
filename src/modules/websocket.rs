@@ -36,21 +36,19 @@ impl WebSocketModule {
         }
     }
 
-    fn with_connection<F>(
-        &self,
-        id: u64,
-        operation: F,
-    ) -> Result<Value, String>
+    fn with_connection<F>(&self, id: u64, operation: F) -> Result<Value, String>
     where
         F: FnOnce(&mut Connection) -> Result<Value, String>,
     {
-        let mut state = self.state.lock()
+        let mut state = self
+            .state
+            .lock()
             .map_err(|_| "WebSocket state lock failed")?;
 
-        let connection = state.connections.get_mut(&id)
-            .ok_or_else(|| {
-                format!("Unknown WebSocket connection ID {}", id)
-            })?;
+        let connection = state
+            .connections
+            .get_mut(&id)
+            .ok_or_else(|| format!("Unknown WebSocket connection ID {}", id))?;
 
         operation(connection)
     }
@@ -61,11 +59,7 @@ impl VeyraModule for WebSocketModule {
         "websocket"
     }
 
-    fn call_func(
-        &self,
-        func: &str,
-        args: Vec<Value>,
-    ) -> Result<Value, String> {
+    fn call_func(&self, func: &str, args: Vec<Value>) -> Result<Value, String> {
         match func {
             "connect" => {
                 require_args("connect", &args, 1)?;
@@ -73,23 +67,19 @@ impl VeyraModule for WebSocketModule {
                 let url = expect_text(&args[0], "URL")?;
 
                 let (socket, _) = connect(url.as_str())
-                    .map_err(|e| {
-                        format!("WebSocket connection failed: {}", e)
-                    })?;
+                    .map_err(|e| format!("WebSocket connection failed: {}", e))?;
 
-                let mut state = self.state.lock()
+                let mut state = self
+                    .state
+                    .lock()
                     .map_err(|_| "WebSocket state lock failed")?;
 
                 let id = state.next_id;
                 state.next_id += 1;
 
-                state.connections.insert(
-                    id,
-                    Connection {
-                        socket,
-                        open: true,
-                    },
-                );
+                state
+                    .connections
+                    .insert(id, Connection { socket, open: true });
 
                 Ok(Value::Num(id as f64))
             }
@@ -105,11 +95,10 @@ impl VeyraModule for WebSocketModule {
                         return Err("WebSocket connection is closed".into());
                     }
 
-                    connection.socket
+                    connection
+                        .socket
                         .send(Message::Text(text.into()))
-                        .map_err(|e| {
-                            format!("WebSocket send failed: {}", e)
-                        })?;
+                        .map_err(|e| format!("WebSocket send failed: {}", e))?;
 
                     Ok(Value::Null)
                 })
@@ -120,9 +109,7 @@ impl VeyraModule for WebSocketModule {
 
                 let id = expect_id(&args[0])?;
 
-                self.with_connection(id, |connection| {
-                    receive_message(connection, None)
-                })
+                self.with_connection(id, |connection| receive_message(connection, None))
             }
 
             "receive_timeout" => {
@@ -131,9 +118,7 @@ impl VeyraModule for WebSocketModule {
                 let id = expect_id(&args[0])?;
                 let timeout = expect_timeout(&args[1])?;
 
-                self.with_connection(id, |connection| {
-                    receive_message(connection, Some(timeout))
-                })
+                self.with_connection(id, |connection| receive_message(connection, Some(timeout)))
             }
 
             "close" => {
@@ -141,18 +126,22 @@ impl VeyraModule for WebSocketModule {
 
                 let id = expect_id(&args[0])?;
 
-                let mut state = self.state.lock()
+                let mut state = self
+                    .state
+                    .lock()
                     .map_err(|_| "WebSocket state lock failed")?;
 
-                let mut connection = state.connections.remove(&id)
-                    .ok_or_else(|| {
-                        format!("Unknown WebSocket connection ID {}", id)
-                    })?;
+                let mut connection = state
+                    .connections
+                    .remove(&id)
+                    .ok_or_else(|| format!("Unknown WebSocket connection ID {}", id))?;
 
-                connection.socket.close(None)
-                    .map_err(|e| {
-                        format!("WebSocket close failed: {}", e)
-                    })?;
+                connection
+                    .socket
+                    .close(None)
+                    .map_err(|e| format!("WebSocket close failed: {}", e))?;
+
+                connection.open = false;
 
                 Ok(Value::Null)
             }
@@ -162,21 +151,21 @@ impl VeyraModule for WebSocketModule {
 
                 let id = expect_id(&args[0])?;
 
-                let state = self.state.lock()
+                let state = self
+                    .state
+                    .lock()
                     .map_err(|_| "WebSocket state lock failed")?;
 
                 Ok(Value::Bool(
-                    state.connections
+                    state
+                        .connections
                         .get(&id)
                         .map(|connection| connection.open)
-                        .unwrap_or(false)
+                        .unwrap_or(false),
                 ))
             }
 
-            _ => Err(format!(
-                "websocket has no member '{}'",
-                func
-            )),
+            _ => Err(format!("websocket has no member '{}'", func)),
         }
     }
 
@@ -197,12 +186,7 @@ impl VeyraModule for WebSocketModule {
     fn is_function(&self, name: &str) -> bool {
         matches!(
             name,
-            "connect"
-                | "send"
-                | "receive"
-                | "receive_timeout"
-                | "close"
-                | "is_open"
+            "connect" | "send" | "receive" | "receive_timeout" | "close" | "is_open"
         )
     }
 }
@@ -215,6 +199,10 @@ fn receive_message(
     connection: &mut Connection,
     timeout: Option<Duration>,
 ) -> Result<Value, String> {
+    if !connection.open {
+        return Ok(Value::Null);
+    }
+
     set_socket_timeout(&mut connection.socket, timeout)?;
 
     loop {
@@ -225,49 +213,58 @@ fn receive_message(
 
             Ok(Message::Binary(bytes)) => {
                 return Ok(Value::List(
-                    bytes.iter()
-                        .map(|byte| Value::Num(*byte as f64))
-                        .collect()
+                    bytes.iter().map(|byte| Value::Num(*byte as f64)).collect(),
                 ));
             }
 
             Ok(Message::Ping(payload)) => {
-                connection.socket
+                connection
+                    .socket
                     .send(Message::Pong(payload))
-                    .map_err(|e| {
-                        format!("WebSocket pong failed: {}", e)
-                    })?;
+                    .map_err(|e| format!("WebSocket pong failed: {}", e))?;
             }
 
-            Ok(Message::Pong(_)) => {
-                // Pong is handled internally.
-            }
+            Ok(Message::Pong(_)) => {}
 
-            Ok(Message::Close(_)) => {
+            Ok(Message::Close(frame)) => {
                 connection.open = false;
+
+                if let Some(frame) = frame {
+                    eprintln!(
+                        "[WebSocket] Closed by server: code={}, reason={}",
+                        frame.code, frame.reason
+                    );
+                } else {
+                    eprintln!("[WebSocket] Closed by server without reason");
+                }
+
                 return Ok(Value::Null);
             }
 
             Ok(Message::Frame(_)) => {}
 
             Err(tungstenite::Error::Io(error))
-                if error.kind() == ErrorKind::WouldBlock
-                    || error.kind() == ErrorKind::TimedOut =>
+                if error.kind() == ErrorKind::WouldBlock || error.kind() == ErrorKind::TimedOut =>
             {
+                eprintln!("[WebSocket DEBUG] Read timeout (connection kept open)");
+
                 return Ok(Value::Null);
             }
 
-            Err(tungstenite::Error::ConnectionClosed)
-            | Err(tungstenite::Error::AlreadyClosed) => {
+            Err(tungstenite::Error::ConnectionClosed) | Err(tungstenite::Error::AlreadyClosed) => {
+                eprintln!("[WebSocket DEBUG] ConnectionClosed / AlreadyClosed");
+
                 connection.open = false;
+
                 return Ok(Value::Null);
             }
 
             Err(error) => {
-                return Err(format!(
-                    "WebSocket receive failed: {}",
-                    error
-                ));
+                eprintln!("[WebSocket DEBUG] Receive error: {}", error);
+
+                connection.open = false;
+
+                return Err(format!("WebSocket receive failed: {}", error));
             }
         }
     }
@@ -277,96 +274,62 @@ fn receive_message(
 // SOCKET TIMEOUT
 // ============================================================
 
-fn set_socket_timeout(
-    socket: &mut Socket,
-    timeout: Option<Duration>,
-) -> Result<(), String> {
+fn set_socket_timeout(socket: &mut Socket, timeout: Option<Duration>) -> Result<(), String> {
     let stream = socket.get_mut();
 
     match stream {
-        MaybeTlsStream::Plain(tcp) => {
-            tcp.set_read_timeout(timeout)
-                .map_err(|e| {
-                    format!("Cannot set WebSocket timeout: {}", e)
-                })
-        }
+        MaybeTlsStream::Plain(tcp) => tcp
+            .set_read_timeout(timeout)
+            .map_err(|e| format!("Cannot set WebSocket timeout: {}", e)),
 
-        MaybeTlsStream::Rustls(tls) => {
-            tls.sock.set_read_timeout(timeout)
-                .map_err(|e| {
-                    format!("Cannot set WebSocket timeout: {}", e)
-                })
-        }
+        MaybeTlsStream::Rustls(tls) => tls
+            .sock
+            .set_read_timeout(timeout)
+            .map_err(|e| format!("Cannot set WebSocket timeout: {}", e)),
 
-        _ => Err(
-            "Unsupported WebSocket stream type".into()
-        ),
+        _ => Err("Unsupported WebSocket stream type".into()),
     }
 }
 
 // ============================================================
-// ARGUMENT VALIDATION
+// VALIDATION
 // ============================================================
 
-fn require_args(
-    name: &str,
-    args: &[Value],
-    expected: usize,
-) -> Result<(), String> {
+fn require_args(name: &str, args: &[Value], expected: usize) -> Result<(), String> {
     if args.len() != expected {
         return Err(format!(
             "websocket.{}() requires {} argument(s)",
-            name,
-            expected
+            name, expected
         ));
     }
 
     Ok(())
 }
 
-fn expect_text(
-    value: &Value,
-    name: &str,
-) -> Result<String, String> {
+fn expect_text(value: &Value, name: &str) -> Result<String, String> {
     match value {
         Value::Text(text) => Ok(text.clone()),
 
-        _ => Err(format!(
-            "{} must be text",
-            name
-        )),
+        _ => Err(format!("{} must be text", name)),
     }
 }
 
 fn expect_id(value: &Value) -> Result<u64, String> {
     match value {
-        Value::Num(number)
-            if number.is_finite()
-                && *number >= 1.0
-                && number.fract() == 0.0 =>
-        {
+        Value::Num(number) if number.is_finite() && *number >= 1.0 && number.fract() == 0.0 => {
             Ok(*number as u64)
         }
 
-        _ => Err(
-            "WebSocket connection ID must be a positive integer".into()
-        ),
+        _ => Err("WebSocket connection ID must be a positive integer".into()),
     }
 }
 
 fn expect_timeout(value: &Value) -> Result<Duration, String> {
     match value {
-        Value::Num(number)
-            if number.is_finite()
-                && *number >= 0.0
-                && *number <= 3_600_000.0 =>
-        {
+        Value::Num(number) if number.is_finite() && *number >= 0.0 && *number <= 3_600_000.0 => {
             Ok(Duration::from_millis(*number as u64))
         }
 
-        _ => Err(
-            "Timeout must be between 0 and 3600000 milliseconds"
-                .into()
-        ),
+        _ => Err("Timeout must be between 0 and 3600000 milliseconds".into()),
     }
 }

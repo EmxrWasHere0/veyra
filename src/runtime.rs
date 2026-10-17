@@ -1317,7 +1317,7 @@ impl Runtime {
 
                 "repeat" => {
                     let (flow, next) = self
-                        .handle_if(lines, position)
+                        .handle_repeat(lines, position, None)
                         .map_err(|error| format_error(&lines[position], error))?;
 
                     position = next;
@@ -1329,7 +1329,7 @@ impl Runtime {
 
                 "while" => {
                     let (flow, next) = self
-                        .handle_if(lines, position)
+                        .handle_while(lines, position)
                         .map_err(|error| format_error(&lines[position], error))?;
 
                     position = next;
@@ -1341,7 +1341,7 @@ impl Runtime {
 
                 "try" => {
                     let (flow, next) = self
-                        .handle_if(lines, position)
+                        .handle_try(lines, position)
                         .map_err(|error| format_error(&lines[position], error))?;
 
                     position = next;
@@ -1352,24 +1352,35 @@ impl Runtime {
                 }
 
                 "add" | "func" if is_function_definition(tokens) => {
-                    position = self.handle_func_def(lines, position)?;
+                    position = self
+                        .handle_func_def(lines, position)
+                        .map_err(|error| format_error(&lines[position], error))?;
                 }
 
                 "mod" => {
-                    self.handle_mod(tokens)?;
+                    self.handle_mod(tokens)
+                        .map_err(|error| format_error(&lines[position], error))?;
+
                     position += 1;
                 }
 
                 "test" => {
-                    position = self.handle_test(lines, position)?;
+                    position = self
+                        .handle_test(lines, position)
+                        .map_err(|error| format_error(&lines[position], error))?;
                 }
 
                 "end" | "else" | "catch" => {
-                    return Err(format!("Unexpected '{}'", first));
+                    return Err(format_error(
+                        &lines[position],
+                        format!("Unexpected '{}'", first),
+                    ));
                 }
 
                 _ if tokens[0].kind == Tok::At => {
-                    let (flow, next) = self.handle_labeled(lines, position)?;
+                    let (flow, next) = self
+                        .handle_labeled(lines, position)
+                        .map_err(|error| format_error(&lines[position], error))?;
 
                     position = next;
 
@@ -1539,7 +1550,6 @@ impl Runtime {
 
     fn handle_while(&mut self, lines: &[Line], start: usize) -> Result<(Flow, usize), String> {
         let end = self.find_end(lines, start)?;
-
         let body = &lines[start + 1..end];
 
         self.loop_depth += 1;
@@ -1560,13 +1570,12 @@ impl Runtime {
 
                 iterations += 1;
 
-                match self.run(body)? {
+                let flow = self.run(body)?;
+
+                match flow {
                     Flow::Normal => {}
-
                     Flow::Stop(None) => break,
-
                     Flow::Forward(None) => continue,
-
                     other => return Ok(other),
                 }
             }
