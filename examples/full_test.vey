@@ -1,9 +1,0 @@
-get "Temanizi secin: "
-x = _input
-if x == "acik"
-    say "Acik Renk"
-else if x == "koyu"
-    say "Koyu Renk"
-else
-    say "Gecersiz Tema: "  + x
-end

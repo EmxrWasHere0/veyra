@@ -1,6 +1,9 @@
 pub mod base;
 pub mod io;
 pub mod system;
+pub mod json;
+pub mod http;
+pub mod websocket;
 
 use crate::runtime::Value;
 
@@ -22,5 +25,17 @@ pub fn builtin_modules() -> Vec<(String, Box<dyn VeyraModule>)> {
         ),
         ("io".into(), Box::new(io::IoModule)),
         ("base".into(), Box::new(base::BaseModule)),
+        (
+            "json".into(),
+            Box::new(json::JsonModule),
+        ),
+        (
+            "http".into(),
+            Box::new(http::HttpModule),
+        ),
+        (
+            "websocket".into(),
+            Box::new(websocket::WebSocketModule::new()),
+        ),
     ]
 }

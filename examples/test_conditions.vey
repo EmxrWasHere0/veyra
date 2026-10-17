@@ -1,9 +1,0 @@
-score = 85
-
-if score >= 90
-    say "Mükemmel!"
-else if score >= 70
-    say "Güzel!"
-else
-    say "Biraz daha çalış."
-end

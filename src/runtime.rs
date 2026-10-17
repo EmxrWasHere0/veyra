@@ -19,6 +19,7 @@ pub enum Value {
     Text(String),
     Bool(bool),
     List(Vec<Value>),
+    Object(Vec<(String, Value)>),
     Func(Rc<Function>),
     Native(&'static str),
     Null,
@@ -83,6 +84,7 @@ impl Value {
             Value::List(_) => "list",
             Value::Func(_) | Value::Native(_) => "function",
             Value::Null => "null",
+            Value::Object(_) => "object",
         }
     }
 
@@ -94,6 +96,7 @@ impl Value {
             Value::List(items) => !items.is_empty(),
             Value::Func(_) | Value::Native(_) => true,
             Value::Null => false,
+            Value::Object(items) => !items.is_empty(),
         }
     }
 }
@@ -135,6 +138,24 @@ impl std::fmt::Display for Value {
                 }
 
                 write!(f, "]")
+            }
+            Value::Object(entries) => {
+                write!(f, "{{")?;
+
+                for (index, (key, value)) in entries.iter().enumerate() {
+                    if index > 0 {
+                        write!(f, ", ")?;
+                    }
+
+                    write!(f, "\"{}\": ", key)?;
+
+                    match value {
+                        Value::Text(text) => write!(f, "\"{}\"", text)?,
+                        other => write!(f, "{}", other)?,
+                    }
+                }
+
+                write!(f, "}}")
             }
         }
     }
@@ -2127,6 +2148,15 @@ fn values_equal(a: &Value, b: &Value) -> bool {
         (Value::Func(a), Value::Func(b)) => Rc::ptr_eq(a, b),
 
         (Value::Native(a), Value::Native(b)) => a == b,
+
+        (Value::Object(a), Value::Object(b)) => {
+            a.len() == b.len()
+                && a.iter().all(|(key, value)| {
+                    b.iter().any(|(other_key, other_value)| {
+                        key == other_key && values_equal(value, other_value)
+                    })
+                })
+        }
 
         _ => false,
     }
