@@ -16,20 +16,12 @@ impl VeyraModule for SystemModule {
             "arch" => Ok(Value::Text(std::env::consts::ARCH.to_string())),
             "os" => Ok(Value::Text(std::env::consts::OS.to_string())),
             "family" => Ok(Value::Text(std::env::consts::FAMILY.to_string())),
-            "version" => Ok(Value::Text(
-                env!("CARGO_PKG_VERSION").to_string()
-            )),
+            "version" => Ok(Value::Text(env!("CARGO_PKG_VERSION").to_string())),
 
             // ── Functions ──
-            "args" => {
-                Ok(Value::List(
-                    self.script_args
-                        .iter()
-                        .cloned()
-                        .map(Value::Text)
-                        .collect()
-                ))
-            }
+            "args" => Ok(Value::List(
+                self.script_args.iter().cloned().map(Value::Text).collect(),
+            )),
             "env" => {
                 let mut items = Vec::new();
                 for (k, v) in std::env::vars() {

@@ -101,13 +101,11 @@ impl VeyraModule for IoModule {
                     return Err("io.listdir() takes 1 argument".into());
                 }
                 let path = args[0].to_string();
-                let entries = std::fs::read_dir(&path)
-                    .map_err(|e| format!("io.listdir error: {}", e))?;
+                let entries =
+                    std::fs::read_dir(&path).map_err(|e| format!("io.listdir error: {}", e))?;
                 let mut items = Vec::new();
                 for entry in entries.flatten() {
-                    items.push(Value::Text(
-                        entry.file_name().to_string_lossy().to_string(),
-                    ));
+                    items.push(Value::Text(entry.file_name().to_string_lossy().to_string()));
                 }
                 Ok(Value::List(items))
             }
@@ -130,15 +128,10 @@ impl VeyraModule for IoModule {
                 let prog = args[0].to_string();
                 let cmd_args: Vec<String> = match args.get(1) {
                     Some(Value::List(items)) if args.len() == 2 => {
-                        items.iter()
-                            .map(|value| value.to_string())
-                            .collect()
+                        items.iter().map(|value| value.to_string()).collect()
                     }
 
-                    _ => args[1..]
-                        .iter()
-                        .map(|value| value.to_string())
-                        .collect(),
+                    _ => args[1..].iter().map(|value| value.to_string()).collect(),
                 };
                 let output = std::process::Command::new(&prog)
                     .args(&cmd_args)

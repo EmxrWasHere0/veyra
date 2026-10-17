@@ -98,11 +98,7 @@ pub fn lex(source: &str) -> Result<Vec<Token>, String> {
         }
 
         // Numbers
-        if c.is_ascii_digit()
-            || (c == '.'
-                && i + 1 < len
-                && chars[i + 1].is_ascii_digit())
-        {
+        if c.is_ascii_digit() || (c == '.' && i + 1 < len && chars[i + 1].is_ascii_digit()) {
             let start = i;
             let mut has_dot = false;
 
@@ -131,10 +127,7 @@ pub fn lex(source: &str) -> Result<Vec<Token>, String> {
         if c.is_alphabetic() || c == '_' {
             let start = i;
 
-            while i < len
-                && (chars[i].is_alphanumeric()
-                    || chars[i] == '_')
-            {
+            while i < len && (chars[i].is_alphanumeric() || chars[i] == '_') {
                 i += 1;
             }
 
@@ -156,11 +149,7 @@ pub fn lex(source: &str) -> Result<Vec<Token>, String> {
         }
 
         // Spread operator
-        if c == '.'
-            && i + 2 < len
-            && chars[i + 1] == '.'
-            && chars[i + 2] == '.'
-        {
+        if c == '.' && i + 2 < len && chars[i + 1] == '.' && chars[i + 2] == '.' {
             tokens.push(Token {
                 kind: Tok::Spread,
                 text: "...".into(),
@@ -175,9 +164,7 @@ pub fn lex(source: &str) -> Result<Vec<Token>, String> {
             let two: String = chars[i..i + 2].iter().collect();
 
             let kind = match two.as_str() {
-                "??" | "==" | "!=" | "<=" | ">=" => {
-                    Some(Tok::Op)
-                }
+                "??" | "==" | "!=" | "<=" | ">=" => Some(Tok::Op),
 
                 "?=" => Some(Tok::QuestionEq),
                 "=>" => Some(Tok::Arrow),
@@ -186,10 +173,7 @@ pub fn lex(source: &str) -> Result<Vec<Token>, String> {
             };
 
             if let Some(kind) = kind {
-                tokens.push(Token {
-                    kind,
-                    text: two,
-                });
+                tokens.push(Token { kind, text: two });
 
                 i += 2;
                 continue;
@@ -211,8 +195,7 @@ pub fn lex(source: &str) -> Result<Vec<Token>, String> {
 
             '?' => Some(Tok::Question),
 
-            '+' | '-' | '*' | '/' | '%' |
-            '<' | '>' | '=' | '!' => Some(Tok::Op),
+            '+' | '-' | '*' | '/' | '%' | '<' | '>' | '=' | '!' => Some(Tok::Op),
 
             _ => None,
         };
@@ -228,11 +211,7 @@ pub fn lex(source: &str) -> Result<Vec<Token>, String> {
         }
 
         // Unknown characters must not be silently ignored.
-        return Err(format!(
-            "Unexpected character '{}' at column {}",
-            c,
-            i + 1
-        ));
+        return Err(format!("Unexpected character '{}' at column {}", c, i + 1));
     }
 
     tokens.push(Token {
@@ -243,10 +222,7 @@ pub fn lex(source: &str) -> Result<Vec<Token>, String> {
     Ok(tokens)
 }
 
-pub fn parse_lines(
-    source: &str,
-    filename: &str,
-) -> Result<Vec<Line>, String> {
+pub fn parse_lines(source: &str, filename: &str) -> Result<Vec<Line>, String> {
     let mut lines = Vec::new();
     let source_name = Rc::new(filename.to_string());
 
@@ -258,14 +234,8 @@ pub fn parse_lines(
         }
 
         // Lex the original line to preserve actual column positions.
-        let tokens = lex(raw_line).map_err(|error| {
-            format!(
-                "{}:{}: {}",
-                filename,
-                index + 1,
-                error
-            )
-        })?;
+        let tokens =
+            lex(raw_line).map_err(|error| format!("{}:{}: {}", filename, index + 1, error))?;
 
         let meaningful: Vec<Token> = tokens
             .into_iter()

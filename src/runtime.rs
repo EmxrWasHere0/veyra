@@ -287,10 +287,7 @@ impl Runtime {
             .unwrap()
             .insert(name.to_string(), value.clone());
 
-        self.consts
-            .last_mut()
-            .unwrap()
-            .insert(name.to_string());
+        self.consts.last_mut().unwrap().insert(name.to_string());
 
         self.channels.insert(name.to_string(), value);
     }
@@ -328,7 +325,8 @@ impl Runtime {
                 }
             }
 
-            if self.veyra_modules
+            if self
+                .veyra_modules
                 .get(module_name)
                 .map(|module| module.constants.contains_key(name))
                 .unwrap_or(false)
@@ -354,10 +352,7 @@ impl Runtime {
         let result = self.expr(tokens, &mut position, 0)?;
 
         if position < tokens.len() {
-            return Err(format!(
-                "Unexpected token '{}'",
-                tokens[position].text
-            ));
+            return Err(format!("Unexpected token '{}'", tokens[position].text));
         }
 
         Ok(result)
@@ -381,22 +376,16 @@ impl Runtime {
 
                 *position += 1;
 
-                if *position >= tokens.len()
-                    || tokens[*position].kind != Tok::Id
-                {
+                if *position >= tokens.len() || tokens[*position].kind != Tok::Id {
                     return Err("Expected channel name after '?'".into());
                 }
 
                 let name = tokens[*position].text.clone();
                 *position += 1;
 
-                let channel_name = self.lookup_tag(&name)
-                    .unwrap_or(name);
+                let channel_name = self.lookup_tag(&name).unwrap_or(name);
 
-                left = self.channels
-                    .get(&channel_name)
-                    .cloned()
-                    .unwrap_or(left);
+                left = self.channels.get(&channel_name).cloned().unwrap_or(left);
 
                 continue;
             }
@@ -424,11 +413,7 @@ impl Runtime {
         Ok(left)
     }
 
-    fn unary(
-        &mut self,
-        tokens: &[Token],
-        position: &mut usize,
-    ) -> Result<Value, String> {
+    fn unary(&mut self, tokens: &[Token], position: &mut usize) -> Result<Value, String> {
         if *position >= tokens.len() {
             return Err("Expected expression".into());
         }
@@ -459,11 +444,7 @@ impl Runtime {
         self.primary(tokens, position)
     }
 
-    fn primary(
-        &mut self,
-        tokens: &[Token],
-        position: &mut usize,
-    ) -> Result<Value, String> {
+    fn primary(&mut self, tokens: &[Token], position: &mut usize) -> Result<Value, String> {
         if *position >= tokens.len() {
             return Err("Expected value".into());
         }
@@ -481,15 +462,11 @@ impl Runtime {
                     _ => {}
                 }
 
-                let is_double_quoted =
-                    token.text.starts_with('"') && token.text.ends_with('"');
+                let is_double_quoted = token.text.starts_with('"') && token.text.ends_with('"');
 
-                let is_single_quoted =
-                    token.text.starts_with('\'') && token.text.ends_with('\'');
+                let is_single_quoted = token.text.starts_with('\'') && token.text.ends_with('\'');
 
-                if (is_double_quoted || is_single_quoted)
-                    && token.text.len() >= 2
-                {
+                if (is_double_quoted || is_single_quoted) && token.text.len() >= 2 {
                     let inner = &token.text[1..token.text.len() - 1];
 
                     return Ok(Value::Text(unescape_string(inner)));
@@ -508,9 +485,7 @@ impl Runtime {
                 let name = token.text;
 
                 // Module member access.
-                if *position < tokens.len()
-                    && tokens[*position].kind == Tok::Dot
-                {
+                if *position < tokens.len() && tokens[*position].kind == Tok::Dot {
                     *position += 1;
 
                     if *position >= tokens.len() {
@@ -520,15 +495,12 @@ impl Runtime {
                     let member = tokens[*position].text.clone();
                     *position += 1;
 
-                    if *position < tokens.len()
-                        && tokens[*position].kind == Tok::LParen
-                    {
+                    if *position < tokens.len() && tokens[*position].kind == Tok::LParen {
                         *position += 1;
 
                         let arguments = self.parse_call_args(tokens, position)?;
 
-                        let (values, tags): (Vec<_>, Vec<_>) =
-                            arguments.into_iter().unzip();
+                        let (values, tags): (Vec<_>, Vec<_>) = arguments.into_iter().unzip();
 
                         return self.module_call(&name, &member, values, tags);
                     }
@@ -537,16 +509,12 @@ impl Runtime {
                 }
 
                 // Function call.
-                if *position < tokens.len()
-                    && tokens[*position].kind == Tok::LParen
-                {
+                if *position < tokens.len() && tokens[*position].kind == Tok::LParen {
                     *position += 1;
 
                     let arguments = self.parse_call_args(tokens, position)?;
 
-                    if let Some((module_name, member)) =
-                        self.resolve_import(&name)
-                    {
+                    if let Some((module_name, member)) = self.resolve_import(&name) {
                         return self.module_call(
                             &module_name,
                             &member,
@@ -561,26 +529,17 @@ impl Runtime {
                         }
 
                         Some(Value::Native(native)) => {
-                            let values = arguments
-                                .into_iter()
-                                .map(|argument| argument.0)
-                                .collect();
+                            let values = arguments.into_iter().map(|argument| argument.0).collect();
 
                             return self.call_native(native, values);
                         }
 
                         Some(_) => {
-                            return Err(format!(
-                                "'{}' is not a function",
-                                name
-                            ));
+                            return Err(format!("'{}' is not a function", name));
                         }
 
                         None => {
-                            return Err(format!(
-                                "Undefined function '{}'",
-                                name
-                            ));
+                            return Err(format!("Undefined function '{}'", name));
                         }
                     }
                 }
@@ -589,9 +548,7 @@ impl Runtime {
                     return Ok(value);
                 }
 
-                if let Some((module_name, member)) =
-                    self.resolve_import(&name)
-                {
+                if let Some((module_name, member)) = self.resolve_import(&name) {
                     return self.module_constant(&module_name, &member);
                 }
 
@@ -613,14 +570,10 @@ impl Runtime {
 
                 let mut items = Vec::new();
 
-                while *position < tokens.len()
-                    && tokens[*position].kind != Tok::RBracket
-                {
+                while *position < tokens.len() && tokens[*position].kind != Tok::RBracket {
                     items.push(self.expr(tokens, position, 0)?);
 
-                    if *position < tokens.len()
-                        && tokens[*position].kind == Tok::Comma
-                    {
+                    if *position < tokens.len() && tokens[*position].kind == Tok::Comma {
                         *position += 1;
                     } else {
                         break;
@@ -649,12 +602,10 @@ impl Runtime {
                     return Err("Lambda requires an expression".into());
                 }
 
-                let mut return_tokens = vec![
-                    Token {
-                        kind: Tok::Id,
-                        text: "return".into(),
-                    },
-                ];
+                let mut return_tokens = vec![Token {
+                    kind: Tok::Id,
+                    text: "return".into(),
+                }];
 
                 return_tokens.extend(expression);
 
@@ -670,10 +621,7 @@ impl Runtime {
                 })))
             }
 
-            _ => Err(format!(
-                "Unexpected token '{}'",
-                token.text
-            )),
+            _ => Err(format!("Unexpected token '{}'", token.text)),
         }
     }
 
@@ -684,16 +632,12 @@ impl Runtime {
     ) -> Result<Vec<(Value, Option<String>)>, String> {
         let mut arguments = Vec::new();
 
-        while *position < tokens.len()
-            && tokens[*position].kind != Tok::RParen
-        {
+        while *position < tokens.len() && tokens[*position].kind != Tok::RParen {
             let start = *position;
 
             let value = self.expr(tokens, position, 0)?;
 
-            let tag = if *position == start + 1
-                && tokens[start].kind == Tok::Id
-            {
+            let tag = if *position == start + 1 && tokens[start].kind == Tok::Id {
                 let name = &tokens[start].text;
 
                 self.lookup_tag(name).or_else(|| {
@@ -709,9 +653,7 @@ impl Runtime {
 
             arguments.push((value, tag));
 
-            if *position < tokens.len()
-                && tokens[*position].kind == Tok::Comma
-            {
+            if *position < tokens.len() && tokens[*position].kind == Tok::Comma {
                 *position += 1;
             } else {
                 break;
@@ -723,17 +665,11 @@ impl Runtime {
         Ok(arguments)
     }
 
-    fn parse_params(
-        &self,
-        tokens: &[Token],
-        position: &mut usize,
-    ) -> Result<Vec<Param>, String> {
+    fn parse_params(&self, tokens: &[Token], position: &mut usize) -> Result<Vec<Param>, String> {
         let mut params = Vec::new();
         let mut variadic_count = 0;
 
-        while *position < tokens.len()
-            && tokens[*position].kind != Tok::RParen
-        {
+        while *position < tokens.len() && tokens[*position].kind != Tok::RParen {
             let variadic = if tokens[*position].kind == Tok::Spread {
                 *position += 1;
                 variadic_count += 1;
@@ -746,9 +682,7 @@ impl Runtime {
                 return Err("Only one variadic parameter is allowed".into());
             }
 
-            if *position >= tokens.len()
-                || tokens[*position].kind != Tok::Id
-            {
+            if *position >= tokens.len() || tokens[*position].kind != Tok::Id {
                 return Err("Expected parameter name".into());
             }
 
@@ -757,9 +691,7 @@ impl Runtime {
 
             let mut default = None;
 
-            if *position < tokens.len()
-                && tokens[*position].text == "="
-            {
+            if *position < tokens.len() && tokens[*position].text == "=" {
                 *position += 1;
 
                 let start = *position;
@@ -785,19 +717,14 @@ impl Runtime {
                 }
 
                 if start == *position {
-                    return Err(format!(
-                        "Missing default value for '{}'",
-                        name
-                    ));
+                    return Err(format!("Missing default value for '{}'", name));
                 }
 
                 default = Some(tokens[start..*position].to_vec());
             }
 
             if variadic && default.is_some() {
-                return Err(
-                    "Variadic parameters cannot have defaults".into()
-                );
+                return Err("Variadic parameters cannot have defaults".into());
             }
 
             params.push(Param {
@@ -806,9 +733,7 @@ impl Runtime {
                 variadic,
             });
 
-            if *position < tokens.len()
-                && tokens[*position].kind == Tok::Comma
-            {
+            if *position < tokens.len() && tokens[*position].kind == Tok::Comma {
                 *position += 1;
             } else {
                 break;
@@ -834,27 +759,16 @@ impl Runtime {
     // OPERATORS
     // ========================================================
 
-    fn binop(
-        &self,
-        left: Value,
-        op: &str,
-        right: Value,
-    ) -> Result<Value, String> {
+    fn binop(&self, left: Value, op: &str, right: Value) -> Result<Value, String> {
         match op {
             "+" => match (left, right) {
                 (Value::Num(a), Value::Num(b)) => Ok(Value::Num(a + b)),
 
-                (Value::Text(a), Value::Text(b)) => {
-                    Ok(Value::Text(a + &b))
-                }
+                (Value::Text(a), Value::Text(b)) => Ok(Value::Text(a + &b)),
 
-                (Value::Text(a), b) => {
-                    Ok(Value::Text(a + &b.to_string()))
-                }
+                (Value::Text(a), b) => Ok(Value::Text(a + &b.to_string())),
 
-                (a, Value::Text(b)) => {
-                    Ok(Value::Text(a.to_string() + &b))
-                }
+                (a, Value::Text(b)) => Ok(Value::Text(a.to_string() + &b)),
 
                 _ => Err("Invalid operands for '+'".into()),
             },
@@ -862,15 +776,10 @@ impl Runtime {
             "-" => numeric_op(left, right, "-", |a, b| a - b),
 
             "*" => match (left, right) {
-                (Value::Num(a), Value::Num(b)) => {
-                    Ok(Value::Num(a * b))
-                }
+                (Value::Num(a), Value::Num(b)) => Ok(Value::Num(a * b)),
 
                 (Value::Text(text), Value::Num(count)) => {
-                    if !count.is_finite()
-                        || count < 0.0
-                        || count > 1_000_000.0
-                    {
+                    if !count.is_finite() || count < 0.0 || count > 1_000_000.0 {
                         return Err("Invalid text repetition count".into());
                     }
 
@@ -900,13 +809,13 @@ impl Runtime {
             "!=" => Ok(Value::Bool(!values_equal(&left, &right))),
 
             "<" | ">" | "<=" | ">=" => {
-                let ordering = compare_values(&left, &right)
-                    .ok_or_else(|| {
-                        format!("Cannot compare {} and {}",
-                            left.type_name(),
-                            right.type_name()
-                        )
-                    })?;
+                let ordering = compare_values(&left, &right).ok_or_else(|| {
+                    format!(
+                        "Cannot compare {} and {}",
+                        left.type_name(),
+                        right.type_name()
+                    )
+                })?;
 
                 let result = match op {
                     "<" => ordering.is_lt(),
@@ -919,13 +828,9 @@ impl Runtime {
                 Ok(Value::Bool(result))
             }
 
-            "and" => Ok(Value::Bool(
-                left.is_truthy() && right.is_truthy()
-            )),
+            "and" => Ok(Value::Bool(left.is_truthy() && right.is_truthy())),
 
-            "or" => Ok(Value::Bool(
-                left.is_truthy() || right.is_truthy()
-            )),
+            "or" => Ok(Value::Bool(left.is_truthy() || right.is_truthy())),
 
             _ => Err(format!("Unknown operator '{}'", op)),
         }
@@ -935,29 +840,18 @@ impl Runtime {
     // NATIVE FUNCTIONS
     // ========================================================
 
-    fn call_native(
-        &self,
-        name: &str,
-        args: Vec<Value>,
-    ) -> Result<Value, String> {
+    fn call_native(&self, name: &str, args: Vec<Value>) -> Result<Value, String> {
         if args.len() != 1 {
-            return Err(format!(
-                "{}() requires exactly 1 argument",
-                name
-            ));
+            return Err(format!("{}() requires exactly 1 argument", name));
         }
 
         let value = &args[0];
 
         match name {
             "len" => match value {
-                Value::Text(text) => {
-                    Ok(Value::Num(text.chars().count() as f64))
-                }
+                Value::Text(text) => Ok(Value::Num(text.chars().count() as f64)),
 
-                Value::List(items) => {
-                    Ok(Value::Num(items.len() as f64))
-                }
+                Value::List(items) => Ok(Value::Num(items.len() as f64)),
 
                 _ => Err("len() requires text or list".into()),
             },
@@ -968,22 +862,16 @@ impl Runtime {
                 Value::Text(text) => text
                     .parse::<f64>()
                     .map(Value::Num)
-                    .map_err(|_| {
-                        format!("Cannot convert '{}' to num", text)
-                    }),
+                    .map_err(|_| format!("Cannot convert '{}' to num", text)),
 
-                Value::Bool(b) => {
-                    Ok(Value::Num(if *b { 1.0 } else { 0.0 }))
-                }
+                Value::Bool(b) => Ok(Value::Num(if *b { 1.0 } else { 0.0 })),
 
                 _ => Err("Cannot convert value to num".into()),
             },
 
             "text" => Ok(Value::Text(value.to_string())),
 
-            "type" => {
-                Ok(Value::Text(value.type_name().to_string()))
-            }
+            "type" => Ok(Value::Text(value.type_name().to_string())),
 
             _ => Err(format!("Unknown native function '{}'", name)),
         }
@@ -999,33 +887,20 @@ impl Runtime {
         args: Vec<(Value, Option<String>)>,
     ) -> Result<Value, String> {
         if self.call_depth >= CALL_LIMIT {
-            return Err(format!(
-                "Call stack limit reached ({})",
-                CALL_LIMIT
-            ));
+            return Err(format!("Call stack limit reached ({})", CALL_LIMIT));
         }
 
-        let (values, tags): (Vec<_>, Vec<_>) =
-            args.into_iter().unzip();
+        let (values, tags): (Vec<_>, Vec<_>) = args.into_iter().unzip();
 
         let planned_values = plan_values(func, values)?;
         let planned_tags = plan_tags(func, tags);
 
         // Functions have closed scopes.
-        let saved_scopes = std::mem::replace(
-            &mut self.scopes,
-            vec![HashMap::new()],
-        );
+        let saved_scopes = std::mem::replace(&mut self.scopes, vec![HashMap::new()]);
 
-        let saved_consts = std::mem::replace(
-            &mut self.consts,
-            vec![HashSet::new()],
-        );
+        let saved_consts = std::mem::replace(&mut self.consts, vec![HashSet::new()]);
 
-        let saved_tags = std::mem::replace(
-            &mut self.tags,
-            vec![HashMap::new()],
-        );
+        let saved_tags = std::mem::replace(&mut self.tags, vec![HashMap::new()]);
 
         let saved_return = self.return_value.take();
         let saved_last = self.last_value.take();
@@ -1035,12 +910,7 @@ impl Runtime {
         self.call_depth += 1;
         self.function_depth += 1;
 
-        let result = call_inner(
-            self,
-            func,
-            planned_values,
-            planned_tags,
-        );
+        let result = call_inner(self, func, planned_values, planned_tags);
 
         self.function_depth -= 1;
         self.call_depth -= 1;
@@ -1064,36 +934,26 @@ impl Runtime {
         arg_tags: Vec<Option<String>>,
     ) -> Result<Value, String> {
         if !self.module_is_accessible(mod_name) {
-            return Err(format!(
-                "Module '{}' has not been imported",
-                mod_name
-            ));
+            return Err(format!("Module '{}' has not been imported", mod_name));
         }
 
         if let Some(module) = self.available_modules.get(mod_name) {
             if !module.is_function(func_name) {
-                return Err(format!(
-                    "'{}.{}' is not a function",
-                    mod_name, func_name
-                ));
+                return Err(format!("'{}.{}' is not a function", mod_name, func_name));
             }
 
             return module.call_func(func_name, args);
         }
 
-        let func = self.veyra_modules
+        let func = self
+            .veyra_modules
             .get(mod_name)
             .and_then(|module| module.functions.get(func_name))
             .cloned();
 
         if let Some(func) = func {
-            if func_name.starts_with('_')
-                && self.active_module.as_deref() != Some(mod_name)
-            {
-                return Err(format!(
-                    "'{}.{}' is private",
-                    mod_name, func_name
-                ));
+            if func_name.starts_with('_') && self.active_module.as_deref() != Some(mod_name) {
+                return Err(format!("'{}.{}' is private", mod_name, func_name));
             }
 
             let previous_module = self.active_module.clone();
@@ -1126,44 +986,26 @@ impl Runtime {
         Err(format!("Unknown module '{}'", mod_name))
     }
 
-    fn module_constant(
-        &self,
-        mod_name: &str,
-        member: &str,
-    ) -> Result<Value, String> {
+    fn module_constant(&self, mod_name: &str, member: &str) -> Result<Value, String> {
         if !self.module_is_accessible(mod_name) {
-            return Err(format!(
-                "Module '{}' has not been imported",
-                mod_name
-            ));
+            return Err(format!("Module '{}' has not been imported", mod_name));
         }
 
         if let Some(module) = self.available_modules.get(mod_name) {
             if module.is_function(member) {
-                return Err(format!(
-                    "'{}.{}' requires ()",
-                    mod_name, member
-                ));
+                return Err(format!("'{}.{}' requires ()", mod_name, member));
             }
 
             if !module.list_members().iter().any(|name| name == member) {
-                return Err(format!(
-                    "Module '{}' has no member '{}'",
-                    mod_name, member
-                ));
+                return Err(format!("Module '{}' has no member '{}'", mod_name, member));
             }
 
             return module.call_func(member, Vec::new());
         }
 
         if let Some(module) = self.veyra_modules.get(mod_name) {
-            if member.starts_with('_')
-                && self.active_module.as_deref() != Some(mod_name)
-            {
-                return Err(format!(
-                    "'{}.{}' is private",
-                    mod_name, member
-                ));
+            if member.starts_with('_') && self.active_module.as_deref() != Some(mod_name) {
+                return Err(format!("'{}.{}' is private", mod_name, member));
             }
 
             if let Some(value) = module.constants.get(member) {
@@ -1171,16 +1013,10 @@ impl Runtime {
             }
 
             if module.functions.contains_key(member) {
-                return Err(format!(
-                    "'{}.{}' requires ()",
-                    mod_name, member
-                ));
+                return Err(format!("'{}.{}' requires ()", mod_name, member));
             }
 
-            return Err(format!(
-                "Module '{}' has no member '{}'",
-                mod_name, member
-            ));
+            return Err(format!("Module '{}' has no member '{}'", mod_name, member));
         }
 
         Err(format!("Unknown module '{}'", mod_name))
@@ -1251,9 +1087,7 @@ impl Runtime {
                     .read_line(&mut input)
                     .map_err(|e| format!("Input error: {}", e))?;
 
-                let input = input
-                    .trim_end_matches(['\r', '\n'])
-                    .to_string();
+                let input = input.trim_end_matches(['\r', '\n']).to_string();
 
                 self.define_var(&name, Value::Text(input));
 
@@ -1300,10 +1134,7 @@ impl Runtime {
                         .collect::<Vec<_>>()
                         .join(" ");
 
-                    let error = format!(
-                        "Assertion failed: {}",
-                        expression
-                    );
+                    let error = format!("Assertion failed: {}", expression);
 
                     if self.test_mode {
                         self.test_stats.failed += 1;
@@ -1323,10 +1154,7 @@ impl Runtime {
             return self.handle_destructure(tokens);
         }
 
-        if tokens.len() >= 3
-            && tokens[0].kind == Tok::Id
-            && tokens[1].kind == Tok::QuestionEq
-        {
+        if tokens.len() >= 3 && tokens[0].kind == Tok::Id && tokens[1].kind == Tok::QuestionEq {
             let name = tokens[0].text.clone();
 
             let value = self.eval(&tokens[2..])?;
@@ -1338,10 +1166,7 @@ impl Runtime {
             return Ok(Flow::Normal);
         }
 
-        if tokens.len() >= 3
-            && tokens[0].kind == Tok::Id
-            && tokens[1].text == "="
-        {
+        if tokens.len() >= 3 && tokens[0].kind == Tok::Id && tokens[1].text == "=" {
             let name = tokens[0].text.clone();
 
             let value = self.eval(&tokens[2..])?;
@@ -1358,10 +1183,7 @@ impl Runtime {
         Ok(Flow::Normal)
     }
 
-    fn eval_return_values(
-        &mut self,
-        tokens: &[Token],
-    ) -> Result<Value, String> {
+    fn eval_return_values(&mut self, tokens: &[Token]) -> Result<Value, String> {
         if tokens.is_empty() {
             return Ok(Value::Null);
         }
@@ -1381,18 +1203,13 @@ impl Runtime {
         }
     }
 
-    fn handle_destructure(
-        &mut self,
-        tokens: &[Token],
-    ) -> Result<Flow, String> {
+    fn handle_destructure(&mut self, tokens: &[Token]) -> Result<Flow, String> {
         let closing = tokens
             .iter()
             .position(|token| token.kind == Tok::RBracket)
             .ok_or("Missing ']' in destructuring")?;
 
-        if closing + 1 >= tokens.len()
-            || tokens[closing + 1].text != "="
-        {
+        if closing + 1 >= tokens.len() || tokens[closing + 1].text != "=" {
             return Err("Expected '=' after destructuring pattern".into());
         }
 
@@ -1402,9 +1219,7 @@ impl Runtime {
             Value::List(items) => items,
 
             _ => {
-                return Err(
-                    "Destructuring requires a list".into()
-                );
+                return Err("Destructuring requires a list".into());
             }
         };
 
@@ -1423,9 +1238,7 @@ impl Runtime {
                 position += 1;
 
                 if position >= closing {
-                    return Err(
-                        "Expected name after '...'".into()
-                    );
+                    return Err("Expected name after '...'".into());
                 }
 
                 rest_name = Some(tokens[position].text.clone());
@@ -1437,19 +1250,13 @@ impl Runtime {
         }
 
         for (index, name) in names.iter().enumerate() {
-            let value = items
-                .get(index)
-                .cloned()
-                .unwrap_or(Value::Null);
+            let value = items.get(index).cloned().unwrap_or(Value::Null);
 
             self.define_var(name, value);
         }
 
         if let Some(name) = rest_name {
-            let remaining = items
-                .into_iter()
-                .skip(names.len())
-                .collect();
+            let remaining = items.into_iter().skip(names.len()).collect();
 
             self.define_var(&name, Value::List(remaining));
         }
@@ -1523,11 +1330,8 @@ impl Runtime {
                     }
                 }
 
-                "add" | "func"
-                    if is_function_definition(tokens) =>
-                {
-                    position =
-                        self.handle_func_def(lines, position)?;
+                "add" | "func" if is_function_definition(tokens) => {
+                    position = self.handle_func_def(lines, position)?;
                 }
 
                 "mod" => {
@@ -1536,20 +1340,15 @@ impl Runtime {
                 }
 
                 "test" => {
-                    position =
-                        self.handle_test(lines, position)?;
+                    position = self.handle_test(lines, position)?;
                 }
 
                 "end" | "else" | "catch" => {
-                    return Err(format!(
-                        "Unexpected '{}'",
-                        first
-                    ));
+                    return Err(format!("Unexpected '{}'", first));
                 }
 
                 _ if tokens[0].kind == Tok::At => {
-                    let (flow, next) =
-                        self.handle_labeled(lines, position)?;
+                    let (flow, next) = self.handle_labeled(lines, position)?;
 
                     position = next;
 
@@ -1559,9 +1358,9 @@ impl Runtime {
                 }
 
                 _ => {
-                    let flow = self.run_line(&lines[position]).map_err(|error| {
-                        format_error(&lines[position], error)
-                    })?;
+                    let flow = self
+                        .run_line(&lines[position])
+                        .map_err(|error| format_error(&lines[position], error))?;
 
                     if !matches!(flow, Flow::Normal) {
                         return Ok(flow);
@@ -1575,11 +1374,7 @@ impl Runtime {
         Ok(Flow::Normal)
     }
 
-    fn find_end(
-        &self,
-        lines: &[Line],
-        start: usize,
-    ) -> Result<usize, String> {
+    fn find_end(&self, lines: &[Line], start: usize) -> Result<usize, String> {
         let mut depth = 1usize;
 
         for index in start + 1..lines.len() {
@@ -1634,17 +1429,12 @@ impl Runtime {
         None
     }
 
-    fn handle_if(
-        &mut self,
-        lines: &[Line],
-        start: usize,
-    ) -> Result<(Flow, usize), String> {
+    fn handle_if(&mut self, lines: &[Line], start: usize) -> Result<(Flow, usize), String> {
         let end = self.find_end(lines, start)?;
 
         let condition = self.eval(&lines[start].tokens[1..])?;
 
-        let else_position =
-            self.find_branch(lines, start, end, "else");
+        let else_position = self.find_branch(lines, start, end, "else");
 
         let flow = if condition.is_truthy() {
             let body_end = else_position.unwrap_or(end);
@@ -1669,33 +1459,18 @@ impl Runtime {
 
         let tokens = &lines[start].tokens;
 
-        let expression_start = if tokens[0].kind == Tok::At {
-            3
-        } else {
-            1
-        };
+        let expression_start = if tokens[0].kind == Tok::At { 3 } else { 1 };
 
         let value = self.eval(&tokens[expression_start..])?;
 
         let count = match value {
-            Value::Num(n)
-                if n.is_finite()
-                    && n >= 0.0
-                    && n.fract() == 0.0 =>
-            {
-                n as usize
-            }
+            Value::Num(n) if n.is_finite() && n >= 0.0 && n.fract() == 0.0 => n as usize,
 
-            _ => return Err(
-                "repeat requires a non-negative integer".into()
-            ),
+            _ => return Err("repeat requires a non-negative integer".into()),
         };
 
         if count > LOOP_LIMIT {
-            return Err(format!(
-                "Loop iteration limit reached ({})",
-                LOOP_LIMIT
-            ));
+            return Err(format!("Loop iteration limit reached ({})", LOOP_LIMIT));
         }
 
         let body = &lines[start + 1..end];
@@ -1741,11 +1516,7 @@ impl Runtime {
         Ok((result?, end + 1))
     }
 
-    fn handle_while(
-        &mut self,
-        lines: &[Line],
-        start: usize,
-    ) -> Result<(Flow, usize), String> {
+    fn handle_while(&mut self, lines: &[Line], start: usize) -> Result<(Flow, usize), String> {
         let end = self.find_end(lines, start)?;
 
         let body = &lines[start + 1..end];
@@ -1756,18 +1527,14 @@ impl Runtime {
             let mut iterations = 0usize;
 
             loop {
-                let condition =
-                    self.eval(&lines[start].tokens[1..])?;
+                let condition = self.eval(&lines[start].tokens[1..])?;
 
                 if !condition.is_truthy() {
                     break;
                 }
 
                 if iterations >= LOOP_LIMIT {
-                    return Err(format!(
-                        "Loop iteration limit reached ({})",
-                        LOOP_LIMIT
-                    ));
+                    return Err(format!("Loop iteration limit reached ({})", LOOP_LIMIT));
                 }
 
                 iterations += 1;
@@ -1791,20 +1558,11 @@ impl Runtime {
         Ok((result?, end + 1))
     }
 
-    fn handle_labeled(
-        &mut self,
-        lines: &[Line],
-        start: usize,
-    ) -> Result<(Flow, usize), String> {
+    fn handle_labeled(&mut self, lines: &[Line], start: usize) -> Result<(Flow, usize), String> {
         let tokens = &lines[start].tokens;
 
-        if tokens.len() < 4
-            || tokens[1].kind != Tok::Id
-            || tokens[2].text != "repeat"
-        {
-            return Err(
-                "Labels are only supported on repeat loops".into()
-            );
+        if tokens.len() < 4 || tokens[1].kind != Tok::Id || tokens[2].text != "repeat" {
+            return Err("Labels are only supported on repeat loops".into());
         }
 
         let label = tokens[1].text.clone();
@@ -1812,15 +1570,10 @@ impl Runtime {
         self.handle_repeat(lines, start, Some(label))
     }
 
-    fn handle_try(
-        &mut self,
-        lines: &[Line],
-        start: usize,
-    ) -> Result<(Flow, usize), String> {
+    fn handle_try(&mut self, lines: &[Line], start: usize) -> Result<(Flow, usize), String> {
         let end = self.find_end(lines, start)?;
 
-        let catch_position =
-            self.find_branch(lines, start, end, "catch");
+        let catch_position = self.find_branch(lines, start, end, "catch");
 
         let try_end = catch_position.unwrap_or(end);
 
@@ -1835,17 +1588,11 @@ impl Runtime {
 
                 self.push_scope();
 
-                if let Some(token) =
-                    lines[catch_index].tokens.get(1)
-                {
-                    self.define_var(
-                        &token.text,
-                        Value::Text(error),
-                    );
+                if let Some(token) = lines[catch_index].tokens.get(1) {
+                    self.define_var(&token.text, Value::Text(error));
                 }
 
-                let result =
-                    self.run(&lines[catch_index + 1..end]);
+                let result = self.run(&lines[catch_index + 1..end]);
 
                 self.pop_scope();
 
@@ -1854,11 +1601,7 @@ impl Runtime {
         }
     }
 
-    fn handle_func_def(
-        &mut self,
-        lines: &[Line],
-        start: usize,
-    ) -> Result<usize, String> {
+    fn handle_func_def(&mut self, lines: &[Line], start: usize) -> Result<usize, String> {
         let end = self.find_end(lines, start)?;
 
         let tokens = &lines[start].tokens;
@@ -1883,11 +1626,7 @@ impl Runtime {
         Ok(end + 1)
     }
 
-    fn handle_test(
-        &mut self,
-        lines: &[Line],
-        start: usize,
-    ) -> Result<usize, String> {
+    fn handle_test(&mut self, lines: &[Line], start: usize) -> Result<usize, String> {
         let end = self.find_end(lines, start)?;
 
         if self.test_mode {
@@ -1907,7 +1646,8 @@ impl Runtime {
         }
 
         if let Some(current) = &self.active_module {
-            return self.module_dependencies
+            return self
+                .module_dependencies
                 .get(current)
                 .map(|dependencies| dependencies.contains(name))
                 .unwrap_or(false);
@@ -1916,12 +1656,10 @@ impl Runtime {
         self.loaded_modules.contains(name)
     }
 
-    fn resolve_import(
-        &self,
-        name: &str,
-    ) -> Option<(String, String)> {
+    fn resolve_import(&self, name: &str) -> Option<(String, String)> {
         if let Some(current) = &self.active_module {
-            return self.module_imports
+            return self
+                .module_imports
                 .get(current)
                 .and_then(|imports| imports.get(name))
                 .cloned();
@@ -1930,23 +1668,16 @@ impl Runtime {
         self.imported_names.get(name).cloned()
     }
 
-    fn handle_mod(
-        &mut self,
-        tokens: &[Token],
-    ) -> Result<(), String> {
+    fn handle_mod(&mut self, tokens: &[Token]) -> Result<(), String> {
         if tokens.len() < 2 || tokens[1].kind != Tok::Id {
             return Err("mod requires a module name".into());
         }
 
         let name = tokens[1].text.clone();
 
-        let (style, members) = if tokens.len() >= 3
-            && tokens[2].text == "*"
-        {
+        let (style, members) = if tokens.len() >= 3 && tokens[2].text == "*" {
             ("star", Vec::new())
-        } else if tokens.len() >= 3
-            && tokens[2].kind == Tok::LBracket
-        {
+        } else if tokens.len() >= 3 && tokens[2].kind == Tok::LBracket {
             let members = tokens[3..]
                 .iter()
                 .filter(|token| token.kind == Tok::Id)
@@ -1959,10 +1690,7 @@ impl Runtime {
         };
 
         if self.loading_modules.contains(&name) {
-            return Err(format!(
-                "Circular module import detected: '{}'",
-                name
-            ));
+            return Err(format!("Circular module import detected: '{}'", name));
         }
 
         if !self.loaded_modules.contains(&name) {
@@ -2011,29 +1739,19 @@ impl Runtime {
         };
 
         for member in selected {
-            let destination = if let Some(current) =
-                &self.active_module
-            {
-                self.module_imports
-                    .entry(current.clone())
-                    .or_default()
+            let destination = if let Some(current) = &self.active_module {
+                self.module_imports.entry(current.clone()).or_default()
             } else {
                 &mut self.imported_names
             };
 
-            destination.insert(
-                member.clone(),
-                (module_name.to_string(), member),
-            );
+            destination.insert(member.clone(), (module_name.to_string(), member));
         }
 
         Ok(())
     }
 
-    fn module_members(
-        &self,
-        name: &str,
-    ) -> Result<Vec<String>, String> {
+    fn module_members(&self, name: &str) -> Result<Vec<String>, String> {
         if let Some(module) = self.available_modules.get(name) {
             return Ok(module.list_members());
         }
@@ -2062,10 +1780,7 @@ impl Runtime {
         Err(format!("Unknown module '{}'", name))
     }
 
-    fn find_module_file(
-        &self,
-        name: &str,
-    ) -> Result<PathBuf, String> {
+    fn find_module_file(&self, name: &str) -> Result<PathBuf, String> {
         let filename = format!("{}.veymod", name);
 
         let mut directories = vec![
@@ -2082,14 +1797,8 @@ impl Runtime {
 
         #[cfg(windows)]
         {
-            if let Ok(program_files) =
-                std::env::var("ProgramFiles")
-            {
-                directories.push(
-                    PathBuf::from(program_files)
-                        .join("vey")
-                        .join("libs")
-                );
+            if let Ok(program_files) = std::env::var("ProgramFiles") {
+                directories.push(PathBuf::from(program_files).join("vey").join("libs"));
             }
         }
 
@@ -2104,51 +1813,28 @@ impl Runtime {
         Err(format!("Module '{}' not found", name))
     }
 
-    fn load_veyra_module(
-        &mut self,
-        name: &str,
-    ) -> Result<(), String> {
+    fn load_veyra_module(&mut self, name: &str) -> Result<(), String> {
         if self.loading_modules.contains(name) {
-            return Err(format!(
-                "Circular module import detected: '{}'",
-                name
-            ));
+            return Err(format!("Circular module import detected: '{}'", name));
         }
 
         let path = self.find_module_file(name)?;
 
         let source = std::fs::read_to_string(&path)
-            .map_err(|error| {
-                format!(
-                    "Cannot read module '{}': {}",
-                    path.display(),
-                    error
-                )
-            })?;
+            .map_err(|error| format!("Cannot read module '{}': {}", path.display(), error))?;
 
         self.loading_modules.insert(name.to_string());
 
         // Module execution is isolated from the caller's variables.
-        let saved_scopes = std::mem::replace(
-            &mut self.scopes,
-            vec![HashMap::new()],
-        );
+        let saved_scopes = std::mem::replace(&mut self.scopes, vec![HashMap::new()]);
 
-        let saved_consts = std::mem::replace(
-            &mut self.consts,
-            vec![HashSet::new()],
-        );
+        let saved_consts = std::mem::replace(&mut self.consts, vec![HashSet::new()]);
 
-        let saved_tags = std::mem::replace(
-            &mut self.tags,
-            vec![HashMap::new()],
-        );
+        let saved_tags = std::mem::replace(&mut self.tags, vec![HashMap::new()]);
 
-        let saved_functions =
-            std::mem::take(&mut self.functions);
+        let saved_functions = std::mem::take(&mut self.functions);
 
-        let saved_imports =
-            std::mem::take(&mut self.imported_names);
+        let saved_imports = std::mem::take(&mut self.imported_names);
 
         let saved_module = self.active_module.take();
 
@@ -2160,17 +1846,12 @@ impl Runtime {
         let saved_last = self.last_value.take();
 
         if let Some(parent) = path.parent() {
-            self.script_dir = parent
-                .to_string_lossy()
-                .to_string();
+            self.script_dir = parent.to_string_lossy().to_string();
         }
 
         // During initialization, module-local imports are collected
         // using the normal import table.
-        let lines = crate::lexer::parse_lines(
-            &source,
-            &path.to_string_lossy(),
-        )?;
+        let lines = crate::lexer::parse_lines(&source, &path.to_string_lossy())?;
 
         let result = self.run(&lines);
 
@@ -2178,9 +1859,7 @@ impl Runtime {
         let mut private = HashMap::new();
 
         if let Some(scope) = self.scopes.first() {
-            let consts = self.consts.first()
-                .cloned()
-                .unwrap_or_default();
+            let consts = self.consts.first().cloned().unwrap_or_default();
 
             for (key, value) in scope {
                 if consts.contains(key) {
@@ -2191,11 +1870,9 @@ impl Runtime {
             }
         }
 
-        let functions =
-            std::mem::take(&mut self.functions);
+        let functions = std::mem::take(&mut self.functions);
 
-        let imports =
-            std::mem::take(&mut self.imported_names);
+        let imports = std::mem::take(&mut self.imported_names);
 
         self.scopes = saved_scopes;
         self.consts = saved_consts;
@@ -2211,13 +1888,7 @@ impl Runtime {
 
         self.loading_modules.remove(name);
 
-        result.map_err(|error| {
-            format!(
-                "{}: {}",
-                path.display(),
-                error
-            )
-        })?;
+        result.map_err(|error| format!("{}: {}", path.display(), error))?;
 
         self.veyra_modules.insert(
             name.to_string(),
@@ -2228,8 +1899,7 @@ impl Runtime {
             },
         );
 
-        self.module_scopes
-            .insert(name.to_string(), private);
+        self.module_scopes.insert(name.to_string(), private);
 
         self.module_imports
             .entry(name.to_string())
@@ -2242,22 +1912,13 @@ impl Runtime {
     }
 
     #[allow(dead_code)]
-    pub fn is_bare_import_function(
-        &self,
-        name: &str,
-    ) -> bool {
-        if let Some((module_name, member)) =
-            self.resolve_import(name)
-        {
-            if let Some(module) =
-                self.available_modules.get(&module_name)
-            {
+    pub fn is_bare_import_function(&self, name: &str) -> bool {
+        if let Some((module_name, member)) = self.resolve_import(name) {
+            if let Some(module) = self.available_modules.get(&module_name) {
                 return module.is_function(&member);
             }
 
-            if let Some(module) =
-                self.veyra_modules.get(&module_name)
-            {
+            if let Some(module) = self.veyra_modules.get(&module_name) {
                 return module.functions.contains_key(&member);
             }
         }
@@ -2276,12 +1937,7 @@ fn call_inner(
     planned: Vec<Option<Value>>,
     tags: Vec<Option<String>>,
 ) -> Result<Value, String> {
-    for ((param, slot), tag) in func
-        .params
-        .iter()
-        .zip(planned)
-        .zip(tags)
-    {
+    for ((param, slot), tag) in func.params.iter().zip(planned).zip(tags) {
         let value = match slot {
             Some(value) => value,
 
@@ -2291,8 +1947,7 @@ fn call_inner(
                 None => {
                     return Err(format!(
                         "Missing parameter '{}' for function '{}'",
-                        param.name,
-                        func.name
+                        param.name, func.name
                     ));
                 }
             },
@@ -2301,7 +1956,8 @@ fn call_inner(
         runtime.define_var(&param.name, value);
 
         if let Some(tag) = tag {
-            runtime.tags
+            runtime
+                .tags
                 .last_mut()
                 .unwrap()
                 .insert(param.name.clone(), tag);
@@ -2312,10 +1968,7 @@ fn call_inner(
 
     match flow {
         Flow::Stop(Some(label)) => {
-            return Err(format!(
-                "stop @{} used outside loop",
-                label
-            ));
+            return Err(format!("stop @{} used outside loop", label));
         }
 
         Flow::Stop(None) => {
@@ -2323,10 +1976,7 @@ fn call_inner(
         }
 
         Flow::Forward(Some(label)) => {
-            return Err(format!(
-                "fwd @{} used outside loop",
-                label
-            ));
+            return Err(format!("fwd @{} used outside loop", label));
         }
 
         Flow::Forward(None) => {
@@ -2348,15 +1998,10 @@ fn call_inner(
 // ARGUMENT PLANNING
 // ============================================================
 
-pub fn plan_values(
-    func: &Function,
-    args: Vec<Value>,
-) -> Result<Vec<Option<Value>>, String> {
+pub fn plan_values(func: &Function, args: Vec<Value>) -> Result<Vec<Option<Value>>, String> {
     let mut result = vec![None; func.params.len()];
 
-    let variadic = func.params
-        .iter()
-        .position(|param| param.variadic);
+    let variadic = func.params.iter().position(|param| param.variadic);
 
     if let Some(index) = variadic {
         let trailing = func.params.len() - index - 1;
@@ -2373,25 +2018,18 @@ pub fn plan_values(
 
         let variadic_end = args.len() - trailing_count;
 
-        result[index] = Some(Value::List(
-            args[prefix_count..variadic_end].to_vec()
-        ));
+        result[index] = Some(Value::List(args[prefix_count..variadic_end].to_vec()));
 
         for i in 0..trailing_count {
-            let param_index =
-                func.params.len() - trailing_count + i;
+            let param_index = func.params.len() - trailing_count + i;
 
-            let arg_index =
-                args.len() - trailing_count + i;
+            let arg_index = args.len() - trailing_count + i;
 
             result[param_index] = Some(args[arg_index].clone());
         }
     } else {
         if args.len() > func.params.len() {
-            return Err(format!(
-                "Too many arguments for function '{}'",
-                func.name
-            ));
+            return Err(format!("Too many arguments for function '{}'", func.name));
         }
 
         for (index, value) in args.into_iter().enumerate() {
@@ -2402,15 +2040,10 @@ pub fn plan_values(
     Ok(result)
 }
 
-pub fn plan_tags(
-    func: &Function,
-    tags: Vec<Option<String>>,
-) -> Vec<Option<String>> {
+pub fn plan_tags(func: &Function, tags: Vec<Option<String>>) -> Vec<Option<String>> {
     let mut result = vec![None; func.params.len()];
 
-    let variadic = func.params
-        .iter()
-        .position(|param| param.variadic);
+    let variadic = func.params.iter().position(|param| param.variadic);
 
     if let Some(index) = variadic {
         let trailing = func.params.len() - index - 1;
@@ -2425,11 +2058,9 @@ pub fn plan_tags(
         let trailing_count = trailing.min(remaining);
 
         for i in 0..trailing_count {
-            let param_index =
-                func.params.len() - trailing_count + i;
+            let param_index = func.params.len() - trailing_count + i;
 
-            let arg_index =
-                tags.len() - trailing_count + i;
+            let arg_index = tags.len() - trailing_count + i;
 
             result[param_index] = tags[arg_index].clone();
         }
@@ -2473,14 +2104,9 @@ fn numeric_op(
     operation: impl FnOnce(f64, f64) -> f64,
 ) -> Result<Value, String> {
     match (left, right) {
-        (Value::Num(a), Value::Num(b)) => {
-            Ok(Value::Num(operation(a, b)))
-        }
+        (Value::Num(a), Value::Num(b)) => Ok(Value::Num(operation(a, b))),
 
-        _ => Err(format!(
-            "Invalid operands for '{}'",
-            op
-        )),
+        _ => Err(format!("Invalid operands for '{}'", op)),
     }
 }
 
@@ -2495,10 +2121,7 @@ fn values_equal(a: &Value, b: &Value) -> bool {
         (Value::Null, Value::Null) => true,
 
         (Value::List(x), Value::List(y)) => {
-            x.len() == y.len()
-                && x.iter()
-                    .zip(y.iter())
-                    .all(|(a, b)| values_equal(a, b))
+            x.len() == y.len() && x.iter().zip(y.iter()).all(|(a, b)| values_equal(a, b))
         }
 
         (Value::Func(a), Value::Func(b)) => Rc::ptr_eq(a, b),
@@ -2509,10 +2132,7 @@ fn values_equal(a: &Value, b: &Value) -> bool {
     }
 }
 
-fn compare_values(
-    a: &Value,
-    b: &Value,
-) -> Option<std::cmp::Ordering> {
+fn compare_values(a: &Value, b: &Value) -> Option<std::cmp::Ordering> {
     match (a, b) {
         (Value::Num(x), Value::Num(y)) => x.partial_cmp(y),
 
@@ -2522,23 +2142,15 @@ fn compare_values(
     }
 }
 
-fn expect_token(
-    tokens: &[Token],
-    position: &mut usize,
-    expected: Tok,
-) -> Result<(), String> {
+fn expect_token(tokens: &[Token], position: &mut usize, expected: Tok) -> Result<(), String> {
     if *position >= tokens.len() {
-        return Err(format!(
-            "Expected {:?}, found end of expression",
-            expected
-        ));
+        return Err(format!("Expected {:?}, found end of expression", expected));
     }
 
     if tokens[*position].kind != expected {
         return Err(format!(
             "Expected {:?}, found '{}'",
-            expected,
-            tokens[*position].text
+            expected, tokens[*position].text
         ));
     }
 
@@ -2552,10 +2164,7 @@ fn parse_label(tokens: &[Token]) -> Result<Option<String>, String> {
         return Ok(None);
     }
 
-    if tokens.len() == 3
-        && tokens[1].kind == Tok::At
-        && tokens[2].kind == Tok::Id
-    {
+    if tokens.len() == 3 && tokens[1].kind == Tok::At && tokens[2].kind == Tok::Id {
         return Ok(Some(tokens[2].text.clone()));
     }
 
@@ -2564,8 +2173,7 @@ fn parse_label(tokens: &[Token]) -> Result<Option<String>, String> {
 
 fn is_function_definition(tokens: &[Token]) -> bool {
     tokens.len() >= 3
-        && (tokens[0].text == "add"
-            || tokens[0].text == "func")
+        && (tokens[0].text == "add" || tokens[0].text == "func")
         && tokens[1].kind == Tok::Id
         && tokens[2].kind == Tok::LParen
 }
@@ -2576,8 +2184,7 @@ fn is_block_start(tokens: &[Token]) -> bool {
     }
 
     if tokens[0].kind == Tok::At {
-        return tokens.len() >= 3
-            && tokens[2].text == "repeat";
+        return tokens.len() >= 3 && tokens[2].text == "repeat";
     }
 
     matches!(
@@ -2586,10 +2193,7 @@ fn is_block_start(tokens: &[Token]) -> bool {
     ) || is_function_definition(tokens)
 }
 
-fn split_top_level(
-    tokens: &[Token],
-    separator: Tok,
-) -> Vec<&[Token]> {
+fn split_top_level(tokens: &[Token], separator: Tok) -> Vec<&[Token]> {
     let mut parts = Vec::new();
     let mut start = 0;
     let mut depth = 0usize;

@@ -78,9 +78,7 @@ fn main() {
     rt.test_mode = test_mode;
     rt.available_modules.insert(
         "system".into(),
-        Box::new(modules::system::SystemModule {
-            script_args,
-        }),
+        Box::new(modules::system::SystemModule { script_args }),
     );
     rt.script_dir = std::path::Path::new(&file)
         .parent()
@@ -111,7 +109,10 @@ fn main() {
 }
 
 fn print_help() {
-    println!("Veyra {} - A Turkish-flavored programming language", env!("CARGO_PKG_VERSION"));
+    println!(
+        "Veyra {} - A Turkish-flavored programming language",
+        env!("CARGO_PKG_VERSION")
+    );
     println!();
     println!("Usage: veyra [options] <file.vey>");
     println!();
