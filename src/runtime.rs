@@ -201,6 +201,61 @@ pub struct Runtime {
     loop_depth: usize,
 }
 
+fn normalize_index(index: &Value, length: usize) -> Result<usize, String> {
+    let number = match index {
+        Value::Num(number) => *number,
+        _ => return Err("Index must be a number".into()),
+    };
+
+    if !number.is_finite() || number.fract() != 0.0 {
+        return Err("Index must be a finite integer".into());
+    }
+
+    if number < i64::MIN as f64 || number >= i64::MAX as f64 {
+        return Err("Index is out of range".into());
+    }
+
+    let mut index = number as i64;
+
+    if index < 0 {
+        index += length as i64;
+    }
+
+    if index < 0 || index >= length as i64 {
+        return Err("Index out of bounds".into());
+    }
+
+    Ok(index as usize)
+}
+
+fn values_equal(a: &Value, b: &Value) -> bool {
+    match (a, b) {
+        (Value::Num(x), Value::Num(y)) => x == y,
+        (Value::Text(x), Value::Text(y)) => x == y,
+        (Value::Bool(x), Value::Bool(y)) => x == y,
+        (Value::Null, Value::Null) => true,
+
+        (Value::List(x), Value::List(y)) => {
+            x.len() == y.len() && x.iter().zip(y.iter()).all(|(a, b)| values_equal(a, b))
+        }
+
+        (Value::Object(x), Value::Object(y)) => {
+            x.len() == y.len()
+                && x.iter().all(|(key, value)| {
+                    y.iter().any(|(other_key, other_value)| {
+                        key == other_key && values_equal(value, other_value)
+                    })
+                })
+        }
+
+        (Value::Func(x), Value::Func(y)) => Rc::ptr_eq(x, y),
+
+        (Value::Native(x), Value::Native(y)) => x == y,
+
+        _ => false,
+    }
+}
+
 impl Runtime {
     pub fn new() -> Self {
         let mut runtime = Self {
@@ -379,6 +434,44 @@ impl Runtime {
         Ok(result)
     }
 
+    fn postfix(&mut self, tokens: &[Token], position: &mut usize) -> Result<Value, String> {
+        let mut value = self.primary(tokens, position)?;
+
+        while *position < tokens.len() {
+            if tokens[*position].kind != Tok::LBracket {
+                break;
+            }
+
+            *position += 1;
+
+            let index = self.expr(tokens, position, 0)?;
+
+            expect_token(tokens, position, Tok::RBracket)?;
+
+            value = match value {
+                Value::List(items) => {
+                    let index = normalize_index(&index, items.len())?;
+
+                    items[index].clone()
+                }
+
+                Value::Text(text) => {
+                    let chars: Vec<char> = text.chars().collect();
+
+                    let index = normalize_index(&index, chars.len())?;
+
+                    Value::Text(chars[index].to_string())
+                }
+
+                _ => {
+                    return Err("Indexing requires a list or text".into());
+                }
+            };
+        }
+
+        Ok(value)
+    }
+
     fn expr(
         &mut self,
         tokens: &[Token],
@@ -462,7 +555,83 @@ impl Runtime {
             return Ok(Value::Bool(!value.is_truthy()));
         }
 
-        self.primary(tokens, position)
+        self.postfix(tokens, position)
+    }
+
+    fn call_list_method(
+        &mut self,
+        name: &str,
+        method: &str,
+        args: Vec<Value>,
+    ) -> Result<Value, String> {
+        let value = self
+            .get(name)
+            .ok_or_else(|| format!("Undefined '{}'", name))?;
+
+        let mut items = match value {
+            Value::List(items) => items,
+            _ => return Err(format!("'{}' is not a list", name)),
+        };
+
+        match method {
+            "len" => {
+                if !args.is_empty() {
+                    return Err("list.len expects no arguments".into());
+                }
+
+                Ok(Value::Num(items.len() as f64))
+            }
+
+            "append" => {
+                if args.len() != 1 {
+                    return Err("list.append expects 1 argument".into());
+                }
+
+                items.push(args[0].clone());
+
+                self.assign(name, Value::List(items))?;
+
+                Ok(Value::Null)
+            }
+
+            "pop" => {
+                if args.len() > 1 {
+                    return Err("list.pop expects 0 or 1 arguments".into());
+                }
+
+                if items.is_empty() {
+                    return Err("Cannot pop from an empty list".into());
+                }
+
+                let index = if args.is_empty() {
+                    items.len() - 1
+                } else {
+                    normalize_index(&args[0], items.len())?
+                };
+
+                let removed = items.remove(index);
+
+                self.assign(name, Value::List(items))?;
+
+                Ok(removed)
+            }
+
+            "index" => {
+                if args.len() != 1 {
+                    return Err("list.index expects 1 argument".into());
+                }
+
+                for (index, item) in items.iter().enumerate() {
+                    if values_equal(item, &args[0]) {
+                        return Ok(Value::Num(index as f64));
+                    }
+                }
+
+                Ok(Value::Num(-1.0))
+            }
+
+            _ => Err(format!("Unknown list method '{}'", method)),
+        }
     }
 
     fn primary(&mut self, tokens: &[Token], position: &mut usize) -> Result<Value, String> {
@@ -505,17 +674,29 @@ impl Runtime {
 
                 let name = token.text;
 
-                // Module member access.
+                // Module member access or list method.
                 if *position < tokens.len() && tokens[*position].kind == Tok::Dot {
                     *position += 1;
 
                     if *position >= tokens.len() {
-                        return Err("Expected module member".into());
+                        return Err("Expected member name".into());
                     }
 
                     let member = tokens[*position].text.clone();
                     *position += 1;
 
+                    // List methods.
+                    if let Some(Value::List(_)) = self.get(&name) {
+                        expect_token(tokens, position, Tok::LParen)?;
+
+                        let arguments = self.parse_call_args(tokens, position)?;
+
+                        let values = arguments.into_iter().map(|argument| argument.0).collect();
+
+                        return self.call_list_method(&name, &member, values);
+                    }
+
+                    // Existing module behavior.
                     if *position < tokens.len() && tokens[*position].kind == Tok::LParen {
                         *position += 1;
 
@@ -787,9 +968,10 @@ impl Runtime {
 
                 (Value::Text(a), Value::Text(b)) => Ok(Value::Text(a + &b)),
 
-                (Value::Text(a), b) => Ok(Value::Text(a + &b.to_string())),
-
-                (a, Value::Text(b)) => Ok(Value::Text(a.to_string() + &b)),
+                (Value::List(mut a), Value::List(b)) => {
+                    a.extend(b);
+                    Ok(Value::List(a))
+                }
 
                 _ => Err("Invalid operands for '+'".into()),
             },
@@ -2137,37 +2319,6 @@ fn numeric_op(
         (Value::Num(a), Value::Num(b)) => Ok(Value::Num(operation(a, b))),
 
         _ => Err(format!("Invalid operands for '{}'", op)),
-    }
-}
-
-fn values_equal(a: &Value, b: &Value) -> bool {
-    match (a, b) {
-        (Value::Num(x), Value::Num(y)) => x == y,
-
-        (Value::Text(x), Value::Text(y)) => x == y,
-
-        (Value::Bool(x), Value::Bool(y)) => x == y,
-
-        (Value::Null, Value::Null) => true,
-
-        (Value::List(x), Value::List(y)) => {
-            x.len() == y.len() && x.iter().zip(y.iter()).all(|(a, b)| values_equal(a, b))
-        }
-
-        (Value::Func(a), Value::Func(b)) => Rc::ptr_eq(a, b),
-
-        (Value::Native(a), Value::Native(b)) => a == b,
-
-        (Value::Object(a), Value::Object(b)) => {
-            a.len() == b.len()
-                && a.iter().all(|(key, value)| {
-                    b.iter().any(|(other_key, other_value)| {
-                        key == other_key && values_equal(value, other_value)
-                    })
-                })
-        }
-
-        _ => false,
     }
 }
 
