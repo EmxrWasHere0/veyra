@@ -2,7 +2,7 @@
   "name": "veyra",
   "displayName": "Veyra",
   "description": "Syntax highlighting and language support for the Veyra programming language.",
-  "version": "0.2.0",
+  "version": "0.2.3",
   "publisher": "veyra-lang",
   "license": "GPL-3.0-only",
   "engines": {
@@ -43,7 +43,9 @@
         "extensions": [
           ".vey",
           ".veyra",
-          ".vy"
+          ".vy",
+          ".veymod",
+          ".wei"
         ],
         "configuration": "./language-configuration.json",
         "icon": {

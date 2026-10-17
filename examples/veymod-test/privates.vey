@@ -1,0 +1,4 @@
+mod math
+
+say math.quadruple(4)
+say math._double(2)

@@ -11,10 +11,10 @@ from PIL import Image
 import customtkinter as ctk
 
 
-APP_VERSION = "1.0.0"
+APP_VERSION = "1.3.0"
 REPO_URL = "https://github.com/EmxrWasHere0/veyra.git"
 REPO_NAME = "veyra"
-VSIX_PATH = Path("veyra-vscode") / "veyra-0.2.0.vsix"
+VSIX_PATH = Path("veyra-vscode") / "veyra-0.2.3.vsix"
 
 ctk.set_appearance_mode("dark")
 ctk.set_default_color_theme("dark-blue")

@@ -1,0 +1,9 @@
+mod math [PI, TAU]
+
+add circle_area(r)
+    PI * r * r
+end
+
+add circle_perimeter(r)
+    TAU * r
+end

@@ -4,78 +4,75 @@ use crate::runtime::Value;
 pub struct BaseModule;
 
 impl VeyraModule for BaseModule {
-    fn name(&self) -> &str { "base" }
-
-    fn members(&self) -> Vec<String> {
-        vec![
-            "os".into(), "arch".into(), "family".into(),
-            "hostname".into(), "username".into(), "home_dir".into(),
-            "exe_path".into(), "pid".into(), "cores".into(),
-        ]
+    fn name(&self) -> &str {
+        "base"
     }
 
-    fn is_function(&self, name: &str) -> bool {
-        matches!(name, "hostname" | "username" | "home_dir" | "exe_path" | "pid" | "cores")
-    }
+    fn call_func(&self, func: &str, _args: Vec<Value>) -> Result<Value, String> {
+        match func {
+            // ── Constants ──
+            "os" => Ok(Value::Text(std::env::consts::OS.to_string())),
+            "arch" => Ok(Value::Text(std::env::consts::ARCH.to_string())),
+            "family" => Ok(Value::Text(std::env::consts::FAMILY.to_string())),
 
-    fn get_value(&self, name: &str) -> Option<Value> {
-        match name {
-            "os" => Some(Value::Text(std::env::consts::OS.into())),
-            "arch" => Some(Value::Text(std::env::consts::ARCH.into())),
-            "family" => Some(Value::Text(std::env::consts::FAMILY.into())),
-            _ => None,
-        }
-    }
-
-    fn call(&self, name: &str, args: Vec<Value>) -> Result<Value, String> {
-        if !args.is_empty() {
-            return Err(format!("base.{}() takes no arguments", name));
-        }
-        match name {
+            // ── Functions ──
             "hostname" => {
-                #[cfg(unix)]
-                {
-                    let out = std::process::Command::new("hostname")
-                        .output()
-                        .map(|o| String::from_utf8_lossy(&o.stdout).trim().to_string())
-                        .unwrap_or_else(|_| "unknown".into());
-                    Ok(Value::Text(out))
-                }
-                #[cfg(windows)]
-                {
+                if cfg!(target_os = "windows") {
                     Ok(Value::Text(
                         std::env::var("COMPUTERNAME").unwrap_or_else(|_| "unknown".into()),
                     ))
-                }
-                #[cfg(not(any(unix, windows)))]
-                {
-                    Ok(Value::Text("unknown".into()))
+                } else {
+                    let output = std::process::Command::new("hostname")
+                        .output()
+                        .map_err(|e| format!("hostname error: {}", e))?;
+                    Ok(Value::Text(
+                        String::from_utf8_lossy(&output.stdout).trim().to_string(),
+                    ))
                 }
             }
             "username" => {
-                Ok(Value::Text(
-                    std::env::var("USER")
-                        .or_else(|_| std::env::var("USERNAME"))
-                        .unwrap_or_else(|_| "unknown".into()),
-                ))
+                let name = if cfg!(target_os = "windows") {
+                    std::env::var("USERNAME").unwrap_or_else(|_| "unknown".into())
+                } else {
+                    std::env::var("USER").unwrap_or_else(|_| "unknown".into())
+                };
+                Ok(Value::Text(name))
             }
             "home_dir" => {
-                Ok(Value::Text(
-                    std::env::var("HOME")
-                        .or_else(|_| std::env::var("USERPROFILE"))
-                        .unwrap_or_else(|_| ".".into()),
-                ))
+                let home = if cfg!(target_os = "windows") {
+                    std::env::var("USERPROFILE").unwrap_or_else(|_| ".".into())
+                } else {
+                    std::env::var("HOME").unwrap_or_else(|_| "/".into())
+                };
+                Ok(Value::Text(home))
             }
             "exe_path" => std::env::current_exe()
                 .map(|p| Value::Text(p.to_string_lossy().to_string()))
-                .map_err(|e| format!("base.exe_path: {}", e)),
+                .map_err(|e| format!("exe_path error: {}", e)),
             "pid" => Ok(Value::Num(std::process::id() as f64)),
-            "cores" => Ok(Value::Num(
-                std::thread::available_parallelism()
+            "cores" => {
+                let n = std::thread::available_parallelism()
                     .map(|n| n.get() as f64)
-                    .unwrap_or(1.0),
-            )),
-            _ => Err(format!("base.{} is not a function", name)),
+                    .unwrap_or(1.0);
+                Ok(Value::Num(n))
+            }
+            _ => Err(format!("base has no member '{}'", func)),
         }
+    }
+
+    fn list_members(&self) -> Vec<String> {
+        vec![
+            "os", "arch", "family", "hostname", "username", "home_dir", "exe_path", "pid", "cores",
+        ]
+        .into_iter()
+        .map(String::from)
+        .collect()
+    }
+
+    fn is_function(&self, name: &str) -> bool {
+        matches!(
+            name,
+            "hostname" | "username" | "home_dir" | "exe_path" | "pid" | "cores"
+        )
     }
 }

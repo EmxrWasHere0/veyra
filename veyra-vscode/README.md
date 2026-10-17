@@ -26,12 +26,12 @@ Language support for **Veyra**, featuring syntax highlighting, automatic bracket
 
 ### Install from VSIX
 
-The packaged extension is available as [`veyra-0.2.0.vsix`](veyra-0.2.0.vsix), if the file is included in the repository.
+The packaged extension is available as [`veyra-0.2.3.vsix`](veyra-0.2.3.vsix), if the file is included in the repository.
 
 **Using the command line:**
 
 ```bash
-code --install-extension veyra-0.2.0.vsix
+code --install-extension veyra-0.2.3.vsix
 ```
 
 **Using the VS Code interface:**
@@ -40,7 +40,7 @@ code --install-extension veyra-0.2.0.vsix
 2. Open the **Extensions** view.
 3. Click the three-dot menu (`...`) next to the search bar.
 4. Select **Install from VSIX...**.
-5. Choose `veyra-0.2.0.vsix`.
+5. Choose `veyra-0.2.3.vsix`.
 6. Follow any prompts to complete installation.
 
 ### Build from source
@@ -57,7 +57,7 @@ vsce package
 This creates a `.vsix` package in the extension directory. Install it with:
 
 ```bash
-code --install-extension veyra-0.2.0.vsix
+code --install-extension veyra-0.2.3.vsix
 ```
 
 If you change the extension version in `package.json`, the generated VSIX filename may also change.

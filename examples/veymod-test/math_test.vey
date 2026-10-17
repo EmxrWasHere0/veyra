@@ -1,0 +1,32 @@
+mod math
+
+say math.PI
+say math.square(7)
+say math.cube(3)
+say math.abs(-42)
+say math.max(10, 20)
+say math.min(10, 20)
+say math.clamp(150, 0, 100)
+say math.factorial(6)
+
+mod math *
+say square(9)
+say PI
+
+mod math [abs, max]
+say abs(-7)
+say max(3, 8)
+
+test "math.square"
+    assert math.square(5) == 25
+    assert math.square(0) == 0
+end
+
+test "math.factorial"
+    assert math.factorial(0) == 1
+    assert math.factorial(5) == 120
+end
+
+say "Next one will be an error!"
+
+say math.divide(10, 0)

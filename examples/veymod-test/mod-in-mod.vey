@@ -1,0 +1,4 @@
+mod geometry
+
+say geometry.circle_area(5)
+say geometry.circle_perimeter(5)
