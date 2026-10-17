@@ -481,8 +481,13 @@ impl Runtime {
                     _ => {}
                 }
 
-                if token.text.starts_with('"')
-                    && token.text.ends_with('"')
+                let is_double_quoted =
+                    token.text.starts_with('"') && token.text.ends_with('"');
+
+                let is_single_quoted =
+                    token.text.starts_with('\'') && token.text.ends_with('\'');
+
+                if (is_double_quoted || is_single_quoted)
                     && token.text.len() >= 2
                 {
                     let inner = &token.text[1..token.text.len() - 1];
@@ -2165,7 +2170,7 @@ impl Runtime {
         let lines = crate::lexer::parse_lines(
             &source,
             &path.to_string_lossy(),
-        );
+        )?;
 
         let result = self.run(&lines);
 
@@ -2627,6 +2632,7 @@ fn unescape_string(text: &str) -> String {
             Some('t') => result.push('\t'),
             Some('"') => result.push('"'),
             Some('\\') => result.push('\\'),
+            Some('\'') => result.push('\''),
 
             Some(other) => {
                 result.push('\\');

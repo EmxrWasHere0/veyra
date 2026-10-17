@@ -128,7 +128,18 @@ impl VeyraModule for IoModule {
                     return Err("io.run() takes at least 1 argument".into());
                 }
                 let prog = args[0].to_string();
-                let cmd_args: Vec<String> = args[1..].iter().map(|a| a.to_string()).collect();
+                let cmd_args: Vec<String> = match args.get(1) {
+                    Some(Value::List(items)) if args.len() == 2 => {
+                        items.iter()
+                            .map(|value| value.to_string())
+                            .collect()
+                    }
+
+                    _ => args[1..]
+                        .iter()
+                        .map(|value| value.to_string())
+                        .collect(),
+                };
                 let output = std::process::Command::new(&prog)
                     .args(&cmd_args)
                     .output()

@@ -20,7 +20,7 @@ fn main() {
                 return;
             }
             "-v" | "--version" => {
-                println!("Veyra 0.1.0");
+                println!("Veyra {}", env!("CARGO_PKG_VERSION"));
                 return;
             }
             "-t" | "--test" => {
@@ -54,7 +54,14 @@ fn main() {
         }
     };
 
-    let lines = lexer::parse_lines(&source, &file);
+    let lines = match lexer::parse_lines(&source, &file) {
+        Ok(lines) => lines,
+
+        Err(error) => {
+            eprintln!("Lexer Error: {}", error);
+            std::process::exit(1);
+        }
+    };
     let mut rt = runtime::Runtime::new();
     rt.test_mode = test_mode;
     rt.script_dir = std::path::Path::new(&file)

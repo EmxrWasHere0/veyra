@@ -1,4 +1,5 @@
 use std::rc::Rc;
+
 use crate::runtime::Line;
 
 #[derive(Clone, Debug, PartialEq)]
@@ -27,9 +28,10 @@ pub struct Token {
     pub text: String,
 }
 
-pub fn lex(source: &str) -> Vec<Token> {
+pub fn lex(source: &str) -> Result<Vec<Token>, String> {
     let chars: Vec<char> = source.chars().collect();
     let len = chars.len();
+
     let mut i = 0;
     let mut tokens = Vec::new();
 
@@ -42,7 +44,7 @@ pub fn lex(source: &str) -> Vec<Token> {
             continue;
         }
 
-        // Comment
+        // Comments
         if c == '#' {
             while i < len && chars[i] != '\n' {
                 i += 1;
@@ -50,123 +52,201 @@ pub fn lex(source: &str) -> Vec<Token> {
             continue;
         }
 
-        // String
-        if c == '"' {
+        // Strings: single and double quotes
+        if c == '"' || c == '\'' {
+            let quote = c;
             let start = i;
+
             i += 1;
-            while i < len && chars[i] != '"' {
-                if chars[i] == '\\' { i += 1; }
+
+            let mut closed = false;
+
+            while i < len {
+                if chars[i] == '\\' {
+                    if i + 1 >= len {
+                        break;
+                    }
+
+                    i += 2;
+                    continue;
+                }
+
+                if chars[i] == quote {
+                    i += 1;
+                    closed = true;
+                    break;
+                }
+
                 i += 1;
             }
-            if i < len { i += 1; } // closing "
+
+            if !closed {
+                return Err(format!(
+                    "Unterminated string starting at column {}",
+                    start + 1
+                ));
+            }
+
             let text: String = chars[start..i].iter().collect();
-            tokens.push(Token { kind: Tok::Val, text });
+
+            tokens.push(Token {
+                kind: Tok::Val,
+                text,
+            });
+
             continue;
         }
 
-        // Number
-        if c.is_ascii_digit() || (c == '.' && i + 1 < len && chars[i + 1].is_ascii_digit()) {
+        // Numbers
+        if c.is_ascii_digit()
+            || (c == '.'
+                && i + 1 < len
+                && chars[i + 1].is_ascii_digit())
+        {
             let start = i;
-            while i < len && (chars[i].is_ascii_digit() || chars[i] == '.') {
-                i += 1;
+            let mut has_dot = false;
+
+            while i < len {
+                if chars[i].is_ascii_digit() {
+                    i += 1;
+                } else if chars[i] == '.' && !has_dot {
+                    has_dot = true;
+                    i += 1;
+                } else {
+                    break;
+                }
             }
+
             let text: String = chars[start..i].iter().collect();
-            tokens.push(Token { kind: Tok::Val, text });
+
+            tokens.push(Token {
+                kind: Tok::Val,
+                text,
+            });
+
             continue;
         }
 
-        // Identifier / keyword
+        // Identifiers and keywords
         if c.is_alphabetic() || c == '_' {
             let start = i;
-            while i < len && (chars[i].is_alphanumeric() || chars[i] == '_') {
+
+            while i < len
+                && (chars[i].is_alphanumeric()
+                    || chars[i] == '_')
+            {
                 i += 1;
             }
+
             let text: String = chars[start..i].iter().collect();
+
             let kind = match text.as_str() {
                 "func" => Tok::FuncKw,
+
                 "true" | "false" | "null" => Tok::Val,
+
+                "and" | "or" | "not" => Tok::Op,
+
                 _ => Tok::Id,
             };
+
             tokens.push(Token { kind, text });
+
             continue;
         }
 
-        // Three-char tokens
-        if c == '.' && i + 2 < len && chars[i + 1] == '.' && chars[i + 2] == '.' {
-            tokens.push(Token { kind: Tok::Spread, text: "...".into() });
+        // Spread operator
+        if c == '.'
+            && i + 2 < len
+            && chars[i + 1] == '.'
+            && chars[i + 2] == '.'
+        {
+            tokens.push(Token {
+                kind: Tok::Spread,
+                text: "...".into(),
+            });
+
             i += 3;
             continue;
         }
 
-        // Two-char tokens
+        // Two-character operators
         if i + 1 < len {
             let two: String = chars[i..i + 2].iter().collect();
-            match two.as_str() {
-                "??" => {
-                    tokens.push(Token { kind: Tok::Op, text: "??".into() });
-                    i += 2;
-                    continue;
+
+            let kind = match two.as_str() {
+                "??" | "==" | "!=" | "<=" | ">=" => {
+                    Some(Tok::Op)
                 }
-                "?=" => {
-                    tokens.push(Token { kind: Tok::QuestionEq, text: "?=".into() });
-                    i += 2;
-                    continue;
-                }
-                "=>" => {
-                    tokens.push(Token { kind: Tok::Arrow, text: "=>".into() });
-                    i += 2;
-                    continue;
-                }
-                "==" => {
-                    tokens.push(Token { kind: Tok::Op, text: "==".into() });
-                    i += 2;
-                    continue;
-                }
-                "!=" => {
-                    tokens.push(Token { kind: Tok::Op, text: "!=".into() });
-                    i += 2;
-                    continue;
-                }
-                "<=" => {
-                    tokens.push(Token { kind: Tok::Op, text: "<=".into() });
-                    i += 2;
-                    continue;
-                }
-                ">=" => {
-                    tokens.push(Token { kind: Tok::Op, text: ">=".into() });
-                    i += 2;
-                    continue;
-                }
-                _ => {}
+
+                "?=" => Some(Tok::QuestionEq),
+                "=>" => Some(Tok::Arrow),
+
+                _ => None,
+            };
+
+            if let Some(kind) = kind {
+                tokens.push(Token {
+                    kind,
+                    text: two,
+                });
+
+                i += 2;
+                continue;
             }
         }
 
-        // Single-char tokens
-        match c {
-            '(' => { tokens.push(Token { kind: Tok::LParen, text: "(".into() }); i += 1; }
-            ')' => { tokens.push(Token { kind: Tok::RParen, text: ")".into() }); i += 1; }
-            '[' => { tokens.push(Token { kind: Tok::LBracket, text: "[".into() }); i += 1; }
-            ']' => { tokens.push(Token { kind: Tok::RBracket, text: "]".into() }); i += 1; }
-            ',' => { tokens.push(Token { kind: Tok::Comma, text: ",".into() }); i += 1; }
-            '.' => { tokens.push(Token { kind: Tok::Dot, text: ".".into() }); i += 1; }
-            '@' => { tokens.push(Token { kind: Tok::At, text: "@".into() }); i += 1; }
-            '?' => { tokens.push(Token { kind: Tok::Question, text: "?".into() }); i += 1; }
-            '+' | '-' | '*' | '/' | '%' | '<' | '>' | '=' | '!' => {
-                tokens.push(Token { kind: Tok::Op, text: c.to_string() });
-                i += 1;
-            }
-            _ => {
-                // Skip unknown characters
-                i += 1;
-            }
+        // Single-character tokens
+        let kind = match c {
+            '(' => Some(Tok::LParen),
+            ')' => Some(Tok::RParen),
+
+            '[' => Some(Tok::LBracket),
+            ']' => Some(Tok::RBracket),
+
+            ',' => Some(Tok::Comma),
+
+            '.' => Some(Tok::Dot),
+            '@' => Some(Tok::At),
+
+            '?' => Some(Tok::Question),
+
+            '+' | '-' | '*' | '/' | '%' |
+            '<' | '>' | '=' | '!' => Some(Tok::Op),
+
+            _ => None,
+        };
+
+        if let Some(kind) = kind {
+            tokens.push(Token {
+                kind,
+                text: c.to_string(),
+            });
+
+            i += 1;
+            continue;
         }
+
+        // Unknown characters must not be silently ignored.
+        return Err(format!(
+            "Unexpected character '{}' at column {}",
+            c,
+            i + 1
+        ));
     }
 
-    tokens.push(Token { kind: Tok::Eof, text: String::new() });
-    tokens
+    tokens.push(Token {
+        kind: Tok::Eof,
+        text: String::new(),
+    });
+
+    Ok(tokens)
 }
 
-pub fn parse_lines(source: &str, filename: &str) -> Vec<Line> {
+pub fn parse_lines(
+    source: &str,
+    filename: &str,
+) -> Result<Vec<Line>, String> {
     let mut lines = Vec::new();
     let source_name = Rc::new(filename.to_string());
 
@@ -177,7 +257,14 @@ pub fn parse_lines(source: &str, filename: &str) -> Vec<Line> {
             continue;
         }
 
-        let tokens = lex(trimmed);
+        let tokens = lex(trimmed).map_err(|error| {
+            format!(
+                "{}:{}: {}",
+                filename,
+                index + 1,
+                error
+            )
+        })?;
 
         let meaningful: Vec<Token> = tokens
             .into_iter()
@@ -193,5 +280,5 @@ pub fn parse_lines(source: &str, filename: &str) -> Vec<Line> {
         }
     }
 
-    lines
+    Ok(lines)
 }

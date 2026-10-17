@@ -14,11 +14,17 @@ impl VeyraModule for SystemModule {
             "arch" => Ok(Value::Text(std::env::consts::ARCH.to_string())),
             "os" => Ok(Value::Text(std::env::consts::OS.to_string())),
             "family" => Ok(Value::Text(std::env::consts::FAMILY.to_string())),
-            "version" => Ok(Value::Text("0.1.0".to_string())),
+            "version" => Ok(Value::Text(
+                env!("CARGO_PKG_VERSION").to_string()
+            )),
 
             // ── Functions ──
             "args" => {
-                let items: Vec<Value> = std::env::args().map(Value::Text).collect();
+                let items: Vec<Value> = std::env::args()
+                    .skip(2)
+                    .map(Value::Text)
+                    .collect();
+
                 Ok(Value::List(items))
             }
             "env" => {
