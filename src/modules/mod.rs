@@ -14,7 +14,12 @@ pub trait VeyraModule {
 
 pub fn builtin_modules() -> Vec<(String, Box<dyn VeyraModule>)> {
     vec![
-        ("system".into(), Box::new(system::SystemModule)),
+        (
+    "system".into(),
+        Box::new(system::SystemModule {
+            script_args: Vec::new(),
+        }),
+    ),
         ("io".into(), Box::new(io::IoModule)),
         ("base".into(), Box::new(base::BaseModule)),
     ]

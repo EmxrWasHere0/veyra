@@ -1,7 +1,9 @@
 use crate::modules::VeyraModule;
 use crate::runtime::Value;
 
-pub struct SystemModule;
+pub struct SystemModule {
+    pub script_args: Vec<String>,
+}
 
 impl VeyraModule for SystemModule {
     fn name(&self) -> &str {
@@ -20,12 +22,13 @@ impl VeyraModule for SystemModule {
 
             // ── Functions ──
             "args" => {
-                let items: Vec<Value> = std::env::args()
-                    .skip(2)
-                    .map(Value::Text)
-                    .collect();
-
-                Ok(Value::List(items))
+                Ok(Value::List(
+                    self.script_args
+                        .iter()
+                        .cloned()
+                        .map(Value::Text)
+                        .collect()
+                ))
             }
             "env" => {
                 let mut items = Vec::new();

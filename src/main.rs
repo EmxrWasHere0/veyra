@@ -12,24 +12,36 @@ fn main() {
 
     let mut test_mode = false;
     let mut file: Option<String> = None;
+    let mut script_args = Vec::new();
 
     for arg in &args[1..] {
+        if file.is_some() {
+            script_args.push(arg.clone());
+            continue;
+        }
+
         match arg.as_str() {
             "-h" | "--help" => {
                 print_help();
                 return;
             }
+
             "-v" | "--version" => {
                 println!("Veyra {}", env!("CARGO_PKG_VERSION"));
                 return;
             }
+
             "-t" | "--test" => {
                 test_mode = true;
             }
+
+            _ if arg.starts_with('-') => {
+                eprintln!("Unknown option: {}", arg);
+                std::process::exit(1);
+            }
+
             _ => {
-                if !arg.starts_with('-') {
-                    file = Some(arg.clone());
-                }
+                file = Some(arg.clone());
             }
         }
     }
@@ -64,6 +76,12 @@ fn main() {
     };
     let mut rt = runtime::Runtime::new();
     rt.test_mode = test_mode;
+    rt.available_modules.insert(
+        "system".into(),
+        Box::new(modules::system::SystemModule {
+            script_args,
+        }),
+    );
     rt.script_dir = std::path::Path::new(&file)
         .parent()
         .filter(|p| !p.as_os_str().is_empty())
@@ -93,7 +111,7 @@ fn main() {
 }
 
 fn print_help() {
-    println!("Veyra 0.1.0 - A Turkish-flavored programming language");
+    println!("Veyra {} - A Turkish-flavored programming language", env!("CARGO_PKG_VERSION"));
     println!();
     println!("Usage: veyra [options] <file.vey>");
     println!();

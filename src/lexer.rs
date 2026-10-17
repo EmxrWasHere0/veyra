@@ -257,7 +257,8 @@ pub fn parse_lines(
             continue;
         }
 
-        let tokens = lex(trimmed).map_err(|error| {
+        // Lex the original line to preserve actual column positions.
+        let tokens = lex(raw_line).map_err(|error| {
             format!(
                 "{}:{}: {}",
                 filename,
