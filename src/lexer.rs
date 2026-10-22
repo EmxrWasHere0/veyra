@@ -234,29 +234,109 @@ pub fn parse_lines(source: &str, filename: &str) -> Result<Vec<Line>, String> {
     let mut lines = Vec::new();
     let source_name = Rc::new(filename.to_string());
 
+    let mut pending_tokens: Vec<Token> = Vec::new();
+    let mut pending_line = 0usize;
+
+    let mut delimiters: Vec<(Tok, usize)> = Vec::new();
+
     for (index, raw_line) in source.lines().enumerate() {
+        let line_number = index + 1;
         let trimmed = raw_line.trim();
 
         if trimmed.is_empty() || trimmed.starts_with('#') {
             continue;
         }
 
-        // Lex the original line to preserve actual column positions.
-        let tokens =
-            lex(raw_line).map_err(|error| format!("{}:{}: {}", filename, index + 1, error))?;
+        // Lex the original line to preserve column positions.
+        let tokens = lex(raw_line)
+            .map_err(|error| format!("{}:{}: {}", filename, line_number, error))?;
 
         let meaningful: Vec<Token> = tokens
             .into_iter()
             .filter(|token| token.kind != Tok::Eof)
             .collect();
 
-        if !meaningful.is_empty() {
+        if meaningful.is_empty() {
+            continue;
+        }
+
+        if pending_tokens.is_empty() {
+            pending_line = line_number;
+        }
+
+        for token in meaningful {
+            match token.kind {
+                Tok::LParen | Tok::LBracket | Tok::LBrace => {
+                    delimiters.push((token.kind.clone(), line_number));
+                }
+
+                Tok::RParen => {
+                    match delimiters.pop() {
+                        Some((Tok::LParen, _)) => {}
+
+                        _ => {
+                            return Err(format!(
+                                "{}:{}: Unexpected ')'",
+                                filename, line_number
+                            ));
+                        }
+                    }
+                }
+
+                Tok::RBracket => {
+                    match delimiters.pop() {
+                        Some((Tok::LBracket, _)) => {}
+
+                        _ => {
+                            return Err(format!(
+                                "{}:{}: Unexpected ']'",
+                                filename, line_number
+                            ));
+                        }
+                    }
+                }
+
+                Tok::RBrace => {
+                    match delimiters.pop() {
+                        Some((Tok::LBrace, _)) => {}
+
+                        _ => {
+                            return Err(format!(
+                                "{}:{}: Unexpected '}}'",
+                                filename, line_number
+                            ));
+                        }
+                    }
+                }
+
+                _ => {}
+            }
+
+            pending_tokens.push(token);
+        }
+
+        // All delimiters closed: complete the logical line.
+        if delimiters.is_empty() {
             lines.push(Line {
-                tokens: meaningful,
+                tokens: std::mem::take(&mut pending_tokens),
                 source: source_name.clone(),
-                number: index + 1,
+                number: pending_line,
             });
         }
+    }
+
+    if let Some((kind, opened_at)) = delimiters.last() {
+        let symbol = match kind {
+            Tok::LParen => "(",
+            Tok::LBracket => "[",
+            Tok::LBrace => "{",
+            _ => "?",
+        };
+
+        return Err(format!(
+            "{}:{}: Unclosed '{}'",
+            filename, opened_at, symbol
+        ));
     }
 
     Ok(lines)
