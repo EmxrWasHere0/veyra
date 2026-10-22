@@ -1,128 +1,22 @@
 # Running Veyra Programs
 
-Veyra is an interpreted programming language. Its interpreter reads and executes Veyra source files, allowing you to run programs without compiling each source file into a standalone executable.
+Veyra is an interpreted programming language written in Rust.
 
-This guide explains how to install the Veyra interpreter and run `.vey` programs using different methods.
+The interpreter executes Veyra source files directly, without requiring each program to be compiled into a standalone executable.
+
+This guide explains how to run scripts, use the interactive REPL, execute tests, and work with Veyra's command-line interface.
 
 ## Requirements
 
-To build or install Veyra from source, you need:
+To run Veyra programs, you need the Veyra interpreter.
 
-- [Rust 1.70 or newer](https://rustup.rs/)
-- Cargo, which is included with a standard Rust installation
-- A terminal or command-line interface
+If you want to build the interpreter from source, you also need Rust and Cargo.
 
-## Method 1: Run Veyra from Source
+For installation instructions, see [Installation](installation.md).
 
-Running Veyra from source is useful when developing the language or testing changes to the interpreter.
+## 1. Running a Veyra File
 
-### 1. Clone the repository
-
-```bash
-git clone https://github.com/EmxrWasHere0/veyra.git
-```
-
-### 2. Navigate to the project directory
-
-```bash
-cd veyra
-```
-
-### 3. Run a Veyra program
-
-Pass the source file path to Cargo using `--`:
-
-```bash
-cargo run -- hello.vey
-```
-
-To run an example from the repository:
-
-```bash
-cargo run -- examples/hello.vey
-```
-
-Cargo builds the interpreter if necessary and then passes the specified file to it.
-
-### 4. Run an optimized build
-
-For optimized execution, use:
-
-```bash
-cargo run --release -- hello.vey
-```
-
-The release profile is optimized for running the interpreter, while the default development profile is generally more convenient when making changes to the source code.
-
-## Method 2: Build the Interpreter
-
-You can build the Veyra interpreter without immediately running a program.
-
-From the repository root, execute:
-
-```bash
-cargo build --release
-```
-
-The resulting executable is located in the `target/release` directory. Its filename depends on the operating system:
-
-- Linux: `target/release/veyra`
-- macOS: `target/release/veyra`
-- Windows: `target\release\veyra.exe`
-
-You can use the executable directly by passing it a source file.
-
-For example, on Linux or macOS:
-
-```bash
-./target/release/veyra hello.vey
-```
-
-On Windows PowerShell:
-
-```powershell
-.\target\release\veyra.exe hello.vey
-```
-
-Run these commands from the repository root, or adjust the paths to match your current directory.
-
-## Method 3: Install Veyra Globally
-
-If you want to use Veyra without navigating to its source repository every time, install it as a Cargo package.
-
-### Install from a local clone
-
-From the repository root, run:
-
-```bash
-cargo install --path .
-```
-
-### Install directly from GitHub
-
-You can also install Veyra directly from its Git repository:
-
-```bash
-cargo install --git https://github.com/EmxrWasHere0/veyra.git
-```
-
-After installation, run a source file with:
-
-```bash
-veyra hello.vey
-```
-
-Cargo normally installs the executable in `~/.cargo/bin/` on Linux and macOS, or the corresponding Cargo binary directory on Windows. Make sure this directory is included in your `PATH`.
-
-To uninstall Veyra if it was installed through Cargo:
-
-```bash
-cargo uninstall veyra
-```
-
-## Writing Your First Program
-
-Create a file named `hello.vey` with the following contents:
+Create a file named `hello.vey`:
 
 ```veyra
 say "Hello, World!"
@@ -134,28 +28,223 @@ end
 greet("Veyra")
 ```
 
-Run the program:
+Run the file:
 
 ```bash
 veyra hello.vey
 ```
 
-If you are running from the source repository instead, use:
-
-```bash
-cargo run -- hello.vey
-```
-
-Expected output:
+Output:
 
 ```text
 Hello, World!
 Hello, Veyra!
 ```
 
-## Running Files from Different Directories
+Veyra executes the statements in the file in order.
 
-You can pass a relative or absolute path to the interpreter.
+## 2. Running from Source
+
+If you are developing Veyra, you can run programs using Cargo.
+
+Clone the repository:
+
+```bash
+git clone https://github.com/EmxrWasHere0/veyra.git
+cd veyra
+```
+
+Run a program:
+
+```bash
+cargo run -- hello.vey
+```
+
+Or run a repository example:
+
+```bash
+cargo run -- examples/hello.vey
+```
+
+The `--` separates Cargo arguments from arguments passed to Veyra.
+
+### Release Mode
+
+For optimized execution:
+
+```bash
+cargo run --release -- hello.vey
+```
+
+Release builds generally run faster than development builds.
+
+## 3. Building the Interpreter
+
+Build an optimized Veyra executable:
+
+```bash
+cargo build --release
+```
+
+The executable is placed in:
+
+| Platform | Executable                 |
+| -------- | -------------------------- |
+| Linux    | `target/release/veyra`     |
+| macOS    | `target/release/veyra`     |
+| Windows  | `target/release/veyra.exe` |
+
+Run the executable directly on Linux or macOS:
+
+```bash
+./target/release/veyra hello.vey
+```
+
+On Windows PowerShell:
+
+```powershell
+.\target\release\veyra.exe hello.vey
+```
+
+## 4. Interactive REPL
+
+Veyra 0.2.6 includes an interactive Read-Eval-Print Loop (REPL).
+
+Start it by running Veyra without arguments:
+
+```bash
+veyra
+```
+
+The interpreter displays an interactive prompt:
+
+```text
+>>>
+```
+
+You can enter statements directly:
+
+```text
+>>> add x = 10
+>>> say x * 2
+20
+```
+
+### Persistent State
+
+Variables, functions, and imports remain available throughout the REPL session.
+
+```text
+>>> add name = "Veyra"
+>>> say name
+Veyra
+>>> name = "Veyra 0.2.6"
+>>> say name
+Veyra 0.2.6
+```
+
+### Multiline Blocks
+
+The REPL supports multiline functions, loops, and other blocks.
+
+```text
+>>> add square(n)
+...     return n * n
+... end
+>>> say square(5)
+25
+```
+
+The `...` prompt indicates that Veyra is waiting for more input.
+
+### Leaving the REPL
+
+Type:
+
+```text
+exit
+```
+
+Or:
+
+```text
+quit
+```
+
+You can also send an end-of-file signal using your terminal's standard keyboard shortcut.
+
+## 5. Command-Line Options
+
+Veyra provides several command-line options.
+
+| Command                 | Description                     |
+| ----------------------- | ------------------------------- |
+| `veyra file.vey`        | Execute a Veyra source file     |
+| `veyra`                 | Start the interactive REPL      |
+| `veyra --help`          | Display usage information       |
+| `veyra -h`              | Short form of `--help`          |
+| `veyra --version`       | Display the interpreter version |
+| `veyra -v`              | Short form of `--version`       |
+| `veyra --test file.vey` | Execute Veyra test blocks       |
+| `veyra -t file.vey`     | Short form of `--test`          |
+
+### Checking the Version
+
+```bash
+veyra --version
+```
+
+The version is determined by the interpreter's Cargo package version.
+
+### Displaying Help
+
+```bash
+veyra --help
+```
+
+This displays the supported command-line syntax and options.
+
+## 6. Running Veyra Tests
+
+Veyra supports test blocks and assertions.
+
+Example file `tests.vey`:
+
+```veyra
+test addition
+    assert 2 + 2 == 4
+end
+```
+
+Run the test file:
+
+```bash
+veyra --test tests.vey
+```
+
+You can also use:
+
+```bash
+veyra -t tests.vey
+```
+
+Test mode executes the file's Veyra tests and reports their results.
+
+### Interpreter Regression Tests
+
+If you are developing the Veyra interpreter itself, run the Rust regression tests:
+
+```bash
+cargo test
+```
+
+These tests execute real Veyra programs and check their behavior.
+
+This is different from using `veyra --test` to execute test blocks inside a Veyra source file.
+
+## 7. Running Files from Different Directories
+
+Veyra accepts relative and absolute file paths.
 
 Relative path:
 
@@ -175,57 +264,128 @@ Absolute path on Windows:
 veyra "C:\Projects\Veyra\hello.vey"
 ```
 
-Replace these example paths with the actual location of your source file.
+Relative paths depend on the current working directory.
 
-## Passing Command-Line Arguments
+## 8. Command-Line Arguments
 
-Veyra provides the `system.args()` function for accessing command-line arguments passed to a running program.
+Veyra provides access to command-line arguments through the `system` module.
 
-For example:
+Example file `arguments.vey`:
 
 ```veyra
 mod system
 
-args = system.args()
-say args
+add arguments = system.args()
+
+say arguments
 ```
 
-Run the program with additional arguments:
+Run it with arguments:
 
 ```bash
-veyra hello.vey first second
+veyra arguments.vey first second
 ```
 
-The arguments can be accessed through `system.args()`. The interpreter's implementation excludes the interpreter and script paths from the returned list.
+The `system.args()` function returns the script arguments exposed by the runtime.
 
-## Choosing a Running Method
+The interpreter and script paths are excluded from the returned argument list.
 
-| Method                            | Best for                                                 |
-| --------------------------------- | -------------------------------------------------------- |
-| `cargo run -- file.vey`           | Development and quick testing                            |
-| `cargo run --release -- file.vey` | Running from source with release optimizations           |
-| Built executable                  | Running the interpreter without Cargo on each invocation |
-| `cargo install`                   | Using Veyra as a command from different directories      |
+## 9. Running Programs in VSCode
 
-## Troubleshooting
+The Veyra VSCode extension supports syntax highlighting, snippets, and REPL integration.
 
-### `cargo` is not recognized
+To start the REPL:
 
-Install Rust using [rustup](https://rustup.rs/) and ensure Cargo is available in your terminal's `PATH`.
+1. Open the VSCode Command Palette.
+2. Search for `Veyra: Start REPL`.
+3. Select the command.
 
-### `veyra` is not recognized
+To run a script, use the integrated terminal:
 
-If you installed Veyra using Cargo, check that Cargo's binary directory is in your `PATH`. Alternatively, run the interpreter from the source repository using `cargo run`.
+```bash
+veyra hello.vey
+```
 
-### The source file cannot be found
+For installation and usage instructions, see [VSCode Extension](extension.md).
 
-Check the filename, file extension, and current working directory. Provide the correct relative or absolute path if necessary.
+## 10. Runtime Errors
 
-### The program reports a runtime error
+Veyra 0.2.6 provides detailed runtime error messages.
 
-Check the source code and the error message printed by the interpreter. Confirm that the program uses valid Veyra syntax and that any required files or modules are available.
+For example:
 
-## Further Reading
+```veyra
+add x = 10
+add y = 0
 
-- [Veyra GitHub Repository](https://github.com/EmxrWasHere0/veyra)
-- [Rust Installation Guide](https://rustup.rs/)
+say x / y
+```
+
+An error may look like:
+
+```text
+Runtime Error: example.vey:4: Division by zero
+
+  4 | say x / y
+    | ^^^^^^^^^
+```
+
+The error includes the source file, line number, and relevant source line.
+
+Errors inside functions can also include a traceback showing the function call chain.
+
+For more information, see [Error Handling](error-handling.md).
+
+## 11. Troubleshooting
+
+### Cargo Is Not Recognized
+
+Install Rust and Cargo using [rustup](https://rustup.rs/).
+
+Make sure Cargo is available in your system's `PATH`.
+
+### Veyra Is Not Recognized
+
+Check whether Veyra is installed:
+
+```bash
+cargo install --path .
+```
+
+Make sure Cargo's binary directory is included in your `PATH`.
+
+You can also run Veyra through Cargo:
+
+```bash
+cargo run -- hello.vey
+```
+
+### Source File Not Found
+
+Check the filename, file extension, and current working directory.
+
+Use an absolute path when necessary.
+
+### Module Not Found
+
+Check that the module exists in one of Veyra's module search directories.
+
+You can also configure additional directories using `VEYRA_PATH`.
+
+See [Modules](modules.md).
+
+### Runtime Error
+
+Read the source location and traceback.
+
+Check the operation, its arguments, and any required external resources.
+
+## What's Next?
+
+Continue learning Veyra:
+
+- [Installation](installation.md)
+- [Quick Start](quickstart.md)
+- [Modules](modules.md)
+- [Error Handling](error-handling.md)
+- [VSCode Extension](extension.md)

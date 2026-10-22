@@ -1,24 +1,25 @@
 # Input and Output
 
-Input and output allow a program to communicate with the user and interact with files on the computer.
+Input and output allow Veyra programs to communicate with users, work with files, and interact with the operating system.
 
-In Veyra, `say` displays values, `get` reads user input, and the `io` module provides file and directory operations.
+Veyra provides `say` for displaying output, `get` for reading user input, and built-in modules such as `io` and `fs` for filesystem operations.
 
 ## What You Will Learn
 
 By the end of this lesson, you will know how to:
 
-- Display text and values using `say`.
+- Display values using `say`.
 - Read user input using `get`.
-- Work with the `_input` variable.
-- Convert user input into numbers.
-- Import and use the `io` module.
+- Display prompts while requesting input.
+- Convert input into numbers.
 - Read, write, and append to files.
-- List directories and check whether paths exist.
+- Manage files and directories.
+- Execute external programs.
+- Understand the roles of the `io` and `fs` modules.
 
-## 1. Displaying Output with `say`
+## 1. Displaying Output
 
-The `say` statement prints a value to the terminal.
+Use `say` to print values to the terminal.
 
 ```veyra
 say "Hello, World!"
@@ -36,11 +37,11 @@ true
 null
 ```
 
-You can display the contents of a variable:
+### Printing Variables
 
 ```veyra
-name = "Veyra"
-version = 1
+add name = "Veyra"
+add version = "0.2.6"
 
 say name
 say version
@@ -50,16 +51,16 @@ Output:
 
 ```text
 Veyra
-1
+0.2.6
 ```
 
 ### Combining Text and Values
 
-Use `+` to concatenate text and other values.
+The `+` operator can concatenate text with other values.
 
 ```veyra
-name = "Alex"
-score = 100
+add name = "Alex"
+add score = 100
 
 say "Player: " + name
 say "Score: " + score
@@ -74,19 +75,28 @@ Score: 100
 
 ## 2. Reading User Input
 
-Use `get` to display a prompt and wait for the user to enter text.
+Use `get` to read a line of text from standard input.
 
-```veyra
-get "What is your name? "
+The general syntax is:
+
+```text
+get variable "Optional prompt"
 ```
 
-When the user submits their input, Veyra stores it in the special `_input` variable.
-
-You can copy that value into another variable:
+### Input Without a Prompt
 
 ```veyra
-get "What is your name? "
-name = _input
+get name
+
+say "Hello, " + name
+```
+
+Veyra waits for the user to enter a value and stores the result in `name`.
+
+### Input With a Prompt
+
+```veyra
+get name "What is your name? "
 
 say "Hello, " + name + "!"
 ```
@@ -98,41 +108,59 @@ What is your name? Alex
 Hello, Alex!
 ```
 
-The value of `_input` is text. If you need a number, convert it with `num()`.
+The prompt is displayed before reading input.
 
-### A Simple Calculator
+### Dynamic Prompts
+
+The prompt can also be an expression.
 
 ```veyra
-get "Enter a number: "
-number = num(_input)
+add field = "username"
 
-say "Double: " + number * 2
+get value "Enter " + field + ": "
+
+say value
 ```
 
-If the user enters `5`, the program displays:
+This is useful when prompts depend on program data.
+
+## 3. Converting Input
+
+User input is read as text.
+
+Use `num()` to convert numeric input.
+
+```veyra
+get age "Enter your age: "
+
+add next_age = num(age) + 1
+
+say "Next year, you will be " + next_age
+```
+
+Example:
 
 ```text
-Enter a number: 5
-Double: 10
+Enter your age: 20
+Next year, you will be 21
 ```
 
-If the input is not a valid number, the conversion produces a runtime error.
+If the input cannot be converted into a number, `num()` raises a runtime error.
 
-### Reading Multiple Inputs
+### Reading Multiple Values
 
-Each new `get` updates `_input`, so save each response before asking the next question.
+Each input can be stored in its own variable.
 
 ```veyra
-get "First number: "
-first = num(_input)
+get first "First number: "
+get second "Second number: "
 
-get "Second number: "
-second = num(_input)
+add total = num(first) + num(second)
 
-say "Sum: " + (first + second)
+say "Sum: " + total
 ```
 
-Example interaction:
+Example:
 
 ```text
 First number: 10
@@ -140,19 +168,19 @@ Second number: 20
 Sum: 30
 ```
 
-## 3. Importing the `io` Module
+There is no need to copy values from `_input` when using named input variables.
 
-Veyra's `io` module provides functions for working with files, directories, and external processes.
+## 4. Importing the IO Module
 
-Import the module with:
+The `io` module provides file, directory, and process operations.
+
+Import it using:
 
 ```veyra
 mod io
 ```
 
-You can then call its functions using the `io.` prefix.
-
-For example:
+Example:
 
 ```veyra
 mod io
@@ -160,11 +188,11 @@ mod io
 say io.cwd()
 ```
 
-The `cwd()` function returns the current working directory.
+This displays the current working directory.
 
-**Important:** Relative file paths are resolved from the process's working directory, which may be different from the directory containing your `.vey` file.
+Relative paths are generally resolved from the process's current working directory, which may differ from the script's directory.
 
-## 4. Writing a File
+## 5. Writing Files
 
 Use `io.write(path, content)` to write text to a file.
 
@@ -172,35 +200,35 @@ Use `io.write(path, content)` to write text to a file.
 mod io
 
 io.write("hello.txt", "Hello from Veyra!")
+
 say "File written."
 ```
 
-This writes the specified content to `hello.txt`.
-
 Writing to an existing file replaces its previous contents.
 
-## 5. Reading a File
+## 6. Reading Files
 
-Use `io.read(path)` to read a file's contents.
+Use `io.read(path)` to read a file.
 
 ```veyra
 mod io
 
-content = io.read("hello.txt")
+add content = io.read("hello.txt")
+
 say content
 ```
 
-If `hello.txt` contains `Hello from Veyra!`, the output is:
+Output:
 
 ```text
 Hello from Veyra!
 ```
 
-The file must exist and be readable. If the operation fails, Veyra reports an error.
+The operation may fail if the file does not exist or cannot be read.
 
-## 6. Appending to a File
+## 7. Appending to Files
 
-Use `io.append(path, content)` to add content to the end of a file.
+Use `io.append(path, content)` to add text to the end of a file.
 
 ```veyra
 mod io
@@ -218,31 +246,27 @@ First line
 Second line
 ```
 
-The `\n` escape sequence adds a newline.
+Unlike `io.write()`, appending preserves existing content.
 
-Unlike `io.write`, `io.append` preserves the existing contents and adds the supplied content at the end.
+## 8. Checking Paths
 
-## 7. Checking Whether a Path Exists
-
-Use `io.exists(path)` to check whether a file or directory exists.
+Use `io.exists(path)` to check whether a path exists.
 
 ```veyra
 mod io
 
 if io.exists("hello.txt")
-    say "The path exists."
+    say "File exists."
 else
-    say "The path does not exist."
+    say "File does not exist."
 end
 ```
 
-This is useful before attempting operations on a path.
+A successful existence check does not guarantee that a later operation will succeed. Permissions or filesystem changes may still cause errors.
 
-## 8. Renaming and Removing Files
+## 9. Renaming and Removing Files
 
-Veyra provides functions to rename and remove files.
-
-### Rename a File
+### Rename
 
 ```veyra
 mod io
@@ -253,9 +277,7 @@ io.rename("old.txt", "new.txt")
 say io.exists("new.txt")
 ```
 
-The last line prints `true` if the rename succeeds and the new path exists.
-
-### Remove a File
+### Remove
 
 ```veyra
 mod io
@@ -266,11 +288,9 @@ if io.exists("new.txt")
 end
 ```
 
-**Warning:** File operations can modify or delete real data. Use paths carefully, especially when working with existing files.
+File removal affects the actual filesystem and should be used carefully.
 
-## 9. Working with Directories
-
-The `io` module includes functions for directory management.
+## 10. Working with Directories
 
 ### Create a Directory
 
@@ -278,7 +298,6 @@ The `io` module includes functions for directory management.
 mod io
 
 io.mkdir("my_folder")
-say io.exists("my_folder")
 ```
 
 ### List Directory Contents
@@ -286,14 +305,12 @@ say io.exists("my_folder")
 ```veyra
 mod io
 
-items = io.listdir(".")
+add items = io.listdir(".")
 
 say items
 ```
 
-The `listdir(path)` function returns the entries in a directory as a list.
-
-The special path `"."` refers to the current working directory.
+The `"."` path refers to the current working directory.
 
 ### Change the Working Directory
 
@@ -301,10 +318,11 @@ The special path `"."` refers to the current working directory.
 mod io
 
 io.chdir("my_folder")
+
 say io.cwd()
 ```
 
-After a successful `chdir`, subsequent relative paths are resolved from the new working directory.
+Subsequent relative paths use the updated working directory.
 
 ### Remove a Directory
 
@@ -314,95 +332,140 @@ mod io
 io.rmdir("my_folder")
 ```
 
-**Warning:** Veyra's `io.rmdir()` removes a directory recursively. It can delete files and subdirectories inside the target directory, so use it only when you are certain the path is correct.
+**Warning:** `io.rmdir()` removes directories recursively. Files and subdirectories inside the target may also be deleted.
 
-## 10. Running External Commands
+Never use it on important directories without verifying the path.
 
-The `io` module can also execute external programs.
+## 11. Running External Programs
 
-### Run a Program
+Veyra can execute external programs using `io.run()`.
 
-Use `io.run(program, args)` to execute a program with an argument list.
+The standard form is:
+
+```text
+io.run(program, [arguments])
+```
+
+Example:
 
 ```veyra
 mod io
 
-result = io.run("echo", ["Hello from Veyra"])
+add result = io.run("echo", ["Hello from Veyra"])
+
 say result
 ```
 
-The function returns a list containing:
+The returned list contains:
 
-1. The process exit code.
+1. Process exit code.
 2. Standard output.
 3. Standard error.
 
-The exact behavior of an external command can vary by operating system.
+External command behavior can vary across operating systems.
 
-### Run a Shell Command
+### Shell Commands
 
 Use `io.shell(command)` to execute a command through the system shell.
 
 ```veyra
 mod io
 
-result = io.shell("echo Hello from Veyra")
+add result = io.shell("echo Hello from Veyra")
+
 say result
 ```
 
-On Windows, commands run through `cmd /C`. On other supported platforms, they run through `sh -c`.
+On Windows, Veyra uses `cmd /C`. On supported Unix-like systems, it uses `sh -c`.
 
-**Security note:** Avoid passing untrusted user input directly into shell commands. A crafted input could cause unintended commands to execute.
+**Security warning:** Never insert untrusted user input directly into shell commands. Doing so can allow unintended commands to execute.
 
-## 11. Reference: `io` Functions
+## 12. The FS Module
 
-| Function                   | Purpose                              |
-| -------------------------- | ------------------------------------ |
-| `io.read(path)`            | Read a file                          |
-| `io.write(path, content)`  | Write or replace file contents       |
-| `io.append(path, content)` | Append content to a file             |
-| `io.exists(path)`          | Check whether a path exists          |
-| `io.remove(path)`          | Remove a file                        |
-| `io.rename(from, to)`      | Rename a path                        |
-| `io.mkdir(path)`           | Create a directory                   |
-| `io.rmdir(path)`           | Remove a directory recursively       |
-| `io.listdir(path)`         | List directory entries               |
-| `io.cwd()`                 | Get the current working directory    |
-| `io.chdir(path)`           | Change the current working directory |
-| `io.run(program, args)`    | Run an external program              |
-| `io.shell(command)`        | Execute a shell command              |
+Veyra also includes a dedicated `fs` module.
 
-File and process operations may fail because of missing paths, permissions, or operating-system restrictions. Handle such errors appropriately when building larger programs.
+Import it using:
 
-## 12. Practice Exercises
+```veyra
+mod fs
+```
+
+While `io` provides general input/output and process operations, `fs` focuses on filesystem utilities.
+
+For example, the `fs` module includes recursive directory removal through `fs.rmtree()`.
+
+**Warning:** Recursive removal permanently deletes directory contents and cannot be undone through Veyra.
+
+The `fs` module complements `io`; it does not replace it.
+
+For a complete list of module functions, see [Built-ins](built-ins.md).
+
+## 13. IO Function Reference
+
+| Function                   | Description                       |
+| -------------------------- | --------------------------------- |
+| `io.read(path)`            | Read file contents                |
+| `io.write(path, content)`  | Write file contents               |
+| `io.append(path, content)` | Append text to a file             |
+| `io.exists(path)`          | Check whether a path exists       |
+| `io.remove(path)`          | Remove a file                     |
+| `io.rename(from, to)`      | Rename a path                     |
+| `io.mkdir(path)`           | Create a directory                |
+| `io.rmdir(path)`           | Remove a directory recursively    |
+| `io.listdir(path)`         | List directory entries            |
+| `io.cwd()`                 | Get the current working directory |
+| `io.chdir(path)`           | Change the working directory      |
+| `io.run(program, args)`    | Execute an external program       |
+| `io.shell(command)`        | Execute a shell command           |
+
+## 14. Handling IO Errors
+
+Filesystem and process operations may fail.
+
+Use `try/catch` to handle errors.
+
+```veyra
+mod io
+
+try
+    add content = io.read("missing.txt")
+    say content
+catch err
+    say "Unable to read file: " + err
+end
+```
+
+This allows your program to respond to the failure instead of terminating immediately.
+
+## 15. Practice Exercises
 
 ### Exercise 1: Greeting Program
 
-Ask the user for their name and display a personalized greeting.
+Ask the user for their name using `get` and display a personalized greeting.
 
-### Exercise 2: Sum Calculator
+### Exercise 2: Calculator
 
-Ask for two numbers, convert them using `num()`, and display their sum.
+Read two numbers and display their sum.
 
 ### Exercise 3: Notes File
 
-Write a message to `notes.txt`, append a second message, and display the complete contents.
+Write two lines to a file using `io.write()` and `io.append()`, then display the result.
 
 ### Exercise 4: File Checker
 
-Ask the user for a filename and use `io.exists()` to report whether that path exists.
+Ask the user for a filename and check whether it exists.
 
 ### Exercise 5: Directory Explorer
 
-Use `io.cwd()` and `io.listdir(".")` to display the current working directory and its entries.
+Display the current working directory and list its contents.
 
-### Exercise 6: Safe File Cleanup
+### Exercise 6: Error Handling
 
-Create a test directory with a file inside it. Verify the directory's contents before using `io.rmdir()` to remove it. Do not use an important directory for this exercise.
+Attempt to read a missing file and handle the error with `try/catch`.
 
 ## What's Next?
 
-Continue with:
+Continue learning Veyra:
 
 - [Variables and Types](variables.md)
 - [Operators](operators.md)

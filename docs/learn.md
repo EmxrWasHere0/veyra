@@ -2,7 +2,9 @@
 
 Welcome to the Veyra learning guide!
 
-This section teaches Veyra step by step, from installing the language and writing your first program to working with functions, modules, channels, and error handling.
+This section teaches Veyra step by step, from writing your first program to working with functions, collections, channels, modules, and error handling.
+
+Veyra is a dynamically typed, interpreted programming language written in Rust.
 
 You can follow the lessons in order or jump directly to a topic using the navigation menu.
 
@@ -10,12 +12,18 @@ You can follow the lessons in order or jump directly to a topic using the naviga
 
 The recommended learning order is:
 
-1. Understand what Veyra is.
-2. Install Veyra and run your first program.
-3. Learn variables, values, and operators.
-4. Explore control flow, lists, and functions.
-5. Learn input/output, channels, and modules.
-6. Handle errors and explore advanced features.
+1. **Getting Started** — Learn what Veyra is, install the interpreter, and write your first program.
+2. **Language Basics** — Understand values, variables, operators, and dynamic typing.
+3. **Control Flow** — Use conditions, loops, and collection iteration.
+4. **Collections** — Work with lists, slicing, and JSON-like objects.
+5. **Functions** — Learn parameters, recursion, lambdas, and closed scopes.
+6. **Input and Output** — Read user input and work with files.
+7. **Channels** — Explore Veyra's runtime override mechanism.
+8. **Modules** — Use built-in libraries and create `.veymod` modules.
+9. **Error Handling** — Handle errors using `try`, `catch`, and `throw`.
+10. **Developer Tools** — Use the REPL, test runner, and VSCode extension.
+
+## Lessons
 
 ```{toctree}
 :caption: Learn Veyra
@@ -24,6 +32,7 @@ The recommended learning order is:
 learning/what-is-veyra
 learning/installation
 learning/quickstart
+learning/values
 learning/variables
 learning/operators
 learning/control-flow
@@ -40,7 +49,9 @@ learning/extension
 
 ## Additional Resources
 
-- [Veyra documentation home](index)
-- [VS Code Extension](vscode-extension)
+- [Documentation Home](index.md)
+- [Language Overview](language-overview.md)
+- [Features](features.md)
+- [VSCode Extension](vscode-extension.md)
 - [Project Repository](https://github.com/EmxrWasHere0/veyra)
 - [Report an Issue](https://github.com/EmxrWasHere0/veyra/issues)

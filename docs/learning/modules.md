@@ -1,25 +1,44 @@
 # Modules
 
-Modules provide additional functionality in Veyra. They let you access features such as system information, environment variables, file operations, and operating system utilities.
+Modules allow Veyra programs to organize reusable code and access additional functionality.
 
-Veyra includes three built-in modules:
-
-- `system` — system information, environment variables, command-line arguments, and process exit.
-- `io` — file operations, directory management, and process execution.
-- `base` — general system utilities such as the hostname, username, and home directory.
+Veyra supports built-in modules implemented in Rust and user-defined modules written in `.veymod` files.
 
 ## What You Will Learn
 
-By the end of this guide, you will understand:
+By the end of this lesson, you will know how to:
 
-- How to import modules.
-- How to import selected functions.
-- How to use the `system` module.
-- How to read and write files with `io`.
-- How to access basic system information with `base`.
-- How to handle errors when using module functions.
+- Import built-in modules.
+- Import all or selected module members.
+- Create user-defined `.veymod` modules.
+- Export functions and constants.
+- Understand module isolation.
+- Configure module search paths.
+- Use the `VEYRA_PATH` environment variable.
+- Handle module-related errors.
 
-## 1. Importing Modules
+## 1. Built-in Modules
+
+Veyra includes ten built-in modules.
+
+| Module      | Description                                                              |
+| ----------- | ------------------------------------------------------------------------ |
+| `system`    | Operating system information, environment variables, and process control |
+| `io`        | File operations, directories, and external processes                     |
+| `base`      | Hostname, username, home directory, and other system information         |
+| `json`      | JSON parsing and serialization                                           |
+| `http`      | HTTP requests                                                            |
+| `websocket` | WebSocket connections                                                    |
+| `math`      | Mathematical operations and constants                                    |
+| `time`      | Date, time, and timing utilities                                         |
+| `fs`        | Filesystem utilities                                                     |
+| `random`    | Pseudorandom number generation                                           |
+
+Built-in modules are implemented in Rust and compiled into the Veyra interpreter.
+
+They do not require separate `.veymod` files.
+
+## 2. Importing Modules
 
 Use `mod` to import a module.
 
@@ -28,445 +47,401 @@ mod system
 
 say system.os
 say system.arch
-say system.version
 ```
 
-The module prefix lets you access its members, such as `system.os`.
+After importing a module, access its members using the module name followed by a dot.
 
-### Importing All Members
+### Module Constants and Functions
 
-You can import all members from a module using `*`.
-
-```veyra
-mod system *
-
-say os
-say arch
-say version
-```
-
-### Importing Selected Members
-
-Use square brackets to import only the members you need.
-
-```veyra
-mod system [get_env, set_env]
-
-value = get_env()
-
-say value
-```
-
-Use the selected import syntax when you want to make specific module members available without writing the module prefix each time.
-
-> **Note:** Check the function signatures in the sections below before calling a function. For example, `get_env` requires an environment-variable name in this module API.
-
-## 2. The `system` Module
-
-The `system` module provides information about the runtime environment and functions for interacting with environment variables and the running process.
-
-Import it with:
-
-```veyra
-mod system
-```
-
-### System Constants
-
-| Member           | Description             |
-| ---------------- | ----------------------- |
-| `system.os`      | Operating system name   |
-| `system.arch`    | System architecture     |
-| `system.family`  | Operating system family |
-| `system.version` | Veyra version           |
-
-Example:
+Module constants are accessed without parentheses:
 
 ```veyra
 mod system
 
 say system.os
-say system.arch
-say system.family
 say system.version
 ```
 
-The exact output depends on the system running Veyra and the version of the program.
-
-### Environment Variables
-
-Use `get_env(name)` to read an environment variable.
+Functions require parentheses:
 
 ```veyra
 mod system
 
-home = system.get_env("HOME")
-
-say home
+say system.args()
+say system.get_env("HOME")
 ```
 
-The environment variable may not exist, and its value can differ between operating systems. On Windows, for example, the `USERPROFILE` variable is commonly used for the current user's profile directory.
+### Importing All Members
 
-Use `set_env(name, value)` to set an environment variable for the running process.
+Use `*` to import all exported members directly.
 
 ```veyra
-mod system
+mod base *
 
-system.set_env("VEYRA_MODE", "development")
-
-say system.get_env("VEYRA_MODE")
+say hostname()
+say pid()
 ```
 
-Environment-variable changes should not be assumed to persist after the process exits.
+This makes exported names available without the `base.` prefix.
 
-### Command-Line Arguments
+### Importing Selected Members
 
-The `system.args()` function provides command-line arguments exposed by the runtime.
+Use square brackets to import specific names.
 
 ```veyra
-mod system
+mod system [get_env, args]
 
-args = system.args()
-
-say args
+say get_env("HOME")
+say args()
 ```
 
-The exact arguments available depend on how Veyra is launched. If you plan to use command-line arguments in a program, verify the behavior of your installed CLI version.
+Selective imports can make dependencies more explicit.
 
-### Exiting a Program
+## 3. Using Built-in Modules
 
-Use `system.exit(code)` to terminate the running process with an exit code.
+### Math
 
 ```veyra
-mod system
+mod math
 
-system.exit(0)
+say math.sqrt(144)
 ```
 
-Conventionally, `0` indicates success, while a nonzero code indicates an error or another unsuccessful outcome.
-
-## 3. The `io` Module
-
-The `io` module provides file, directory, and process operations.
-
-Import it with:
+### JSON
 
 ```veyra
-mod io
+mod json
+
+add data = json.parse("{\"name\":\"Veyra\"}")
+
+say data["name"]
 ```
 
-### Reading a File
+JSON objects are represented as Veyra `jsondata` values.
 
-Use `io.read(path)` to read a file.
+### Time
 
 ```veyra
-mod io
+mod time
 
-content = io.read("notes.txt")
-
-say content
+say time.now()
 ```
 
-The file must be accessible to the running process. If reading fails, handle the runtime error where appropriate.
-
-### Writing a File
-
-Use `io.write(path, content)` to write content to a file.
+### Random
 
 ```veyra
-mod io
-
-io.write("hello.txt", "Hello from Veyra!")
-
-say "File written."
+mod random
 ```
 
-Writing may create a file or replace existing content, so use it carefully when working with important files.
+The `random` module provides pseudorandom operations.
 
-### Appending to a File
+Its output should not be used for cryptographic or security-sensitive purposes.
 
-Use `io.append(path, content)` to append content to a file.
+### Filesystem
 
 ```veyra
-mod io
-
-io.append("log.txt", "Application started\n")
-
-say "Log updated."
+mod fs
 ```
 
-Appending is useful for logs because it adds content rather than intentionally replacing the existing file.
+The `fs` module provides filesystem-related utilities.
 
-### Checking Whether a File Exists
+Some operations, such as recursive directory removal, can permanently delete data.
 
-Use `io.exists(path)` to check whether a path exists.
+### Networking
+
+Veyra includes `http` and `websocket` modules for network communication.
 
 ```veyra
-mod io
+mod http
+mod websocket
+```
 
-if io.exists("hello.txt")
-    say "The path exists."
-else
-    say "The path does not exist."
+Network operations can fail due to connectivity, timeouts, invalid responses, or remote server behavior.
+
+For detailed APIs, see [Built-ins](built-ins.md).
+
+## 4. User-Defined Modules
+
+Veyra supports user-defined modules written in `.veymod` files.
+
+These modules are interpreted at runtime.
+
+### Creating a Module
+
+Create a file named `calculator.veymod`:
+
+```veyra
+set VERSION = "1.0"
+
+add add_numbers(a, b)
+    return a + b
+end
+
+add multiply(a, b)
+    return a * b
 end
 ```
 
-This checks existence; it does not guarantee that a file is readable or writable.
+### Importing the Module
 
-### Removing and Renaming Paths
-
-Use `io.remove(path)` to remove a file and `io.rename(from, to)` to rename or move a path.
+Create a Veyra program in the same directory:
 
 ```veyra
-mod io
+mod calculator
 
-io.rename("hello.txt", "greeting.txt")
+say calculator.VERSION
+say calculator.add_numbers(10, 20)
+say calculator.multiply(4, 5)
 ```
 
-Be careful when removing files or changing paths. Verify the target before running operations on important data.
+Output:
 
-### Creating and Removing Directories
+```text
+1.0
+30
+20
+```
 
-Use `io.mkdir(path)` to create a directory.
+The interpreter searches supported module directories for `calculator.veymod`.
+
+## 5. Module Exports
+
+User-defined modules expose:
+
+- Constants declared with `set`.
+- Functions declared using `add name(...)`.
+
+Mutable variables declared with `add name = value` are not automatically exported.
+
+### Private Members
+
+Names beginning with `_` are private.
 
 ```veyra
-mod io
+set VERSION = "1.0"
 
-io.mkdir("my_folder")
+add _internal_helper(value)
+    return value * 2
+end
+
+add calculate(value)
+    return _internal_helper(value) + 1
+end
 ```
 
-Use `io.rmdir(path)` to remove a directory recursively.
+The module can use `_internal_helper()` internally, but other modules cannot import it as a public member.
+
+This allows modules to keep implementation details private.
+
+## 6. Module Isolation
+
+User-defined modules execute in isolated module environments.
+
+Variables created inside a module do not automatically become variables in the importing program.
+
+For example, `settings.veymod`:
 
 ```veyra
-mod io
+add internal_value = 100
 
-io.rmdir("my_folder")
+set APP_NAME = "Veyra"
 ```
 
-**Warning:** Recursive directory removal can delete files and subdirectories inside the target. Only use it when you are certain the target is safe to remove.
-
-### Listing Directory Contents
-
-Use `io.listdir(path)` to list entries in a directory.
+Main program:
 
 ```veyra
-mod io
+mod settings
 
-entries = io.listdir(".")
-
-say entries
+say settings.APP_NAME
 ```
 
-The path `"."` refers to the current working directory.
+The constant is exported, but `internal_value` is not.
 
-### Working with Directories
+### Functions and Module Context
 
-Use `io.cwd()` to get the current working directory and `io.chdir(path)` to change it.
+Functions defined inside modules retain their module context when called.
 
-```veyra
-mod io
+This is important for callbacks and recursive module functions.
 
-say io.cwd()
+For example, a module function can use imported modules that belong to its defining module without requiring the caller to import them separately.
 
-io.chdir("..")
+### Closed Scopes
 
-say io.cwd()
+Veyra's closed-scope function behavior also applies to module functions.
+
+A function does not automatically capture arbitrary surrounding local variables.
+
+Pass required values explicitly through parameters.
+
+## 7. Module Search Paths
+
+Veyra searches multiple locations when importing user-defined modules.
+
+The search locations include:
+
+1. The directory containing the running script.
+2. The script directory's `modules/` folder.
+3. The script directory's `lib/` folder.
+4. The current working directory.
+5. The working directory's `modules/` folder.
+6. The working directory's `lib/` folder.
+7. Additional directories configured through `VEYRA_PATH`.
+8. User-level module directories.
+9. System-level module directories.
+
+The exact user and system module directories depend on the operating system.
+
+When multiple directories contain a module with the same name, search order determines which module is loaded.
+
+## 8. The VEYRA_PATH Environment Variable
+
+Use `VEYRA_PATH` to add custom module search directories.
+
+### Linux and macOS
+
+```bash
+export VEYRA_PATH="/home/user/veyra-modules:/opt/veyra/modules"
 ```
 
-A relative path is interpreted in relation to the current working directory.
+### Windows PowerShell
 
-## 4. Running External Programs
-
-The `io` module provides functions for running external commands.
-
-### Running a Program
-
-Use `io.run(program, args)` to run a program with an argument list.
-
-```veyra
-mod io
-
-result = io.run("echo", ["Hello from Veyra"])
-
-say result
+```powershell
+$env:VEYRA_PATH = "C:\veyra\modules;D:\shared\veyra"
 ```
 
-The result is a list containing:
+Veyra uses the operating system's path-list separator:
 
-1. The exit code.
-2. Standard output.
-3. Standard error.
+- Linux/macOS: `:`
+- Windows: `;`
 
-An exit code of `-1` may be returned when the operating system does not provide an exit code.
+The variable can contain multiple directories.
 
-The availability and behavior of a particular executable depend on the operating system and environment.
-
-### Running a Shell Command
-
-Use `io.shell(command)` to execute a command through the system shell.
-
-```veyra
-mod io
-
-result = io.shell("echo Hello from Veyra")
-
-say result
-```
-
-Like `io.run`, the result contains the exit code, standard output, and standard error.
-
-**Security warning:** Shell commands can perform actions with the permissions of the current user. Avoid passing untrusted input into `io.shell()`. Prefer `io.run()` with a program and separate arguments when possible.
-
-## 5. The `base` Module
-
-The `base` module provides general system utilities.
-
-Import it with:
-
-```veyra
-mod base
-```
-
-### System Information
-
-| Member        | Description             |
-| ------------- | ----------------------- |
-| `base.os`     | Operating system name   |
-| `base.arch`   | System architecture     |
-| `base.family` | Operating system family |
+After configuring `VEYRA_PATH`, modules inside those directories can be imported by name.
 
 Example:
 
 ```veyra
-mod base
-
-say base.os
-say base.arch
-say base.family
+mod calculator
 ```
 
-### Utility Functions
+You do not need to specify the full path when importing a module located in a configured search directory.
 
-| Function          | Description                                |
-| ----------------- | ------------------------------------------ |
-| `base.hostname()` | Returns the hostname                       |
-| `base.username()` | Returns the current username               |
-| `base.home_dir()` | Returns the home directory                 |
-| `base.exe_path()` | Returns the executable path                |
-| `base.pid()`      | Returns the process ID                     |
-| `base.cores()`    | Returns the available processor-core count |
+## 9. Importing User-Defined Module Members
 
-Example:
+User-defined modules support the same import syntax as built-in modules.
+
+### Regular Import
 
 ```veyra
-mod base
+mod calculator
 
-say "Hostname: " + base.hostname()
-say "Username: " + base.username()
-say "Home: " + base.home_dir()
-say "Executable: " + base.exe_path()
-say "PID: " + base.pid()
-say "CPU cores: " + base.cores()
+say calculator.add_numbers(2, 3)
 ```
 
-Returned values depend on the host system and runtime environment.
+### Import All
 
-## 6. Handling Module Errors
+```veyra
+mod calculator *
 
-Module operations may fail because of missing files, invalid paths, insufficient permissions, or unavailable programs.
+say add_numbers(2, 3)
+```
 
-Use `try` and `catch` to handle runtime errors.
+### Selective Import
+
+```veyra
+mod calculator [add_numbers]
+
+say add_numbers(2, 3)
+```
+
+Private members beginning with `_` are not exported.
+
+## 10. Handling Module Errors
+
+Module imports or function calls may fail.
+
+Common causes include:
+
+- The module file cannot be found.
+- A requested member does not exist.
+- The requested member is private.
+- The module contains invalid Veyra code.
+- A module function raises a runtime error.
+- A built-in module operation fails.
+
+Use `try/catch` when an operation may fail during execution.
 
 ```veyra
 mod io
 
 try
-    content = io.read("missing_file.txt")
+    add content = io.read("missing.txt")
     say content
 catch err
     say "Operation failed: " + err
 end
 ```
 
-The `catch` variable receives the runtime error message.
+Veyra 0.2.6 also provides source locations and function tracebacks for debugging runtime errors.
 
-For more information, see the [Error Handling Guide](error-handling.md).
+## 11. Built-in vs. User-Defined Modules
 
-## 7. Module Reference
+| Feature                | Built-in Modules          | User-Defined Modules  |
+| ---------------------- | ------------------------- | --------------------- |
+| Implementation         | Rust                      | Veyra                 |
+| File format            | Compiled into interpreter | `.veymod`             |
+| Import keyword         | `mod`                     | `mod`                 |
+| Selective imports      | Supported                 | Supported             |
+| Star imports           | Supported                 | Supported             |
+| Runtime interpretation | No                        | Yes                   |
+| Module isolation       | Module-specific           | Isolated environments |
 
-### `system`
+Both types of modules use the same import syntax.
 
-| Member                            | Purpose                                       |
-| --------------------------------- | --------------------------------------------- |
-| `os`, `arch`, `family`, `version` | Runtime and system information                |
-| `args()`                          | Command-line arguments exposed by the runtime |
-| `env()`                           | Environment information                       |
-| `get_env(name)`                   | Read an environment variable                  |
-| `set_env(name, value)`            | Set an environment variable                   |
-| `exit(code)`                      | Exit the process                              |
+## 12. Practice Exercises
 
-### `io`
+### Exercise 1: Import a Built-in Module
 
-| Function                | Purpose                              |
-| ----------------------- | ------------------------------------ |
-| `read(path)`            | Read a file                          |
-| `write(path, content)`  | Write a file                         |
-| `append(path, content)` | Append to a file                     |
-| `exists(path)`          | Check whether a path exists          |
-| `remove(path)`          | Remove a file                        |
-| `rename(from, to)`      | Rename or move a path                |
-| `mkdir(path)`           | Create a directory                   |
-| `rmdir(path)`           | Recursively remove a directory       |
-| `listdir(path)`         | List directory entries               |
-| `cwd()`                 | Get the current working directory    |
-| `chdir(path)`           | Change the current working directory |
-| `run(program, args)`    | Run an external program              |
-| `shell(command)`        | Run a shell command                  |
+Import `math` and calculate the square root of a number.
 
-### `base`
+### Exercise 2: Selective Import
 
-| Function     | Purpose                      |
-| ------------ | ---------------------------- |
-| `hostname()` | Get the hostname             |
-| `username()` | Get the current username     |
-| `home_dir()` | Get the home directory       |
-| `exe_path()` | Get the executable path      |
-| `pid()`      | Get the process ID           |
-| `cores()`    | Get the processor-core count |
+Import `get_env` from `system` and read an environment variable.
 
-## 8. Practice Exercises
+### Exercise 3: Create a Module
 
-### Exercise 1: System Information
+Create a file named `greetings.veymod`.
 
-Write a program that displays the operating system, architecture, and Veyra version.
+Export a function that accepts a name and returns a greeting.
 
-### Exercise 2: File Operations
+### Exercise 4: Private Functions
 
-Write a short message to a file, read it back, and display its contents.
+Add a private helper function beginning with `_` to your module.
 
-### Exercise 3: Directory Listing
+Call it from an exported function.
 
-Display the contents of the current directory.
+### Exercise 5: Module Search Paths
 
-### Exercise 4: Environment Variables
+Create a `modules/` directory next to a Veyra script.
 
-Set an environment variable and read its value back during the same program execution.
+Place a `.veymod` file inside it and import that module.
 
-### Exercise 5: Error Handling
+### Exercise 6: VEYRA_PATH
 
-Attempt to read a file that does not exist and handle the resulting error using `try` and `catch`.
+Create a custom module directory and add it to `VEYRA_PATH`.
 
-### Exercise 6: System Utilities
+Verify that Veyra can import a module from that directory.
 
-Display the hostname, username, home directory, and process ID.
+### Exercise 7: Module Errors
+
+Attempt to import a nonexistent module and inspect the resulting error message.
 
 ## What's Next?
 
-You now know how to import Veyra's built-in modules and use their main APIs.
+Continue learning Veyra:
 
-Continue learning:
-
+- [Built-in Functions and Modules](built-ins.md)
+- [Functions](functions.md)
 - [Error Handling](error-handling.md)
 - [Input and Output](io.md)
-- [Functions](functions.md)
-- [Operators](operators.md)
+- [Variables and Types](variables.md)

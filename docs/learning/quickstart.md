@@ -1,33 +1,25 @@
 # Veyra Quick Start
 
-Welcome to your first Veyra lesson!
+Welcome to Veyra!
 
-In this guide, you will write and run a simple program, work with variables, perform calculations, create a function, and receive input from the user.
+In this guide, you will write your first program, work with variables, use functions and loops, read user input, and explore collections.
 
-You should have the Veyra interpreter installed. If you have not installed it yet, follow the [Installation Guide](installation.md).
+Veyra is a dynamically typed, interpreted programming language written in Rust.
 
-## 1. Create Your First Program
+If you have not installed the interpreter yet, follow the [Installation Guide](installation.md).
 
-Create a file named `hello.vey`.
+## 1. Your First Program
 
-Write the following code:
+Create a file named `hello.vey`:
 
 ```veyra
 say "Hello, World!"
 ```
 
-The `say` command prints a value to the terminal.
-
-Run your program from the directory containing the file:
+Run it:
 
 ```bash
 veyra hello.vey
-```
-
-If you are running Veyra from its source repository instead, use:
-
-```bash
-cargo run -- hello.vey
 ```
 
 Output:
@@ -36,26 +28,30 @@ Output:
 Hello, World!
 ```
 
-That's your first Veyra program!
+You can also run programs from the Veyra source directory:
 
-## 2. Write Comments
+```bash
+cargo run -- hello.vey
+```
 
-Comments help explain what your code does. In Veyra, `#` starts a comment outside a quoted string.
+## 2. Comments
+
+Comments begin with `#`.
 
 ```veyra
 # This is a comment.
 say "Hello!"  # Print a greeting.
 ```
 
-Comments are ignored when the program executes.
+Comments are ignored during execution.
 
-## 3. Work with Variables
+## 3. Variables
 
-Variables let you store values and use them later.
+Use `add` to declare mutable variables.
 
 ```veyra
-name = "Veyra"
-age = 15
+add name = "Veyra"
+add age = 15
 
 say name
 say age
@@ -68,21 +64,31 @@ Veyra
 15
 ```
 
-In this example:
-
-- `name` stores text.
-- `age` stores a number.
-- `say` displays the value of each variable.
-
-Veyra is dynamically typed, so you do not need to declare a variable's type before assigning a value.
-
-## 4. Perform Calculations
-
-Veyra supports arithmetic operators such as `+`, `-`, `*`, `/`, and `%`.
+Variables can be updated using `=`.
 
 ```veyra
-a = 10
-b = 3
+add score = 10
+
+score = 25
+
+say score
+```
+
+Output:
+
+```text
+25
+```
+
+Veyra is dynamically typed, so variables do not require type annotations.
+
+## 4. Calculations
+
+Veyra supports common arithmetic operators.
+
+```veyra
+add a = 10
+add b = 3
 
 say a + b
 say a - b
@@ -101,13 +107,11 @@ Output:
 1
 ```
 
-The `%` operator returns the remainder of a division.
-
-You can also use `+` to combine text with other values:
+Text can also be combined using `+`.
 
 ```veyra
-name = "Veyra"
-version = 1
+add name = "Veyra"
+add version = "0.2.6"
 
 say "Language: " + name
 say "Version: " + version
@@ -117,15 +121,15 @@ Output:
 
 ```text
 Language: Veyra
-Version: 1
+Version: 0.2.6
 ```
 
-## 5. Make Decisions
+## 5. Conditions
 
-Use `if` and `else` to execute different blocks of code depending on a condition.
+Use `if` and `else` to make decisions.
 
 ```veyra
-age = 18
+add age = 18
 
 if age >= 18
     say "You are an adult."
@@ -134,28 +138,26 @@ else
 end
 ```
 
-The condition is evaluated first. If it is true, the first block runs. Otherwise, the `else` block runs.
+Blocks are closed using `end`.
 
-Every block in this example is closed with `end`.
+## 6. Loops
 
-## 6. Repeat Instructions
-
-Use `repeat` to execute code multiple times.
+Use `repeat` to execute a block a specific number of times.
 
 ```veyra
-repeat 5
+repeat 3
     say "Hello!"
 end
 ```
 
-This prints `Hello!` five times.
+### While Loops
 
-You can also use a condition with `repeat while`:
+Use `while` to repeat while a condition is true.
 
 ```veyra
-counter = 1
+add counter = 1
 
-repeat while counter <= 3
+while counter <= 3
     say counter
     counter += 1
 end
@@ -169,11 +171,31 @@ Output:
 3
 ```
 
-The variable `counter` increases by one on each iteration. When the condition becomes false, the loop stops.
+### Collection Loops
 
-## 7. Create a Function
+Use `repeat item in collection` to iterate directly over a collection.
 
-Functions let you group instructions and reuse them.
+```veyra
+add colors = ["red", "green", "blue"]
+
+repeat color in colors
+    say color
+end
+```
+
+Output:
+
+```text
+red
+green
+blue
+```
+
+For more information, see [Control Flow](control-flow.md).
+
+## 7. Functions
+
+Functions allow you to reuse code.
 
 ```veyra
 add greet(name)
@@ -191,21 +213,15 @@ Hello, Alex!
 Hello, Veyra!
 ```
 
-Here's how it works:
-
-- `add greet(name)` defines a function named `greet`.
-- `name` is a parameter.
-- `end` closes the function definition.
-- `greet("Alex")` calls the function with an argument.
-
-You can also write functions that return values:
+Functions can return values using `return`.
 
 ```veyra
 add square(number)
     return number * number
 end
 
-result = square(5)
+add result = square(5)
+
 say result
 ```
 
@@ -215,48 +231,48 @@ Output:
 25
 ```
 
-The `return` statement sends a value back to the caller.
+Veyra also supports default parameters, recursion, variadic parameters, and lambda expressions.
 
-## 8. Receive Input from the User
+## 8. User Input
 
-Use `get` to ask the user for input. The entered value is stored as text in `_input`.
+Use `get` to read user input.
 
 ```veyra
-get "What is your name? "
-name = _input
+get name "What is your name? "
 
 say "Hello, " + name + "!"
 ```
 
-If the user enters `Alex`, the output will look like this:
+Example interaction:
 
 ```text
 What is your name? Alex
 Hello, Alex!
 ```
 
-To convert text into a number, use the built-in `num()` function:
+Input is read as text.
+
+Use `num()` when you need a number.
 
 ```veyra
-get "Enter a number: "
-number = num(_input)
+get value "Enter a number: "
+
+add number = num(value)
 
 say number * 2
 ```
 
-If the user enters `5`, the program prints `10`.
+If the user enters `5`, the program displays `10`.
 
-If the input cannot be converted into a number, the conversion reports an error.
+## 9. Lists
 
-## 9. Work with Lists
-
-Lists store multiple values in one variable.
+Lists store multiple values.
 
 ```veyra
-colors = ["red", "green", "blue"]
+add colors = ["red", "green", "blue"]
 
 say colors[0]
-say colors[1]
+say colors[-1]
 say len(colors)
 ```
 
@@ -264,20 +280,79 @@ Output:
 
 ```text
 red
-green
+blue
 3
 ```
 
-List indexes start at `0`, so the first item is `colors[0]`.
+Lists also support slicing.
 
-The built-in `len()` function returns the number of items in a list. It also works with text.
+```veyra
+add numbers = [10, 20, 30, 40]
 
-## 10. Understand Constants and Channels
+say numbers[1:3]
+```
 
-The `set` command declares a constant. Assigning to a constant does not replace its original value; it writes to its associated channel instead.
+Output:
+
+```text
+[20, 30]
+```
+
+You can add elements using `append()`.
+
+```veyra
+numbers.append(50)
+
+say numbers
+```
+
+For more information, see [Lists](lists.md).
+
+## 10. JSONData Objects
+
+Veyra provides a `jsondata` type for key-value collections.
+
+```veyra
+add user = {
+    "name": "Alex",
+    "age": 20,
+    "active": true
+}
+
+say user["name"]
+say user["age"]
+```
+
+Output:
+
+```text
+Alex
+20
+```
+
+Object values can be updated.
+
+```veyra
+user["age"] = 21
+
+say user["age"]
+```
+
+Output:
+
+```text
+21
+```
+
+## 11. Constants and Channels
+
+Use `set` to declare a constant.
+
+Assigning to a constant updates its channel rather than changing the original value.
 
 ```veyra
 set port = 80
+
 port = 8080
 
 say port
@@ -291,60 +366,77 @@ Output:
 8080
 ```
 
-Here, `port` remains `80`. The expression `0 ? port` reads the channel value and uses `0` as the default if no channel value has been set.
+The `?` operator reads a channel value using a fallback.
 
-Channels are an advanced Veyra feature. You can learn more in the [Channels Guide](channels.md).
+For details, see [Channels](channels.md).
 
-## 11. Try It Yourself
+## 12. Interactive REPL
 
-Create a file named `practice.vey` and complete these exercises.
+Veyra 0.2.6 includes an interactive REPL.
 
-### Exercise 1: A Personal Greeting
+Start it without specifying a file:
 
-Ask the user for their name and print a greeting.
+```bash
+veyra
+```
 
-Expected behavior:
+Example:
 
 ```text
-What is your name? Sam
-Hello, Sam!
+>>> add x = 10
+>>> say x * 2
+20
+>>> add double(n)
+...     return n * 2
+... end
+>>> say double(5)
+10
 ```
 
-### Exercise 2: A Number Calculator
+Variables and functions remain available throughout the session.
 
-Ask the user for a number, convert it using `num()`, and print the number multiplied by three.
+Type `exit` or `quit` to leave the REPL.
 
-### Exercise 3: Count to Ten
+## 13. Practice Exercises
 
-Use a `repeat while` loop to print the numbers from `1` through `10`.
+### Exercise 1: Greeting
 
-### Exercise 4: A Reusable Function
+Ask the user for their name and print a personalized greeting.
 
-Create a function named `double` that accepts a number and returns twice its value.
+### Exercise 2: Calculator
 
-For example:
+Read two numbers and print their sum.
 
-```veyra
-say double(7)
-```
+### Exercise 3: Counting
 
-Expected output:
+Use `while` to print numbers from 1 to 10.
 
-```text
-14
-```
+### Exercise 4: Functions
 
-### Exercise 5: Find the Number of Items
+Create a function named `double` that returns twice its argument.
 
-Create a list of at least four items and use `len()` to print the number of items.
+### Exercise 5: Lists
+
+Create a list of five numbers and print the first and last elements.
+
+### Exercise 6: Collection Iteration
+
+Use `repeat item in collection` to calculate the sum of a list.
+
+### Exercise 7: JSONData
+
+Create a `jsondata` object containing a name and age.
+
+Print both values and update the age.
+
+### Exercise 8: Channels
+
+Declare a constant, assign a channel override, and display both values.
 
 ## What's Next?
 
-You now know the basic structure of a Veyra program!
+Continue learning Veyra:
 
-Continue learning with these guides:
-
-- [Installation](installation.md)
 - [Variables and Types](variables.md)
 - [Input and Output](io.md)
 - [Control Flow](control-flow.md)
@@ -352,3 +444,4 @@ Continue learning with these guides:
 - [Functions](functions.md)
 - [Operators](operators.md)
 - [Modules](modules.md)
+- [Channels](channels.md)

@@ -1,28 +1,30 @@
 # Variables and Types
 
-In this lesson, you will learn how to store values in variables, understand Veyra's data types, convert values between types, and work with constants.
+Veyra is a dynamically typed language. Variables can store different kinds of values without requiring explicit type declarations.
+
+In this lesson, you will learn how to declare variables, update their values, inspect types, and work with constants.
 
 ## What You Will Learn
 
 By the end of this guide, you will know how to:
 
-- Create and update variables.
-- Understand Veyra's built-in value types.
-- Convert values using `num()`, `text()`, and `type()`.
-- Declare constants with `set`.
+- Declare mutable variables using `add`.
+- Update variables using assignment operators.
+- Understand Veyra's seven value types.
+- Convert values using `num()` and `text()`.
+- Inspect values using `type()`.
+- Declare constants using `set`.
 - Use conditional assignment with `?=`.
-- Avoid common variable-related mistakes.
+- Understand the difference between constants and channels.
 
 ## 1. Creating Variables
 
-A variable is a name that refers to a value.
-
-In Veyra, use `=` to assign a value to a variable.
+Use `add` to declare a mutable variable.
 
 ```veyra
-name = "Alex"
-age = 20
-is_learning = true
+add name = "Alex"
+add age = 20
+add is_learning = true
 
 say name
 say age
@@ -37,17 +39,19 @@ Alex
 true
 ```
 
-You do not need to declare a variable's type before assigning a value. Veyra determines the value's type at runtime.
+Veyra determines the type of each value at runtime.
 
-### Updating a Variable
+### Updating Variables
 
-You can assign a new value to an existing variable.
+Use `=` to update an existing variable.
 
 ```veyra
-score = 10
+add score = 10
+
 say score
 
 score = 25
+
 say score
 ```
 
@@ -58,34 +62,34 @@ Output:
 25
 ```
 
-The second assignment replaces the value stored in `score`.
+Variables can also change types:
 
-### Assignment Shorthand
+```veyra
+add value = 42
+
+value = "Hello"
+value = [1, 2, 3]
+
+say value
+```
+
+### Compound Assignment
 
 Veyra supports compound assignment operators:
 
 ```veyra
-score = 10
+add score = 10
 
 score += 5
-say score
-
 score -= 3
-say score
-
 score *= 2
-say score
-
 score /= 4
-say score
-
 score %= 3
+
 say score
 ```
 
-These operators perform an operation and assign the result back to the same variable.
-
-| Operator | Meaning                            |
+| Operator | Description                        |
 | -------- | ---------------------------------- |
 | `=`      | Assign a value                     |
 | `+=`     | Add and assign                     |
@@ -96,45 +100,48 @@ These operators perform an operation and assign the result back to the same vari
 
 ## 2. Understanding Data Types
 
-Veyra supports several built-in value types.
+Veyra supports seven value types.
 
-| Type name  | Description            | Example            |
-| ---------- | ---------------------- | ------------------ |
-| `num`      | A number               | `42`               |
-| `text`     | Text                   | `"Hello"`          |
-| `bool`     | A Boolean value        | `true`             |
-| `list`     | A collection of values | `[1, 2, 3]`        |
-| `function` | A function value       | `func(x) => x + 1` |
-| `null`     | The absence of a value | `null`             |
+| Type       | Description         | Example            |
+| ---------- | ------------------- | ------------------ |
+| `number`   | Numeric values      | `42`, `3.14`       |
+| `text`     | Text strings        | `"Hello"`          |
+| `bool`     | Boolean values      | `true`, `false`    |
+| `list`     | Ordered collections | `[1, 2, 3]`        |
+| `jsondata` | Key-value objects   | `{"name": "Alex"}` |
+| `function` | Callable values     | `func(x) => x + 1` |
+| `null`     | Absence of a value  | `null`             |
 
-The `type()` function returns the type name of a value as text.
+Use `type()` to inspect a value.
 
 ```veyra
 say type(42)
 say type("Hello")
 say type(true)
 say type([1, 2, 3])
+say type({"name": "Alex"})
 say type(null)
 ```
 
 Output:
 
 ```text
-num
+number
 text
 bool
 list
+jsondata
 null
 ```
 
-You can also check the type of a variable:
+Because Veyra is dynamically typed, the same variable can hold different types during execution.
 
 ```veyra
-value = 42
+add value = 42
 
 say type(value)
 
-value = "Now I am text."
+value = "Hello"
 
 say type(value)
 ```
@@ -142,19 +149,17 @@ say type(value)
 Output:
 
 ```text
-num
+number
 text
 ```
 
-Because Veyra is dynamically typed, a variable can hold values of different types at different times.
-
 ## 3. Working with Numbers
 
-Numbers can be used in calculations.
+Veyra uses a single numeric type called `number`.
 
 ```veyra
-a = 12
-b = 5
+add a = 12
+add b = 5
 
 say a + b
 say a - b
@@ -173,12 +178,14 @@ Output:
 2
 ```
 
-The `num()` function can convert compatible values into numbers.
+### Converting Values to Numbers
+
+Use `num()` to convert compatible values into numbers.
 
 ```veyra
-first = num("42")
-second = num(true)
-third = num(false)
+add first = num("42")
+add second = num(true)
+add third = num(false)
 
 say first
 say second
@@ -193,19 +200,23 @@ Output:
 0
 ```
 
-A Boolean value converts to `1` when true and `0` when false.
+Invalid numeric text causes a runtime error.
 
-**Important:** A text value that cannot be converted into a number causes a runtime error.
+```veyra
+num("hello")
+```
+
+Veyra reports an error because `"hello"` cannot be converted into a number.
 
 ## 4. Working with Text
 
-Text values are written inside quotation marks.
+Text values can use single or double quotes.
 
 ```veyra
-first_name = "Alex"
-last_name = "Morgan"
+add first_name = "Alex"
+add last_name = 'Morgan'
 
-full_name = first_name + " " + last_name
+add full_name = first_name + " " + last_name
 
 say full_name
 ```
@@ -216,12 +227,10 @@ Output:
 Alex Morgan
 ```
 
-The `+` operator concatenates text.
-
-It can also combine text with other value types:
+Veyra supports combining text with other values:
 
 ```veyra
-age = 20
+add age = 20
 
 say "Age: " + age
 ```
@@ -234,11 +243,11 @@ Age: 20
 
 ### Converting Values to Text
 
-Use `text()` to convert a value to its text representation.
+Use `text()` to convert a value into text.
 
 ```veyra
-score = 100
-message = text(score)
+add score = 100
+add message = text(score)
 
 say message
 say type(message)
@@ -251,41 +260,43 @@ Output:
 text
 ```
 
-This is useful when you need to combine a value with a text message or store its textual representation.
+Text values also support methods such as `upper()`, `lower()`, `trim()`, `split()`, and `replace()`.
 
-## 5. Checking Types with `type()`
+## 5. Dynamic Typing
 
-The `type()` function returns the type name of a value.
+A variable's type depends on its current value.
 
 ```veyra
-username = "guest"
-attempts = 3
-active = true
+add data = 10
 
-say type(username)
-say type(attempts)
-say type(active)
+say type(data)
+
+data = "Veyra"
+
+say type(data)
+
+data = [1, 2, 3]
+
+say type(data)
 ```
 
 Output:
 
 ```text
+number
 text
-num
-bool
+list
 ```
 
-You can use this function while debugging to understand what kind of value a variable currently contains.
+There are no mandatory type annotations.
 
-Remember that `type()` returns text, so the result for a number is `"num"`, not `"number"`.
-
-## 6. Declaring Constants with `set`
+## 6. Constants with `set`
 
 Use `set` to declare a constant.
 
 ```veyra
 set app_name = "Veyra"
-set version = 1
+set version = "0.2.6"
 
 say app_name
 say version
@@ -295,10 +306,16 @@ Output:
 
 ```text
 Veyra
-1
+0.2.6
 ```
 
-A constant's original value is preserved. However, Veyra has a special feature: assigning to a constant creates or updates its associated **channel value** rather than replacing the constant itself.
+Unlike mutable variables, constants preserve their original values.
+
+However, Veyra has a special behavior for assignments to constants.
+
+### Constants and Channels
+
+When assigning a new value to a constant, Veyra updates its associated channel instead.
 
 ```veyra
 set greeting = "Hello"
@@ -318,19 +335,19 @@ Welcome!
 
 Here:
 
-- `greeting` reads the original constant value.
-- `greeting = "Welcome!"` writes to the channel associated with `greeting`.
-- `0 ? greeting` reads the channel value, using `0` as the default if the channel has no value.
+- `greeting` returns the original constant value.
+- `greeting = "Welcome!"` updates its channel.
+- `0 ? greeting` reads the channel value.
 
-This behavior is different from ordinary constant declarations in many other programming languages.
+The left side of `?` acts as a fallback when the channel has no value.
 
-For a deeper explanation, see the [Channels Guide](channels.md).
+For a detailed explanation, see [Channels](channels.md).
 
 ## 7. Conditional Assignment with `?=`
 
-Veyra supports the `?=` operator for conditional assignment.
+The `?=` operator assigns a value only when its target meets Veyra's conditional assignment rules.
 
-It assigns a value only when the target variable has not already been filled or defined.
+For example, it can provide a default value for an undefined name:
 
 ```veyra
 username ?= "guest"
@@ -344,12 +361,11 @@ Output:
 guest
 ```
 
-This can be useful when providing a default value that should not overwrite an existing variable.
-
-For example:
+If the variable already has a value, the conditional assignment does not replace it.
 
 ```veyra
-username = "alex"
+add username = "alex"
+
 username ?= "guest"
 
 say username
@@ -361,19 +377,36 @@ Output:
 alex
 ```
 
-Because `username` already has a value, the second assignment does not replace it.
+### Difference Between `?=` and `??`
 
-Do not confuse `?=` with `??`:
+These operators serve different purposes.
 
-- `?=` conditionally assigns to a variable.
-- `??` returns the left operand unless it is `null`; otherwise, it returns the right operand.
+`?=` conditionally assigns a value:
+
+```veyra
+username ?= "guest"
+```
+
+`??` provides a fallback when an expression evaluates to `null`:
+
+```veyra
+add nickname = null
+
+say nickname ?? "Anonymous"
+```
+
+Output:
+
+```text
+Anonymous
+```
 
 ## 8. Understanding `null`
 
-`null` represents the absence of a value.
+The `null` value represents the absence of a value.
 
 ```veyra
-result = null
+add result = null
 
 say result
 say type(result)
@@ -386,14 +419,12 @@ null
 null
 ```
 
-The first `null` is the displayed value. The second is the type name returned by `type()`.
-
-You can use the `??` operator to provide a fallback when a value is `null`.
+Use `??` when you want to replace a `null` result with another value.
 
 ```veyra
-nickname = null
+add nickname = null
 
-display_name = nickname ?? "Anonymous"
+add display_name = nickname ?? "Anonymous"
 
 say display_name
 ```
@@ -404,117 +435,119 @@ Output:
 Anonymous
 ```
 
-If `nickname` contains a non-null value, that value is used instead.
-
 ## 9. Common Mistakes
 
 ### Using the Wrong Type Name
 
-Incorrect expectation:
+The numeric type is called `number`, not `num`.
 
 ```veyra
 say type(42)
 ```
 
-Expected result:
+Output:
 
 ```text
 number
 ```
 
-Actual result:
+`num()` is a conversion function, while `"number"` is the type name.
 
-```text
-num
-```
-
-Veyra uses `num` as the type name for numbers.
-
-### Converting Invalid Text to a Number
+### Converting Invalid Text
 
 ```veyra
-value = num("hello")
+add value = num("hello")
 ```
 
-The text `"hello"` cannot be converted into a number, so this operation causes a runtime error.
+This causes a runtime error because the text cannot be converted into a number.
 
-Use `num()` with values that can be converted successfully.
-
-### Expecting `set` to Behave Like an Ordinary Variable
+### Expecting Constants to Change
 
 ```veyra
 set mode = "safe"
+
 mode = "fast"
 
 say mode
+say "" ? mode
 ```
 
-The final output remains:
+Output:
 
 ```text
 safe
+fast
 ```
 
-The assignment to `mode` updates its channel rather than replacing its constant value. Use ordinary assignment when you want a variable that can be updated normally.
+The original constant remains unchanged.
 
-### Confusing `?=` and `??`
-
-These operators have different purposes.
+### Confusing `?=` with `??`
 
 ```veyra
-value = null
+add value = null
+
 say value ?? "default"
 ```
 
-The `??` operator provides a fallback value. The `?=` operator conditionally assigns to a variable.
+The `??` operator evaluates an expression and provides a fallback.
+
+The `?=` operator conditionally assigns a value.
 
 ## 10. Practice Exercises
 
-Try solving these exercises without looking at the earlier examples.
-
 ### Exercise 1: Personal Information
 
-Create variables for a name, age, and country. Print all three values.
+Create mutable variables for your name, age, and country using `add`.
+
+Print their values.
 
 ### Exercise 2: Type Detection
 
-Create one variable of each of these types:
+Create one variable for each of these types:
 
 - Number
 - Text
 - Boolean
 - List
+- JSONData
 - Null
 
-Use `type()` to display each variable's type.
+Use `type()` to display their types.
 
 ### Exercise 3: Temperature Conversion
 
-Create a variable named `celsius` and convert it to Fahrenheit using this formula:
+Create a variable named `celsius`.
 
-`Fahrenheit = Celsius * 9 / 5 + 32`
+Convert it to Fahrenheit using:
+
+```text
+Fahrenheit = Celsius * 9 / 5 + 32
+```
 
 Print the result.
 
 ### Exercise 4: Text Conversion
 
-Create a numeric variable, convert it to text using `text()`, and print its type.
+Create a numeric variable, convert it to text using `text()`, and inspect the result with `type()`.
 
 ### Exercise 5: Default Values
 
-Use `?=` to provide a default username. Then assign a username before the conditional assignment and observe the difference.
+Use `?=` to assign a default username.
+
+Then repeat the exercise with an already initialized variable.
 
 ### Exercise 6: Constants and Channels
 
-Declare a constant using `set`, assign a different value to its channel, and print both the constant and its channel value.
+Declare a constant using `set`.
+
+Assign a new value to its channel, then print both the original constant and the channel value.
 
 ## What's Next?
 
-You now understand Veyra's variables, data types, and assignment behavior.
+Continue learning Veyra:
 
-Continue with:
-
-- [Input and Output](io.md) — receive input and display information.
-- [Operators](operators.md) — explore arithmetic, comparison, and logical operators.
-- [Control Flow](control-flow.md) — make decisions and repeat instructions.
-- [Channels](channels.md) — learn more about constants and channel values.
+- [Input and Output](io.md)
+- [Operators](operators.md)
+- [Control Flow](control-flow.md)
+- [Channels](channels.md)
+- [Values](values.md)

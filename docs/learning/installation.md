@@ -1,44 +1,46 @@
 # Installing Veyra
 
-Welcome to Veyra! This guide will help you install the tools required to run Veyra programs and get your development environment ready.
+Welcome to Veyra!
 
-By the end of this guide, you will be able to build the Veyra interpreter, run a source file, and install Veyra as a command-line program.
+This guide will help you install the Veyra interpreter, configure your development environment, and run your first program.
+
+Veyra is an interpreted programming language written in Rust. You do not need to compile individual `.vey` files before running them.
 
 ## What You Need
 
-To build Veyra from source, you need:
+To build or install Veyra from source, you need:
 
-- **Git** — to download the repository.
-- **Rust** — the programming language used to implement Veyra.
-- **Cargo** — Rust's build and package manager. It is included with a standard Rust installation.
-- **A terminal** — such as PowerShell, Windows Terminal, Terminal on macOS, or a Linux shell.
+- **Rust** — The programming language used to implement Veyra.
+- **Cargo** — Rust's build and package manager.
+- **Git** — Used to download the Veyra repository.
+- **A terminal** — PowerShell, Windows Terminal, macOS Terminal, or a Linux shell.
 
-You do not need a separate compiler for your `.vey` programs. Veyra's interpreter executes them.
+Cargo is included with standard Rust installations.
 
-## Step 1: Install Rust and Cargo
+## 1. Install Rust and Cargo
 
 Visit the official Rust installation website:
 
-[https://rustup.rs/](https://rustup.rs/)
+https://rustup.rs/
 
 Follow the instructions for your operating system.
 
-After installation, open a **new terminal** and check that Rust and Cargo are available:
+After installation, open a new terminal and verify both tools:
 
 ```bash
 rustc --version
 cargo --version
 ```
 
-Both commands should print version information.
+Both commands should display version information.
 
-If either command is not recognized, check your Rust installation and ensure the appropriate binary directory is included in your `PATH`.
+The minimum supported Rust version depends on the dependencies used by the current Veyra release.
 
-## Step 2: Install Git
+## 2. Install Git
 
-If Git is not already installed, download it from:
+Download Git from:
 
-[https://git-scm.com/downloads](https://git-scm.com/downloads)
+https://git-scm.com/downloads
 
 Verify the installation:
 
@@ -46,87 +48,83 @@ Verify the installation:
 git --version
 ```
 
-If you already have Git installed, you can continue to the next step.
+If Git is already installed, continue to the next step.
 
-## Step 3: Download the Veyra Repository
+## P.S.
 
-Clone the official Veyra repository:
+After these 2 steps, you can go to our [latest release](https://github.com/EmxrWasHere0/veyra/releases/latest) and use Veyra Installer.
+
+## 3. Download Veyra
+
+Clone the repository:
 
 ```bash
 git clone https://github.com/EmxrWasHere0/veyra.git
 ```
 
-Move into the project directory:
+Enter the project directory:
 
 ```bash
 cd veyra
 ```
 
-You should now be in the directory containing the project's `Cargo.toml` file.
+This directory contains `Cargo.toml` and the interpreter's Rust source code.
 
-## Step 4: Build and Run Veyra
+## 4. Run Veyra from Source
 
-You can run the interpreter directly through Cargo without installing it globally.
+You can execute the interpreter through Cargo without installing it globally.
 
-From the repository root, execute:
+Display CLI help:
 
 ```bash
 cargo run -- --help
 ```
 
-This command builds and launches the interpreter, passing the `--help` option to it.
-
-To display the interpreter version, run:
+Display the interpreter version:
 
 ```bash
 cargo run -- --version
 ```
 
-The first build may take a little time because Cargo needs to compile the project and its dependencies.
+The first build may take some time because Cargo needs to compile the interpreter and its dependencies.
 
-## Step 5: Run a Veyra Source File
+### Run a Source File
 
-Create a file named `hello.vey` in the repository root.
-
-Add the following code:
+Create a file named `hello.vey`:
 
 ```veyra
 say "Hello, World!"
 ```
 
-Run it with:
+Run it:
 
 ```bash
 cargo run -- hello.vey
 ```
 
-Expected output:
+Output:
 
 ```text
 Hello, World!
 ```
 
-Congratulations! You have successfully run your first Veyra program.
+## 5. Build an Optimized Interpreter
 
-## Step 6: Build an Optimized Interpreter
-
-For an optimized build, run:
+For an optimized build:
 
 ```bash
 cargo build --release
 ```
 
-The executable will be generated in the `target/release` directory.
+The executable will be located at:
 
-Typical executable paths are:
+| Platform | Executable                 |
+| -------- | -------------------------- |
+| Linux    | `target/release/veyra`     |
+| macOS    | `target/release/veyra`     |
+| Windows  | `target/release/veyra.exe` |
 
-- Linux: `target/release/veyra`
-- macOS: `target/release/veyra`
-- Windows: `target/release/veyra.exe`
-
-You can run the executable directly.
-
-On Linux or macOS:
+Run it directly on Linux or macOS:
 
 ```bash
 ./target/release/veyra hello.vey
@@ -138,57 +136,197 @@ On Windows PowerShell:
 .\target\release\veyra.exe hello.vey
 ```
 
-Run these commands from the repository root, or adjust the paths if your source file is elsewhere.
+This builds the Veyra interpreter, not a standalone executable from the Veyra source file.
 
-**Important:** This builds the Veyra interpreter, not a standalone executable from your `.vey` source file.
+## 6. Install Veyra Globally
 
-## Step 7: Install Veyra as a Command-Line Tool
+To use Veyra from any directory, install it through Cargo.
 
-If you want to run Veyra without typing `cargo run` each time, install it using Cargo.
-
-From the repository root, execute:
+From the repository root:
 
 ```bash
 cargo install --path .
 ```
 
-After installation, you can run programs using:
+Alternatively, install directly from GitHub:
 
 ```bash
-veyra hello.vey
+cargo install --git https://github.com/EmxrWasHere0/veyra.git
 ```
 
-You can also check the installed interpreter:
+After installation, verify it:
 
 ```bash
 veyra --version
 ```
 
-If the `veyra` command is not recognized, ensure Cargo's binary directory is included in your `PATH`. On many systems, this directory is `~/.cargo/bin`.
+Run a program:
 
-To update an existing local installation after making changes to the repository, run `cargo install --path .` again.
+```bash
+veyra hello.vey
+```
 
-## Troubleshooting
+Cargo usually installs executables into its binary directory, such as `~/.cargo/bin/` on Linux and macOS.
 
-### `cargo` is not recognized
+Make sure this directory is available in your system's `PATH`.
 
-Install Rust through [rustup](https://rustup.rs/), reopen your terminal, and check your `PATH`.
+### Updating Veyra
 
-### Git cannot be found
+If you installed Veyra from a local repository, update the source code and reinstall:
 
-Install Git from the [official download page](https://git-scm.com/downloads), then reopen your terminal.
+```bash
+git pull
+cargo install --path . --force
+```
 
-### The source file cannot be found
+For a Git-based installation:
 
-Make sure your terminal is in the directory containing `hello.vey`, or provide the correct relative or absolute path.
+```bash
+cargo install --git https://github.com/EmxrWasHere0/veyra.git --force
+```
 
-### The program reports an error
+## 7. Start the Interactive REPL
 
-Read the error message and check your Veyra syntax. If the error occurs during the build, check that Rust and Cargo are installed correctly.
+Veyra 0.2.6 includes an interactive REPL.
+
+Start it by running:
+
+```bash
+veyra
+```
+
+You can enter Veyra statements directly:
+
+```text
+>>> add x = 10
+>>> say x * 2
+20
+```
+
+Variables and functions remain available during the session.
+
+The REPL also supports multiline blocks:
+
+```text
+>>> add square(n)
+...     return n * n
+... end
+>>> say square(5)
+25
+```
+
+Type `exit` or `quit` to leave the REPL.
+
+## 8. Running Tests
+
+Veyra supports test blocks.
+
+Run a Veyra test file:
+
+```bash
+veyra --test tests.vey
+```
+
+If you are developing the interpreter, run its Rust regression tests:
+
+```bash
+cargo test
+```
+
+The regression tests help verify that existing language features continue working after changes.
+
+## 9. Optional: Install the VSCode Extension
+
+Veyra provides a Visual Studio Code extension with syntax highlighting, snippets, and REPL integration.
+
+To build it:
+
+```bash
+cd veyra-vscode
+npm install
+npx vsce package
+```
+
+Install the generated VSIX package:
+
+```bash
+code --install-extension veyra-0.2.6.vsix
+```
+
+The package filename depends on the extension version.
+
+For details, see [VSCode Extension](extension.md).
+
+## 10. Troubleshooting
+
+### Cargo Is Not Recognized
+
+Install Rust using [rustup](https://rustup.rs/).
+
+Reopen your terminal and check:
+
+```bash
+cargo --version
+```
+
+### Git Is Not Recognized
+
+Install Git and reopen your terminal.
+
+Verify it using:
+
+```bash
+git --version
+```
+
+### Veyra Is Not Recognized
+
+Check that the interpreter was installed successfully.
+
+Make sure Cargo's binary directory is included in `PATH`.
+
+You can also run the interpreter directly from the project directory:
+
+```bash
+cargo run -- hello.vey
+```
+
+### Source File Not Found
+
+Check the current working directory and the file path.
+
+Use an absolute path if necessary.
+
+### Build Fails
+
+Make sure Rust and Cargo are up to date:
+
+```bash
+rustup update stable
+```
+
+Then retry the build:
+
+```bash
+cargo build
+```
+
+### Runtime Error
+
+Veyra reports source locations and function tracebacks for runtime errors.
+
+Read the error message and check the indicated source line.
+
+For more information, see [Error Handling](error-handling.md).
 
 ## What's Next?
 
-Now that Veyra is ready, continue to the [Quick Start](quickstart.md) guide to learn the basics of writing and running Veyra programs.
+Continue learning Veyra:
+
+- [Quick Start](quickstart.md)
+- [Running Veyra Programs](run.md)
+- [Variables and Types](variables.md)
+- [VSCode Extension](extension.md)
 
 ## Useful Links
 

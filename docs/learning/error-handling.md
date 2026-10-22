@@ -1,96 +1,141 @@
 # Error Handling
 
-Errors can occur while a Veyra program is running. A file may not exist, an operation may fail, or an expression may produce a runtime error.
+Errors can occur while a Veyra program is running. A calculation may fail, a file may not exist, or a function may receive an invalid value.
 
-Veyra provides `try` and `catch` to handle runtime errors and keep error-handling logic separate from normal program execution.
+Veyra provides `try`, `catch`, and `throw` for handling runtime errors.
+
+Since version 0.2.6, runtime errors also include source locations and function tracebacks to make debugging easier.
 
 ## What You Will Learn
 
-By the end of this guide, you will understand:
+By the end of this guide, you will know how to:
 
-- What runtime errors are.
-- How to use `try` and `catch`.
-- How to read error messages.
-- How to keep error-handling code organized.
-- How to debug common Veyra problems.
-- How to avoid hiding errors accidentally.
+- Understand runtime errors.
+- Handle errors using `try` and `catch`.
+- Raise errors explicitly using `throw`.
+- Use optional catch variables.
+- Handle errors in nested blocks.
+- Read source locations and function tracebacks.
+- Avoid hiding important failures.
 
-## 1. Understanding Errors
+## 1. Understanding Runtime Errors
 
-An error is a problem that prevents an operation from completing normally.
+A runtime error occurs when an operation cannot complete normally.
 
-Common causes include:
+Common examples include:
 
-- Dividing by zero.
-- Reading a file that does not exist.
-- Using an invalid value in an operation.
-- Calling a function with incorrect arguments.
-- Accessing a resource that is unavailable.
-
-For example:
-
-```veyra
-result = 10 / 0
-say result
-```
-
-This operation produces a runtime error. The program cannot complete the calculation normally.
-
-When an error occurs, Veyra reports it with an error message. Understanding that message is the first step toward fixing the problem.
-
-## 2. Using `try` and `catch`
-
-Use `try` to mark a block of code where a runtime error may occur. Use `catch` to handle an error raised while executing that block.
-
-General structure:
-
-```veyra
-try
-    # Code that may fail
-catch err
-    # Handle the error
-end
-```
-
-The variable following `catch` receives the runtime error message.
+- Division by zero.
+- Invalid operations between values.
+- Undefined variables.
+- Invalid list indexes.
+- Incorrect function arguments.
+- File or network failures.
 
 Example:
 
 ```veyra
+add result = 10 / 0
+
+say result
+```
+
+This causes a division-by-zero error.
+
+If the error is not handled, Veyra stops execution and reports the failure.
+
+## 2. Using Try and Catch
+
+Use `try` to execute code that may fail.
+
+If an error occurs, Veyra transfers execution to the `catch` block.
+
+```veyra
 try
-    result = 10 / 0
+    add result = 10 / 0
     say result
 catch err
     say "An error occurred: " + err
 end
 ```
 
-If the calculation fails, Veyra runs the `catch` block and makes the error message available through `err`.
+The `err` variable contains the error message.
 
-This allows the program to report the problem rather than leaving it unhandled.
+When an error occurs, the remaining statements in the `try` block are skipped.
 
-## 3. Handling File Errors
+### Catch Without a Variable
 
-File operations can fail when a file is missing or the current process does not have permission to access it.
+The catch variable is optional.
 
-Import the `io` module before using its file functions.
+```veyra
+try
+    throw "Example error"
+catch
+    say "An error was handled."
+end
+```
+
+Use this form when you do not need the error message.
+
+## 3. Throwing Errors
+
+Use `throw` to raise a runtime error explicitly.
+
+```veyra
+throw "Something went wrong"
+```
+
+You can throw errors based on conditions.
+
+```veyra
+add divide(a, b)
+    if b == 0
+        throw "The denominator cannot be zero"
+    end
+
+    return a / b
+end
+```
+
+Handle the error with `try/catch`:
+
+```veyra
+try
+    say divide(10, 0)
+catch err
+    say "Calculation failed: " + err
+end
+```
+
+### Throwing Expressions
+
+`throw` accepts an expression.
+
+```veyra
+add name = "example.txt"
+
+throw "Unable to open file: " + name
+```
+
+This is useful for producing descriptive error messages.
+
+## 4. Handling File Errors
+
+File operations may fail because a path does not exist or permissions are insufficient.
+
+Import the `io` module before using its functions.
 
 ```veyra
 mod io
 
 try
-    content = io.read("notes.txt")
+    add content = io.read("notes.txt")
     say content
 catch err
     say "Could not read the file: " + err
 end
 ```
 
-If the operation succeeds, the program displays the file's contents. If it fails, the error is handled by the `catch` block.
-
 ### Writing Files
-
-File writes can also fail.
 
 ```veyra
 mod io
@@ -103,161 +148,211 @@ catch err
 end
 ```
 
-Only display a success message after the operation completes without raising an error.
+Only report success after the operation finishes without raising an error.
 
-## 4. Keeping Normal Logic Separate
+## 5. Nested Error Handling
 
-A useful practice is to keep the code that may fail inside `try` and put the response to failure inside `catch`.
+A `try/catch` block can contain another `try/catch` block.
 
 ```veyra
-mod io
-
 try
-    content = io.read("config.txt")
-    say "Configuration loaded."
-    say content
-catch err
-    say "Configuration could not be loaded."
-    say "Details: " + err
+    say "Starting operation"
+
+    try
+        throw "Inner error"
+    catch inner_error
+        say "Handled inner error: " + inner_error
+    end
+
+    say "Continuing operation"
+catch outer_error
+    say "Outer error: " + outer_error
 end
 ```
 
-This makes it easier to distinguish normal program behavior from error handling.
+If the inner handler successfully handles the error, execution can continue in the outer block.
 
-Avoid wrapping large sections of unrelated code in one `try` block if doing so would make it difficult to identify which operation failed.
+Nested handlers are useful when different operations require different recovery strategies.
 
-## 5. Understanding Error Messages
+## 6. Runtime Error Locations
 
-An error message provides clues about what went wrong.
+Veyra 0.2.6 includes source information in runtime errors.
 
-When investigating an error, ask yourself:
-
-1. Which operation was running?
-2. Which values were being used?
-3. Was a file or other resource available?
-4. Does the error point to an invalid operation or argument?
-5. Can the problem be reproduced with a smaller example?
-
-For example, if a file read fails, verify the path and check whether the file is accessible.
+Consider a file named `example.vey`:
 
 ```veyra
-mod io
+add x = 10
+add y = 0
 
-if io.exists("notes.txt")
-    content = io.read("notes.txt")
-    say content
-else
-    say "notes.txt was not found."
-end
+say x / y
 ```
 
-Checking whether a path exists can help, but it does not guarantee that a later operation will succeed. Permissions or other conditions may still cause an error, so `try/catch` can remain useful.
+Running the file produces an error similar to:
 
-## 6. Errors and Conditional Logic
+```text
+Runtime Error: example.vey:4: Division by zero
 
-Not every unexpected situation is a runtime error. Some situations can be handled using conditions.
+  4 | say x / y
+    | ^^^^^^^^^
+```
 
-For example, you can check a value before performing an operation.
+The error report includes:
+
+- The source filename.
+- The line number.
+- The error description.
+- The source line.
+- A marker identifying the relevant line.
+
+The marker currently highlights the line rather than the exact expression.
+
+## 7. Function Tracebacks
+
+When an error occurs inside a function, Veyra can display the function call chain.
+
+Example:
 
 ```veyra
-denominator = 5
+add divide(a, b)
+    return a / b
+end
+
+add calculate()
+    return divide(10, 0)
+end
+
+calculate()
+```
+
+Example error:
+
+```text
+Runtime Error: example.vey:2: Division by zero
+
+  2 |     return a / b
+    | ^^^^^^^^^^^^^^^^
+
+  at example.vey:6 in divide()
+  at example.vey:9 in calculate()
+```
+
+The traceback shows where the functions were called.
+
+This is especially useful when debugging nested function calls or module callbacks.
+
+## 8. Preventing Errors with Conditions
+
+Not every invalid situation needs to become a runtime error.
+
+You can check values before performing an operation.
+
+```veyra
+add denominator = 5
 
 if denominator != 0
-    result = 10 / denominator
-    say result
+    say 10 / denominator
 else
     say "The denominator must not be zero."
 end
 ```
 
-This checks the denominator before dividing.
+Use conditions for situations that can be checked in advance.
 
-Use conditional logic when the program can detect and respond to a situation in advance. Use `try/catch` when an operation may still fail at runtime.
+Use `try/catch` for operations that may still fail during execution.
 
-## 7. Avoiding Silent Failures
+## 9. Avoiding Silent Failures
 
-A `catch` block should do something useful with an error.
+Avoid catching errors without handling them meaningfully.
 
-Avoid catching an error and then continuing as if everything succeeded.
-
-For example, this is misleading:
+Misleading:
 
 ```veyra
 try
-    result = 10 / 0
+    throw "Operation failed"
 catch err
     say "Everything worked!"
 end
 ```
 
-The message does not describe what happened.
-
-A better approach is to report the failure honestly:
+Better:
 
 ```veyra
 try
-    result = 10 / 0
+    throw "Operation failed"
 catch err
-    say "The calculation failed: " + err
+    say "Operation failed: " + err
 end
 ```
 
-If a program cannot continue safely after an operation fails, do not silently continue with an invalid or incomplete result.
-
-## 8. Common Mistakes
-
-### Forgetting `end`
-
-Veyra uses `end` to close the `try/catch` structure.
+When appropriate, you can raise another error from inside a handler.
 
 ```veyra
 try
-    result = 10 / 0
+    throw "Connection failed"
+catch err
+    throw "Unable to continue: " + err
+end
+```
+
+This allows the failure to propagate to another handler or terminate execution.
+
+## 10. Common Mistakes
+
+### Forgetting End
+
+Every `try/catch` structure must end with `end`.
+
+```veyra
+try
+    throw "Example"
 catch err
     say err
 end
 ```
 
-### Using an Error Variable Outside Its Intended Purpose
+### Expecting Execution to Resume Inside Try
 
-The variable after `catch` receives the error message. Use it inside the handler to explain the failure.
-
-```veyra
-try
-    result = 10 / 0
-catch err
-    say "Error: " + err
-end
-```
-
-### Assuming Every Failure Can Be Recovered From
-
-Catching an error does not automatically make the failed operation successful. Check whether the program has enough information to continue safely.
-
-### Ignoring the Original Error
-
-A generic message can be useful for users, but during development the original error message often provides important diagnostic information.
+When an error occurs, Veyra jumps to the corresponding catch block.
 
 ```veyra
 try
-    content = io.read("config.txt")
+    throw "Failed"
+    say "This will not execute"
 catch err
-    say "Unable to load configuration."
-    say "Debug details: " + err
+    say err
 end
 ```
 
-## 9. A Complete Example
+### Catching Too Much Code
 
-The following program tries to load a file and handles a failure.
+Avoid wrapping unrelated operations in a single large `try` block.
+
+Smaller blocks make failures easier to identify.
+
+### Ignoring Error Details
+
+During development, include the original error message when possible.
+
+```veyra
+try
+    throw "Invalid configuration"
+catch err
+    say "Configuration error: " + err
+end
+```
+
+## 11. Complete Example
+
+The following program attempts to read a file and handles failures.
 
 ```veyra
 mod io
 
-filename = "message.txt"
+add filename = "message.txt"
 
 try
-    message = io.read(filename)
+    add message = io.read(filename)
+
     say "Message loaded:"
     say message
 catch err
@@ -266,35 +361,41 @@ catch err
 end
 ```
 
-If `message.txt` is available and readable, its contents are displayed. Otherwise, the program reports the error.
+If the file exists and is readable, its contents are displayed.
 
-## 10. Practice Exercises
+Otherwise, the error is reported.
+
+## 12. Practice Exercises
 
 ### Exercise 1: Division
 
-Write a program that performs a division inside `try` and reports any runtime error in `catch`.
+Perform a division inside `try` and handle a division-by-zero error.
 
-### Exercise 2: File Reading
+### Exercise 2: Custom Error
 
-Try to read a file and display its contents. If reading fails, display a useful error message.
+Create a function that uses `throw` when an argument is invalid.
 
-### Exercise 3: File Writing
+### Exercise 3: File Reading
 
-Write text to a file and display a success message only if the operation completes successfully.
+Read a file and display a descriptive error if the operation fails.
 
-### Exercise 4: Validate Before Calculating
+### Exercise 4: Nested Handlers
 
-Use an `if` statement to check whether a denominator is zero before performing division.
+Create nested `try/catch` blocks and handle an error in the inner block.
 
-### Exercise 5: Improve an Error Message
+### Exercise 5: Traceback
 
-Take a generic error handler and improve it so the user knows which operation failed while the original error remains available for debugging.
+Create three functions that call one another.
+
+Trigger an error in the deepest function and inspect the traceback.
+
+### Exercise 6: Error Propagation
+
+Catch an error and throw a new error containing the original message.
 
 ## What's Next?
 
-You now know how to handle common runtime errors in Veyra.
-
-Continue learning:
+Continue learning Veyra:
 
 - [Modules](modules.md)
 - [Input and Output](io.md)

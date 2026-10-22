@@ -1,39 +1,40 @@
 # Operators
 
-Operators are symbols or keywords that perform operations on values and variables.
+Operators are symbols or keywords that perform operations on values.
 
-Veyra supports arithmetic, comparison, logical, assignment, and special operators for features such as channels and null-coalescing.
+Veyra supports arithmetic, comparison, logical, assignment, membership, and special operators for channels, null handling, and functions.
 
 ## What You Will Learn
 
 By the end of this lesson, you will know how to:
 
-- Perform arithmetic calculations.
+- Perform arithmetic operations.
 - Compare values.
-- Combine conditions with logical operators.
+- Combine and negate conditions.
 - Update variables using assignment operators.
-- Use `??` for fallback values.
-- Understand the difference between `?` and `?=`.
-- Create lambda expressions with `=>`.
-- Work with the variadic and rest operator `...`.
+- Check collection membership with `in` and `not in`.
+- Use `?`, `?=`, and `??`.
+- Combine lists.
+- Access and slice collections.
+- Create lambdas and variadic parameters.
 
 ## 1. Arithmetic Operators
 
-Arithmetic operators perform mathematical calculations.
+Arithmetic operators perform calculations on numbers.
 
-| Operator | Meaning                        | Example  |
-| -------- | ------------------------------ | -------- |
-| `+`      | Addition or text concatenation | `10 + 5` |
-| `-`      | Subtraction                    | `10 - 5` |
-| `*`      | Multiplication                 | `10 * 5` |
-| `/`      | Division                       | `10 / 5` |
-| `%`      | Remainder                      | `10 % 3` |
+| Operator | Description    |
+| -------- | -------------- |
+| `+`      | Addition       |
+| `-`      | Subtraction    |
+| `*`      | Multiplication |
+| `/`      | Division       |
+| `%`      | Remainder      |
 
 Example:
 
-```veyra id="v33vbx"
-a = 10
-b = 3
+```veyra
+add a = 10
+add b = 3
 
 say a + b
 say a - b
@@ -44,7 +45,7 @@ say a % b
 
 Output:
 
-```text id="f5rdx2"
+```text
 13
 7
 30
@@ -52,15 +53,13 @@ Output:
 1
 ```
 
-The `%` operator returns the remainder after division.
-
 ### Text Concatenation
 
-The `+` operator can also combine text with values.
+The `+` operator also concatenates text.
 
-```veyra id="dzhflp"
-name = "Veyra"
-version = 1
+```veyra
+add name = "Veyra"
+add version = "0.2.6"
 
 say "Language: " + name
 say "Version: " + version
@@ -68,29 +67,48 @@ say "Version: " + version
 
 Output:
 
-```text id="t3c56c"
+```text
 Language: Veyra
-Version: 1
+Version: 0.2.6
 ```
 
-When working with mixed values, remember that `+` may concatenate text instead of performing numeric addition.
+Veyra can combine text with other values using `+`.
+
+### List Concatenation
+
+The `+` operator can combine two lists.
+
+```veyra
+add first = [1, 2]
+add second = [3, 4]
+
+say first + second
+```
+
+Output:
+
+```text
+[1, 2, 3, 4]
+```
+
+The operation returns a new list.
 
 ## 2. Comparison Operators
 
-Comparison operators compare two values and produce a Boolean result.
+Comparison operators return Boolean values.
 
-| Operator | Meaning                  | Example  |
-| -------- | ------------------------ | -------- |
-| `==`     | Equal to                 | `5 == 5` |
-| `!=`     | Not equal to             | `5 != 3` |
-| `<`      | Less than                | `3 < 5`  |
-| `>`      | Greater than             | `8 > 5`  |
-| `<=`     | Less than or equal to    | `5 <= 5` |
-| `>=`     | Greater than or equal to | `8 >= 5` |
+| Operator | Description           |
+| -------- | --------------------- |
+| `==`     | Equal                 |
+| `!=`     | Not equal             |
+| `<`      | Less than             |
+| `>`      | Greater than          |
+| `<=`     | Less than or equal    |
+| `>=`     | Greater than or equal |
 
 Example:
 
-```veyra id="cq55vm"
+```veyra
 say 5 == 5
 say 5 != 3
 say 3 < 5
@@ -99,12 +117,21 @@ say 5 <= 5
 say 8 >= 5
 ```
 
-Each expression evaluates to a Boolean value.
+Output:
 
-Comparison operators are commonly used in conditional statements and loops.
+```text
+true
+true
+true
+true
+true
+true
+```
 
-```veyra id="bl6x9a"
-score = 85
+Comparison operators are commonly used in conditions.
+
+```veyra
+add score = 85
 
 if score >= 50
     say "Passed."
@@ -115,73 +142,135 @@ end
 
 ## 3. Logical Operators
 
-Logical operators combine or negate conditions.
+Veyra supports four logical operators.
 
-| Operator | Meaning                 |
+| Operator | Description             |
 | -------- | ----------------------- |
 | `and`    | Logical AND             |
 | `or`     | Logical OR              |
 | `not`    | Logical NOT             |
 | `!`      | Alternative logical NOT |
 
-### Logical AND
+### AND
 
-`and` evaluates to true when both operands are truthy.
-
-```veyra id="f9thbx"
-age = 20
-has_ticket = true
+```veyra
+add age = 20
+add has_ticket = true
 
 if age >= 18 and has_ticket
     say "Access granted."
 end
 ```
 
-### Logical OR
+### OR
 
-`or` evaluates to true when at least one operand is truthy.
-
-```veyra id="nx9a0j"
-is_admin = false
-is_owner = true
+```veyra
+add is_admin = false
+add is_owner = true
 
 if is_admin or is_owner
     say "Permission granted."
 end
 ```
 
-### Logical NOT
+### NOT
 
-`not` and `!` negate the truthiness of a value.
-
-```veyra id="s1zjva"
-is_ready = false
+```veyra
+add is_ready = false
 
 say not is_ready
 say !is_ready
 ```
 
-Both expressions evaluate to `true`.
+Output:
 
-Veyra uses truthiness rules when evaluating logical operators. In general, `false`, `null`, numeric zero, and empty text are falsy, while other values are truthy.
+```text
+true
+true
+```
 
-## 4. Assignment Operators
+Logical operations use Veyra's truthiness rules.
 
-Assignment operators store values in variables.
+Falsy values include `false`, `null`, `0`, `""`, and `[]`.
 
-| Operator | Meaning                        | Example  |
-| -------- | ------------------------------ | -------- |
-| `=`      | Assign a value                 | `x = 10` |
-| `+=`     | Add and assign                 | `x += 5` |
-| `-=`     | Subtract and assign            | `x -= 2` |
-| `*=`     | Multiply and assign            | `x *= 3` |
-| `/=`     | Divide and assign              | `x /= 2` |
-| `%=`     | Calculate remainder and assign | `x %= 4` |
+## 4. Membership Operators
+
+Veyra supports `in` and `not in`.
+
+These operators check whether a value belongs to a collection.
+
+### List Membership
+
+```veyra
+add numbers = [10, 20, 30]
+
+say 20 in numbers
+say 50 not in numbers
+```
+
+Output:
+
+```text
+true
+true
+```
+
+### Text Membership
+
+For strings, membership checks whether a substring exists.
+
+```veyra
+add message = "Hello, Veyra!"
+
+say "Veyra" in message
+say "Python" not in message
+```
+
+Output:
+
+```text
+true
+true
+```
+
+### JSONData Membership
+
+For `jsondata`, membership checks object keys.
+
+```veyra
+add user = {
+    "name": "Alex",
+    "age": 20
+}
+
+say "name" in user
+say "email" not in user
+```
+
+Output:
+
+```text
+true
+true
+```
+
+## 5. Assignment Operators
+
+Assignment operators update variables.
+
+| Operator | Description          |
+| -------- | -------------------- |
+| `=`      | Assign               |
+| `+=`     | Add and assign       |
+| `-=`     | Subtract and assign  |
+| `*=`     | Multiply and assign  |
+| `/=`     | Divide and assign    |
+| `%=`     | Remainder and assign |
 
 Example:
 
-```veyra id="b2f2pn"
-x = 10
+```veyra
+add x = 10
 
 x += 5
 say x
@@ -195,19 +284,21 @@ say x
 
 Output:
 
-```text id="kp84rj"
+```text
 15
 12
 24
 ```
 
-Compound assignment updates the variable using its current value.
+Use `add` to declare a mutable variable and assignment operators to update it.
 
-## 5. Conditional Assignment: `?=`
+## 6. Conditional Assignment: `?=`
 
-The `?=` operator assigns a value only when the target variable has not already been filled or defined.
+The `?=` operator conditionally assigns a value.
 
-```veyra id="jj4b0x"
+It is commonly used to provide a default for an undefined name.
+
+```veyra
 username ?= "guest"
 
 say username
@@ -215,14 +306,15 @@ say username
 
 Output:
 
-```text id="3q2i8w"
+```text
 guest
 ```
 
-If the variable already has a value, the conditional assignment does not overwrite it.
+An existing value is preserved.
 
-```veyra id="uhbnrn"
-username = "alex"
+```veyra
+add username = "alex"
+
 username ?= "guest"
 
 say username
@@ -230,60 +322,49 @@ say username
 
 Output:
 
-```text id="u1w9z0"
+```text
 alex
 ```
 
-This operator is useful when providing defaults without replacing an existing value.
+This makes `?=` useful for default initialization.
 
-## 6. Null-Coalescing Operator: `??`
+## 7. Null Coalescing: `??`
 
-The `??` operator returns its left operand unless that operand is `null`. If the left operand is `null`, it returns the right operand.
+The `??` operator provides a fallback when the left operand is `null`.
 
-```veyra id="p7qugo"
-name = null
+```veyra
+add name = null
 
 say name ?? "Guest"
 ```
 
 Output:
 
-```text id="7n0gqd"
+```text
 Guest
 ```
 
-If the value is not null, the fallback is not needed.
+If the value is not null, the original value is returned.
 
-```veyra id="x9bdxk"
-name = "Alex"
+```veyra
+add name = "Alex"
 
 say name ?? "Guest"
 ```
 
 Output:
 
-```text id="2l9h2q"
+```text
 Alex
 ```
 
-### `?=` vs. `??`
+Unlike `?=`, this operator does not assign a new value to a variable.
 
-These operators serve different purposes.
+## 8. Channel Operator: `?`
 
-| Operator | Purpose                                                  |
-| -------- | -------------------------------------------------------- |
-| `?=`     | Conditionally assigns to a variable                      |
-| `??`     | Chooses a fallback value when the left operand is `null` |
+The `?` operator reads a channel value with a fallback.
 
-Use `?=` when you want to initialize a variable only if it has not already been defined or filled. Use `??` when you want an expression to provide a fallback for `null`.
-
-## 7. Channel Operator: `?`
-
-Veyra's `?` operator reads a channel value with a default.
-
-This feature is associated with constants declared using `set`.
-
-```veyra id="j7b71s"
+```veyra
 set port = 80
 
 port = 8080
@@ -294,56 +375,142 @@ say 0 ? port
 
 Output:
 
-```text id="f8yrcv"
+```text
 80
 8080
 ```
 
-The constant `port` retains its original value, while the assignment updates its channel.
+The original constant remains unchanged.
 
-In `0 ? port`, the left operand `0` is the default value. The expression returns the channel value if one exists; otherwise, it returns the default.
+The general form is:
 
-For more information, see the [Channels Guide](channels.md).
+```text
+fallback ? channel_name
+```
 
-## 8. Lambda Operator: `=>`
+If a channel value exists, it is returned. Otherwise, the fallback is returned.
 
-The `=>` operator is used to define a lambda expression with `func`.
+Channels can also be carried through function arguments.
 
-```veyra id="v5e4hw"
-double = func(x) => x * 2
+See [Channels](channels.md) for details.
+
+## 9. Indexing and Slicing
+
+Square brackets provide access to elements in collections.
+
+### Indexing
+
+```veyra
+add numbers = [10, 20, 30]
+
+say numbers[0]
+say numbers[-1]
+```
+
+Output:
+
+```text
+10
+30
+```
+
+Strings also support indexing.
+
+```veyra
+add word = "Veyra"
+
+say word[0]
+```
+
+Output:
+
+```text
+V
+```
+
+JSONData objects support key-based access.
+
+```veyra
+add user = {"name": "Alex"}
+
+say user["name"]
+```
+
+Output:
+
+```text
+Alex
+```
+
+### Slicing
+
+Use slicing to extract a range from a list or string.
+
+Syntax:
+
+```text
+collection[start:end:step]
+```
+
+Example:
+
+```veyra
+add numbers = [10, 20, 30, 40, 50]
+
+say numbers[1:4]
+say numbers[::2]
+say numbers[::-1]
+```
+
+Output:
+
+```text
+[20, 30, 40]
+[10, 30, 50]
+[50, 40, 30, 20, 10]
+```
+
+The ending index is exclusive.
+
+For more examples, see [Lists](lists.md).
+
+## 10. Lambda Operator: `=>`
+
+The `=>` operator creates a lambda expression together with `func`.
+
+```veyra
+add double = func(x) => x * 2
 
 say double(5)
 ```
 
 Output:
 
-```text id="7f04fa"
+```text
 10
 ```
 
-A lambda is an anonymous function that can be stored in a variable and called later.
+Lambdas can also accept multiple parameters.
 
-You can also define lambdas with multiple parameters.
-
-```veyra id="r2xbz7"
-add_numbers = func(a, b) => a + b
+```veyra
+add add_numbers = func(a, b) => a + b
 
 say add_numbers(3, 4)
 ```
 
 Output:
 
-```text id="9v6f0m"
+```text
 7
 ```
 
-## 9. Variadic and Rest Operator: `...`
+## 11. Variadic and Rest Operator: `...`
 
-Veyra uses `...` to work with a variable number of function arguments and to capture remaining list elements during destructuring.
+The `...` syntax is used with variadic parameters and list destructuring.
 
 ### Variadic Parameters
 
-```veyra id="zv1q2v"
+```veyra
 add show_values(...values)
     say values
 end
@@ -351,11 +518,11 @@ end
 show_values(10, 20, 30)
 ```
 
-The variadic parameter collects the arguments into a list.
+The arguments are collected into a list.
 
 ### List Destructuring
 
-```veyra id="3ch0d8"
+```veyra
 [first, ...rest] = [10, 20, 30, 40]
 
 say first
@@ -364,90 +531,124 @@ say rest
 
 Output:
 
-```text id="6ov4hx"
+```text
 10
 [20, 30, 40]
 ```
 
-The first element is assigned to `first`, while the remaining elements are collected into `rest`.
-
-## 10. Operator Reference
-
-The following table summarizes the operators covered in this guide.
+## 12. Operator Reference
 
 | Category               | Operators                         |
 | ---------------------- | --------------------------------- |
 | Arithmetic             | `+`, `-`, `*`, `/`, `%`           |
 | Comparison             | `==`, `!=`, `<`, `>`, `<=`, `>=`  |
 | Logical                | `and`, `or`, `not`, `!`           |
+| Membership             | `in`, `not in`                    |
 | Assignment             | `=`, `+=`, `-=`, `*=`, `/=`, `%=` |
 | Conditional assignment | `?=`                              |
 | Null coalescing        | `??`                              |
 | Channel access         | `?`                               |
+| Indexing               | `[]`                              |
+| Slicing                | `[start:end:step]`                |
 | Lambda                 | `=>`                              |
 | Variadic/rest          | `...`                             |
 
-## 11. Common Mistakes
+## 13. Common Mistakes
 
-### Using `=` Instead of `==`
+### Assignment vs. Comparison
 
-Use `=` to assign a value and `==` to compare values.
+Use `=` for assignment and `==` for comparison.
 
-```veyra id="n3i2nd"
-score = 100
+```veyra
+add score = 100
 
 if score == 100
     say "Perfect!"
 end
 ```
 
-### Confusing `?=` and `??`
+### Confusing Channel and Null Operators
 
-`?=` conditionally assigns a variable. `??` returns a fallback when the left operand is `null`.
+The three operators have different purposes:
 
-### Treating `?` as a Boolean Operator
+- `?` reads a channel.
+- `?=` conditionally assigns a value.
+- `??` provides a fallback for `null`.
 
-In Veyra, the `?` operator is used for channel access with a default value. It is not a replacement for `if`, `and`, or `or`.
+### Expecting List Concatenation to Modify the Original
 
-### Mixing Text and Numeric Operations
+```veyra
+add first = [1, 2]
+add second = [3, 4]
 
-The `+` operator can concatenate text. If you intend to perform arithmetic, make sure the values are numeric.
+first + second
+```
 
-## 12. Practice Exercises
+This creates a new list but does not modify `first`.
+
+Use assignment to keep the result:
+
+```veyra
+first = first + second
+```
+
+### Invalid Slice Step
+
+A slice step cannot be zero.
+
+```veyra
+add numbers = [1, 2, 3]
+
+say numbers[::0]
+```
+
+This causes a runtime error.
+
+## 14. Practice Exercises
 
 ### Exercise 1: Arithmetic
 
-Create two numeric variables and display their sum, difference, product, quotient, and remainder.
+Create two numbers and perform all five arithmetic operations.
 
 ### Exercise 2: Comparisons
 
-Compare two numbers using all six comparison operators.
+Compare two values using comparison operators.
 
 ### Exercise 3: Logical Conditions
 
-Create two Boolean variables and experiment with `and`, `or`, and `not`.
+Use `and`, `or`, and `not` in conditional statements.
 
-### Exercise 4: Conditional Assignment
+### Exercise 4: Membership
 
-Provide a default username using `?=`. Test what happens when the variable already contains a value.
+Check whether a list contains a number and whether a string contains a substring.
 
-### Exercise 5: Null Fallback
+### Exercise 5: Conditional Assignment
 
-Create a variable with the value `null` and use `??` to provide a fallback.
+Use `?=` to initialize a name only when it has not already been defined.
 
-### Exercise 6: Lambda
+### Exercise 6: Null Fallback
 
-Create a lambda that squares a number and call it with different arguments.
+Use `??` to replace a `null` value with a default.
 
-### Exercise 7: Variadic Parameters
+### Exercise 7: List Concatenation
 
-Write a function that accepts multiple arguments and displays them as a list.
+Combine two lists using `+`.
+
+### Exercise 8: Slicing
+
+Create a list and extract every second element.
+
+### Exercise 9: Lambda
+
+Create a lambda that squares a number.
+
+### Exercise 10: Channels
+
+Declare a constant with `set`, update its channel, and read the channel using `?`.
 
 ## What's Next?
 
-You now know the main operators available in Veyra.
-
-Continue with:
+Continue learning Veyra:
 
 - [Variables and Types](variables.md)
 - [Control Flow](control-flow.md)

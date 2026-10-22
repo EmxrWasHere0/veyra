@@ -1,40 +1,44 @@
-## Quick Start
+# Quick Start
 
-Create a file called `hello.vey`:
+Write your first Veyra program and run it using the interpreter.
+
+## Your First Program
+
+Create a file named `hello.vey`:
 
 ```veyra
-# hello.vey — your first Veyra program
-
 say "Hello, World!"
 
 add greet(name, greeting = "Hi")
-    greeting + ", " + name + "!"
+    return greeting + ", " + name + "!"
 end
 
 say greet("Alex")
 say greet("Alice", "Hello")
 
-# A tiny counter
-i = 1
-repeat while i <= 3
-    say i
-    i += 1
+add counter = 1
+
+while counter <= 3
+    say counter
+    counter += 1
 end
 ```
 
 Run it:
 
 ```bash
-# With cargo:
-cargo run --release -- hello.vey
-
-# After cargo install:
 veyra hello.vey
+```
+
+Or, if you are running Veyra from source:
+
+```bash
+cargo run --release -- hello.vey
 ```
 
 Expected output:
 
-```
+```text
 Hello, World!
 Hi, Alex!
 Hello, Alice!
@@ -42,3 +46,40 @@ Hello, Alice!
 2
 3
 ```
+
+## Interactive REPL
+
+You can also run Veyra interactively without creating a file.
+
+Start the REPL:
+
+```bash
+veyra
+```
+
+Enter expressions and statements:
+
+```text
+>>> add x = 10
+>>> say x * 2
+20
+>>> add square(n)
+...     return n * n
+... end
+>>> say square(5)
+25
+```
+
+The REPL preserves variables and functions between commands.
+
+Type `exit` or `quit` to leave.
+
+## What's Next?
+
+Continue with:
+
+- [Learning Guide](learn.md)
+- [Language Overview](language-overview.md)
+- [Variables and Types](learning/variables.md)
+- [Functions](learning/functions.md)
+- [Running Veyra Programs](learning/run.md)

@@ -2,56 +2,60 @@
 
 Lists allow you to store multiple values in a single variable. They are useful for organizing data, processing collections, and working with groups of related values.
 
-In Veyra, lists can contain values of different types, and individual elements can be accessed or updated using their indexes.
+Veyra lists are dynamically typed and can contain values of different types.
 
 ## What You Will Learn
 
 By the end of this lesson, you will know how to:
 
-- Create lists.
-- Access elements using indexes.
-- Update list elements.
-- Find the length of a list.
-- Work with lists containing different types.
+- Create and update lists.
+- Access elements using positive and negative indexes.
+- Extract portions of lists using slicing.
+- Work with nested lists.
+- Use list methods.
+- Combine lists.
 - Destructure lists using `...rest`.
-- Use loops to process list elements.
+- Iterate over lists using loops.
 
-## 1. Creating a List
+## 1. Creating Lists
 
-Create a list by placing values inside square brackets, separated by commas.
-
-```veyra
-numbers = [10, 20, 30, 40]
-colors = ["red", "green", "blue"]
-empty = []
-```
-
-You can print a list using `say`.
+Create a list using square brackets.
 
 ```veyra
+add numbers = [10, 20, 30, 40]
+add colors = ["red", "green", "blue"]
+add empty = []
+
 say numbers
 say colors
 say empty
 ```
 
-A list can contain numbers, text, Boolean values, and other supported values.
+Lists can contain different types:
 
 ```veyra
-data = [42, "Hello", true, null]
+add data = [42, "Hello", true, null]
 
 say data
 ```
 
-Veyra lists are dynamically typed, so you do not need to specify a type for each element.
-
-## 2. Accessing List Elements
-
-Use square brackets with an index to access an element.
-
-**List indexes start at `0`.**
+A list can also contain other lists or `jsondata` objects.
 
 ```veyra
-colors = ["red", "green", "blue"]
+add users = [
+    {"name": "Alex", "age": 20},
+    {"name": "Alice", "age": 25}
+]
+
+say users[0]["name"]
+```
+
+## 2. Accessing Elements
+
+List indexes start at `0`.
+
+```veyra
+add colors = ["red", "green", "blue"]
 
 say colors[0]
 say colors[1]
@@ -66,15 +70,29 @@ green
 blue
 ```
 
-The first element is at index `0`, the second is at index `1`, and the third is at index `2`.
+### Negative Indexes
 
-### Accessing Elements with Variables
-
-You can use a variable as an index.
+Negative indexes count backward from the end of the list.
 
 ```veyra
-numbers = [10, 20, 30]
-index = 1
+add numbers = [10, 20, 30, 40]
+
+say numbers[-1]
+say numbers[-2]
+```
+
+Output:
+
+```text
+40
+30
+```
+
+### Using Variables as Indexes
+
+```veyra
+add numbers = [10, 20, 30]
+add index = 1
 
 say numbers[index]
 ```
@@ -85,68 +103,73 @@ Output:
 20
 ```
 
-The index must refer to a valid element in the list. An invalid index can cause a runtime error.
+An index outside the valid range causes a runtime error.
 
 ## 3. Updating List Elements
 
-You can change an existing element by assigning a new value to its index.
+Assign a value to an index to replace an element.
 
 ```veyra
-colors = ["red", "green", "blue"]
+add colors = ["red", "green", "blue"]
 
 colors[1] = "yellow"
 
 say colors
 ```
 
-The second element changes from `"green"` to `"yellow"`.
+Output:
 
-You can also update numeric elements:
+```text
+[red, yellow, blue]
+```
+
+Negative indexes can also be used when accessing elements.
+
+### Nested Assignment
+
+Veyra supports updating values inside nested collections.
 
 ```veyra
-numbers = [10, 20, 30]
+add matrix = [
+    [1, 2],
+    [3, 4]
+]
 
-numbers[0] = 100
+matrix[1][0] = 99
 
-say numbers
+say matrix
 ```
 
 Output:
 
 ```text
-[100, 20, 30]
+[[1, 2], [99, 4]]
 ```
 
-Updating an element does not require creating a new list.
+## 4. List Length
 
-## 4. Finding the Length of a List
-
-Use the built-in `len()` function to find the number of elements in a list.
+Use `len()` to find the number of elements.
 
 ```veyra
-numbers = [10, 20, 30, 40]
+add numbers = [10, 20, 30, 40]
 
 say len(numbers)
+say numbers.len()
 ```
 
 Output:
 
 ```text
 4
+4
 ```
-
-The length is the number of elements, not the index of the final element.
-
-For a list with four elements, the valid indexes are `0`, `1`, `2`, and `3`.
-
-### Checking Whether a List Is Empty
 
 An empty list has a length of zero.
 
 ```veyra
-items = []
+add items = []
 
-say len(items)
+say items.len()
 ```
 
 Output:
@@ -155,55 +178,248 @@ Output:
 0
 ```
 
-You can use the length when deciding whether there are any elements to process.
+## 5. List Slicing
 
-```veyra
-items = ["apple", "banana"]
+Slicing extracts a portion of a list.
 
-if len(items) > 0
-    say "The list contains items."
-else
-    say "The list is empty."
-end
+The general syntax is:
+
+```text
+list[start:end:step]
 ```
 
-## 5. Lists Can Contain Different Types
+- `start` — Starting index.
+- `end` — Ending index (exclusive).
+- `step` — Distance between selected elements.
 
-Veyra does not require all elements of a list to have the same type.
-
-```veyra
-profile = ["Alex", 20, true]
-
-say profile[0]
-say profile[1]
-say profile[2]
-```
-
-The list contains text, a number, and a Boolean value.
-
-You can inspect individual element types with `type()`.
+All three components can be omitted.
 
 ```veyra
-values = [42, "Veyra", false]
+add numbers = [10, 20, 30, 40, 50]
 
-say type(values[0])
-say type(values[1])
-say type(values[2])
+say numbers[1:4]
+say numbers[:3]
+say numbers[2:]
+say numbers[::2]
 ```
 
 Output:
 
 ```text
-num
-text
-bool
+[20, 30, 40]
+[10, 20, 30]
+[30, 40, 50]
+[10, 30, 50]
 ```
 
-This flexibility is useful, but make sure your program handles each value according to its type.
+Negative indexes and negative steps are also supported.
 
-## 6. Destructuring Lists
+```veyra
+say numbers[-3:]
+say numbers[::-1]
+```
 
-List destructuring allows you to assign list elements to multiple variables in one statement.
+Output:
+
+```text
+[30, 40, 50]
+[50, 40, 30, 20, 10]
+```
+
+Slicing returns a new list rather than changing the original.
+
+## 6. List Methods
+
+Veyra provides built-in methods for common list operations.
+
+### Append
+
+Add an element to the end of a list.
+
+```veyra
+add numbers = [10, 20]
+
+numbers.append(30)
+
+say numbers
+```
+
+Output:
+
+```text
+[10, 20, 30]
+```
+
+### Pop
+
+Remove an element from a list.
+
+```veyra
+add numbers = [10, 20, 30]
+
+numbers.pop()
+
+say numbers
+```
+
+Output:
+
+```text
+[10, 20]
+```
+
+### Insert
+
+Insert an element at a specific index.
+
+```veyra
+add numbers = [10, 30]
+
+numbers.insert(1, 20)
+
+say numbers
+```
+
+Output:
+
+```text
+[10, 20, 30]
+```
+
+### Remove
+
+Remove an element using the list's `remove()` method.
+
+```veyra
+add numbers = [10, 20, 30]
+
+numbers.remove(20)
+
+say numbers
+```
+
+Output:
+
+```text
+[10, 30]
+```
+
+### Clear
+
+Remove all elements from a list.
+
+```veyra
+add numbers = [10, 20, 30]
+
+numbers.clear()
+
+say numbers
+```
+
+Output:
+
+```text
+[]
+```
+
+### Sort
+
+Return a sorted list.
+
+```veyra
+add numbers = [30, 10, 20]
+
+add sorted = numbers.sort()
+
+say sorted
+say numbers
+```
+
+Output:
+
+```text
+[10, 20, 30]
+[30, 10, 20]
+```
+
+`sort()` returns a new list without changing the original.
+
+### Reverse
+
+Return a reversed list.
+
+```veyra
+add numbers = [10, 20, 30]
+
+add reversed = numbers.reverse()
+
+say reversed
+say numbers
+```
+
+Output:
+
+```text
+[30, 20, 10]
+[10, 20, 30]
+```
+
+`reverse()` also returns a new list.
+
+### Index
+
+Find the index of an element.
+
+```veyra
+add colors = ["red", "green", "blue"]
+
+say colors.index("green")
+```
+
+Output:
+
+```text
+1
+```
+
+### Method Summary
+
+| Method                 | Description             | Changes Original |
+| ---------------------- | ----------------------- | ---------------- |
+| `append(value)`        | Add an element          | Yes              |
+| `pop()`                | Remove an element       | Yes              |
+| `insert(index, value)` | Insert an element       | Yes              |
+| `remove(value)`        | Remove an element       | Yes              |
+| `clear()`              | Remove all elements     | Yes              |
+| `sort()`               | Return a sorted list    | No               |
+| `reverse()`            | Return a reversed list  | No               |
+| `index(value)`         | Find an element's index | No               |
+| `len()`                | Return the list length  | No               |
+
+## 7. Combining Lists
+
+The `+` operator concatenates lists.
+
+```veyra
+add first = [1, 2]
+add second = [3, 4]
+
+add combined = first + second
+
+say combined
+```
+
+Output:
+
+```text
+[1, 2, 3, 4]
+```
+
+The original lists are not modified.
+
+## 8. List Destructuring
+
+Destructuring assigns elements to multiple variables.
 
 ```veyra
 [first, second, third] = [10, 20, 30]
@@ -221,13 +437,9 @@ Output:
 30
 ```
 
-Each variable receives the corresponding element from the list.
+### Rest Elements
 
-Destructuring is useful when a function or operation provides multiple values in a list.
-
-### Using `...rest`
-
-The `...rest` syntax captures the remaining elements of a list.
+Use `...rest` to capture remaining elements.
 
 ```veyra
 [first, ...rest] = [10, 20, 30, 40]
@@ -243,44 +455,17 @@ Output:
 [20, 30, 40]
 ```
 
-Here:
+Rest elements are useful when processing lists of varying lengths.
 
-- `first` receives the first element.
-- `rest` receives the remaining elements as a list.
+## 9. Iterating Over Lists
 
-You can also capture the last part of a list after multiple individual elements.
-
-```veyra
-[first, second, ...remaining] = [10, 20, 30, 40, 50]
-
-say first
-say second
-say remaining
-```
-
-Output:
-
-```text
-10
-20
-[30, 40, 50]
-```
-
-The rest variable is useful when you want to process some elements separately and keep the remaining elements together.
-
-## 7. Processing Lists with Loops
-
-Lists become especially useful when combined with loops.
-
-For example, you can process a list by accessing its elements with an index.
+The simplest way to iterate over a list is `repeat item in collection`.
 
 ```veyra
-numbers = [10, 20, 30]
-index = 0
+add numbers = [10, 20, 30]
 
-repeat while index < len(numbers)
-    say numbers[index]
-    index += 1
+repeat number in numbers
+    say number
 end
 ```
 
@@ -292,22 +477,28 @@ Output:
 30
 ```
 
-The loop starts at index `0` and continues while the index is less than the list's length.
+### Index-Based Iteration
 
-Incrementing the index moves to the next element.
+You can also use a `while` loop.
+
+```veyra
+add numbers = [10, 20, 30]
+add index = 0
+
+while index < len(numbers)
+    say numbers[index]
+    index += 1
+end
+```
 
 ### Calculating a Sum
 
-You can use a loop to calculate the sum of a list of numbers.
-
 ```veyra
-numbers = [5, 10, 15]
-index = 0
-total = 0
+add numbers = [5, 10, 15]
+add total = 0
 
-repeat while index < len(numbers)
-    total += numbers[index]
-    index += 1
+repeat number in numbers
+    total += number
 end
 
 say total
@@ -319,23 +510,17 @@ Output:
 30
 ```
 
-This example demonstrates how to process each element and accumulate a result.
+## 10. Nested Lists
 
-## 8. Nested Lists
-
-A list can contain other lists.
+Lists can contain other lists.
 
 ```veyra
-grid = [
+add grid = [
     [1, 2, 3],
     [4, 5, 6],
     [7, 8, 9]
 ]
-```
 
-Use multiple indexes to access nested elements.
-
-```veyra
 say grid[0][0]
 say grid[1][2]
 say grid[2][1]
@@ -349,113 +534,160 @@ Output:
 8
 ```
 
-The first index selects an inner list. The second index selects an element from that inner list.
+Nested elements can also be updated:
 
-Nested lists can represent grids, tables, and other structured data.
+```veyra
+grid[1][1] = 99
 
-## 9. Common Mistakes
+say grid[1]
+```
+
+Output:
+
+```text
+[4, 99, 6]
+```
+
+## 11. Value-Based Lists
+
+Veyra lists use value-based semantics.
+
+```veyra
+add original = [1, 2, 3]
+add copy = original
+
+copy.append(4)
+
+say original
+say copy
+```
+
+Output:
+
+```text
+[1, 2, 3]
+[1, 2, 3, 4]
+```
+
+Updating `copy` does not modify `original`.
+
+## 12. Common Mistakes
 
 ### Starting at Index 1
 
-Incorrect:
+List indexing begins at zero.
 
 ```veyra
-colors = ["red", "green", "blue"]
+add colors = ["red", "green", "blue"]
 
-say colors[1]
-```
-
-This prints `"green"`, not `"red"`.
-
-Correct:
-
-```veyra
 say colors[0]
 ```
 
-Remember that list indexes start at zero.
+Output:
 
-### Using an Invalid Index
+```text
+red
+```
 
-For a list with three elements, the valid indexes are `0`, `1`, and `2`.
+### Accessing an Invalid Index
 
 ```veyra
-numbers = [10, 20, 30]
+add numbers = [10, 20, 30]
 
 say numbers[3]
 ```
 
-The index is outside the valid range and can cause a runtime error.
+This causes a runtime error because the index is outside the list.
 
 ### Confusing Length with the Last Index
 
+For a list containing three elements:
+
 ```veyra
-numbers = [10, 20, 30]
+add numbers = [10, 20, 30]
 
 say len(numbers)
 ```
 
-The result is `3`, but the last valid index is `2`.
+The result is `3`, but the last positive index is `2`.
 
-Use `len(numbers) - 1` when you specifically need the last index of a non-empty list.
-
-### Forgetting to Increment a Loop Index
-
-If you do not update the index in a `repeat while` loop, the loop may never reach its stopping condition.
+### Expecting `sort()` to Modify the Original
 
 ```veyra
-index = 0
+add numbers = [3, 1, 2]
 
-repeat while index < 3
-    say index
-    index += 1
-end
+numbers.sort()
+
+say numbers
 ```
 
-Increment the index when moving through a list this way.
+The original list remains unchanged.
 
-### Assuming Every Element Has the Same Type
+Assign the result if you want to keep the sorted version:
 
-A list may contain different types. Check or convert values when your program depends on a specific type.
+```veyra
+numbers = numbers.sort()
+```
 
-## 10. Practice Exercises
+### Using a Zero Slice Step
+
+A slice step cannot be zero.
+
+```veyra
+add numbers = [1, 2, 3]
+
+say numbers[::0]
+```
+
+This causes a runtime error.
+
+## 13. Practice Exercises
 
 ### Exercise 1: Favorite Foods
 
-Create a list containing at least four favorite foods. Print the first and third elements.
+Create a list of four foods and print the first and last elements.
 
 ### Exercise 2: Update an Element
 
-Create a list of three numbers and replace the second element with a different number.
+Replace the second element of a list with another value.
 
-### Exercise 3: Count the Elements
+### Exercise 3: Slicing
 
-Create a list and use `len()` to display its length.
+Create a list of six numbers and extract:
 
-### Exercise 4: Calculate a Total
+- The first three elements.
+- The last two elements.
+- Every second element.
+- The elements in reverse order.
 
-Create a list of numbers and use a loop to calculate their sum.
+### Exercise 4: List Methods
 
-### Exercise 5: Destructure a List
+Create a list and practice using `append()`, `insert()`, `remove()`, and `clear()`.
 
-Assign the first two elements of a list to separate variables and use `...rest` to capture the remaining elements.
+### Exercise 5: Sorting
 
-### Exercise 6: Work with a Grid
+Create a list of numbers in random order.
 
-Create a nested list representing a three-by-three grid. Print the center element.
+Use `sort()` to produce a sorted copy without modifying the original.
 
-### Exercise 7: Find the Largest Number
+### Exercise 6: Calculate a Total
 
-Create a non-empty list of numbers. Use a loop and conditional statements to find and print the largest value.
+Use `repeat item in collection` to calculate the sum of a list.
+
+### Exercise 7: Nested Assignment
+
+Create a nested list and update one of its inner elements.
+
+### Exercise 8: Destructuring
+
+Destructure a list into two variables and a `...rest` variable.
 
 ## What's Next?
 
-You now know how to create, access, update, and process lists in Veyra.
-
-Continue with:
+Continue learning Veyra:
 
 - [Variables and Types](variables.md)
 - [Control Flow](control-flow.md)
 - [Functions](functions.md)
 - [Operators](operators.md)
-- [Input and Output](io.md)
+- [Values](values.md)

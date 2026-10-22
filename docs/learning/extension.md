@@ -1,183 +1,393 @@
 # VS Code Extension
 
-The **Veyra VS Code extension** provides language support for writing Veyra programs in Visual Studio Code. It improves the editing experience with syntax highlighting, automatic bracket and quote closing, code folding, and built-in code snippets.
+The Veyra VS Code extension provides language support for writing Veyra programs in Visual Studio Code.
 
-The extension supports the following file extensions:
+It includes syntax highlighting, automatic indentation, code snippets, code folding, and integrated REPL support.
 
-- `.vey`
-- `.veyra`
-- `.vy`
+For a quick overview, see [VSCode Extension](../vscode-extension.md).
 
-## Features
+## What You Will Learn
 
-### Syntax Highlighting
+By the end of this guide, you will know how to:
 
-The extension highlights Veyra language syntax to make code easier to read and understand.
+- Install the Veyra extension.
+- Open and edit Veyra source files.
+- Use code snippets.
+- Start the Veyra REPL from VS Code.
+- Configure basic editor behavior.
+- Troubleshoot common extension problems.
 
-It provides syntax highlighting for supported language constructs, including keywords, operators, comments, and other syntax patterns defined by the extension's grammar.
+## 1. Supported Files
 
-```vey
-add square(x)
-    return x * x
-end
+The extension recognizes the following extensions:
 
-# Calculate a square
-say square(5)
-```
+| Extension | Description                                   |
+| --------- | --------------------------------------------- |
+| `.vey`    | Standard Veyra source files                   |
+| `.veyra`  | Alternative Veyra source extension            |
+| `.vy`     | Alternative Veyra source extension            |
+| `.veymod` | User-defined Veyra modules                    |
+| `.wei`    | Additional extension recognized by the editor |
 
-Comments use the `#` character.
+When opening a supported file, VS Code automatically selects the Veyra language mode.
 
-### Automatic Bracket and Quote Closing
+If it does not, select **Veyra** manually from the language mode selector in the bottom-right corner.
 
-When you type an opening bracket or quote, VS Code can automatically insert its matching closing character.
+## 2. Installation
 
-For example, typing an opening parenthesis can produce a matching pair:
+### Build from Source
 
-```vey
-say("Hello, world!")
-```
-
-This feature helps reduce typing and prevents common delimiter mistakes.
-
-### Code Folding
-
-Code folding allows you to collapse and expand sections of code in the editor.
-
-The extension defines folding support for common Veyra constructs, including:
-
-- `if` blocks
-- `repeat` loops
-- `add` function definitions
-
-Folding is useful when working with large functions or deeply nested control-flow structures.
-
-### Code Snippets
-
-Snippets are reusable code templates that can be inserted by typing a prefix and selecting a suggestion from the editor.
-
-The extension includes the following snippets:
-
-| Prefix   | Description                                    |
-| -------- | ---------------------------------------------- |
-| `if`     | Conditional statement                          |
-| `ife`    | Conditional with an `else` branch              |
-| `ifee`   | Conditional with `else if` and `else` branches |
-| `repeat` | Repetition loop                                |
-| `rwhile` | Conditional loop                               |
-| `add`    | Function definition                            |
-| `func`   | Lambda expression                              |
-| `set`    | Constant declaration                           |
-| `say`    | Output statement                               |
-| `get`    | User input                                     |
-
-To use a snippet:
-
-1. Open a Veyra source file.
-2. Place the cursor where you want to insert code.
-3. Type a snippet prefix, such as `add`.
-4. Select the desired snippet from the completion menu.
-5. Fill in any editable placeholders.
-
-Snippets help you write common language constructs more quickly and consistently.
-
-## Installation
-
-### Option 1: Install from a VSIX Package
-
-The repository includes a packaged extension named `veyra-0.2.0.vsix`.
-
-1. Open Visual Studio Code.
-2. Open the **Extensions** view.
-3. Open the three-dot menu (`...`).
-4. Select **Install from VSIX...**.
-5. Select `veyra-0.2.0.vsix` from the repository's `veyra-vscode` directory.
-6. Wait for installation to finish.
-
-You can also install the package from a terminal:
-
-```bash
-code --install-extension veyra-0.2.0.vsix
-```
-
-Run this command from the directory containing the VSIX file, or provide the correct path to the package.
-
-You can find the extension files in the [Veyra repository](https://github.com/EmxrWasHere0/veyra/tree/main/veyra-vscode).
-
-### Option 2: Build from Source
-
-To build your own package or modify the extension, install Node.js and npm first.
-
-Clone the repository and navigate to the extension directory:
+Clone the Veyra repository:
 
 ```bash
 git clone https://github.com/EmxrWasHere0/veyra.git
 cd veyra/veyra-vscode
 ```
 
-Install the dependencies:
+Install the required dependencies:
 
 ```bash
 npm install
 ```
 
-Install the VS Code extension packaging tool if it is not already available:
+Build the VSIX package:
 
 ```bash
-npm install -g @vscode/vsce
+npx vsce package
 ```
 
-Package the extension:
+This generates a file named:
+
+```text
+veyra-0.2.6.vsix
+```
+
+Install it:
 
 ```bash
-vsce package
+code --install-extension veyra-0.2.6.vsix
 ```
 
-This creates a `.vsix` package in the current directory. Its filename depends on the extension's name and version in `package.json`.
+The generated filename depends on the version in `package.json`.
 
-Install the resulting package with:
+### Install Using VS Code
+
+You can also install the generated VSIX file through the editor:
+
+1. Open Visual Studio Code.
+2. Open the Extensions view.
+3. Click the `...` menu.
+4. Select **Install from VSIX...**.
+5. Choose the generated `.vsix` file.
+
+Reload VS Code if the extension does not activate immediately.
+
+## 3. Syntax Highlighting
+
+The extension highlights Veyra syntax, including:
+
+- Keywords and control-flow statements.
+- Variables, constants, and functions.
+- Operators and module imports.
+- Lists and JSON-like objects.
+- Built-in functions and modules.
+- Comments and strings.
+- Triple-quoted multiline strings.
+
+Example:
+
+```veyra
+mod math
+
+add square(x)
+    return x * x
+end
+
+add numbers = [2, 4, 6]
+
+repeat number in numbers
+    say square(number)
+end
+```
+
+Comments begin with `#`.
+
+The extension uses TextMate grammar rules. It does not perform complete semantic analysis.
+
+## 4. Automatic Editing Features
+
+The extension provides language configuration for common editing operations.
+
+### Automatic Bracket Closing
+
+Supported pairs include:
+
+```text
+()
+[]
+{}
+```
+
+### Automatic Quote Closing
+
+Single and double quotes are supported:
+
+```veyra
+add name = "Veyra"
+add message = 'Hello'
+```
+
+Triple-quoted strings are recognized by the syntax highlighter:
+
+```veyra
+add message = """
+Hello from Veyra!
+This is a multiline string.
+"""
+```
+
+Automatic completion of triple quotes may vary depending on VS Code behavior.
+
+### Indentation
+
+The extension provides indentation rules for:
+
+- `if`, `else if`, and `else`.
+- `repeat` and `while`.
+- Named function declarations.
+- `try` and `catch`.
+- Labeled `repeat` loops.
+
+Example:
+
+```veyra
+add greet(name)
+    if name == "Veyra"
+        say "Hello, Veyra!"
+    else
+        say "Hello, " + name
+    end
+end
+```
+
+### Code Folding
+
+VS Code can collapse and expand supported code blocks.
+
+This is useful when working with long functions, nested loops, and conditional statements.
+
+## 5. Code Snippets
+
+Snippets provide reusable templates for common Veyra constructs.
+
+Type a prefix and select the corresponding suggestion.
+
+### Language Snippets
+
+| Prefix        | Description                |
+| ------------- | -------------------------- |
+| `add`         | Declare a mutable variable |
+| `set`         | Declare a constant         |
+| `say`         | Print a value              |
+| `get`         | Read user input            |
+| `if`          | Create an if block         |
+| `ifelse`      | Create an if-else block    |
+| `while`       | Create a while loop        |
+| `repeat`      | Create a counted loop      |
+| `repeatin`    | Iterate over a collection  |
+| `repeatlabel` | Create a labeled loop      |
+| `stop`        | Stop a loop                |
+| `fwd`         | Continue a loop            |
+| `func`        | Define a named function    |
+| `lambda`      | Create a lambda expression |
+| `return`      | Return a value             |
+| `try`         | Create a try-catch block   |
+| `throw`       | Throw an error             |
+| `test`        | Create a test block        |
+| `assert`      | Assert a condition         |
+| `list`        | Create a list              |
+| `jsondata`    | Create a JSON-like object  |
+| `multistr`    | Create a multiline string  |
+
+### Module Snippets
+
+| Prefix      | Description                 |
+| ----------- | --------------------------- |
+| `mod`       | Import a module             |
+| `mods`      | Import all exported members |
+| `modi`      | Import selected members     |
+| `modsys`    | Import `system`             |
+| `modio`     | Import `io`                 |
+| `modbase`   | Import `base`               |
+| `modjson`   | Import `json`               |
+| `modhttp`   | Import `http`               |
+| `modws`     | Import `websocket`          |
+| `modmath`   | Import `math`               |
+| `modtime`   | Import `time`               |
+| `modfs`     | Import `fs`                 |
+| `modrandom` | Import `random`             |
+
+Additional import variants are available for the `system`, `io`, and `base` modules.
+
+### Using a Snippet
+
+1. Open a Veyra source file.
+2. Type a snippet prefix, such as `repeatin`.
+3. Select the snippet from the suggestion list.
+4. Press `Tab` or `Enter`, depending on your editor settings.
+5. Fill in the placeholders.
+
+For example, the `repeatin` snippet generates:
+
+```veyra
+repeat item in collection
+
+end
+```
+
+You can then replace the placeholders and write the loop body.
+
+## 6. Integrated REPL
+
+Veyra 0.2.6 includes an interactive Read-Eval-Print Loop (REPL).
+
+The extension provides a command to start it directly from VS Code.
+
+### Starting the REPL
+
+1. Open the Command Palette:
+   - Windows/Linux: `Ctrl+Shift+P`
+   - macOS: `Cmd+Shift+P`
+2. Search for `Veyra: Start REPL`.
+3. Select the command.
+
+VS Code opens a terminal named **Veyra REPL** and runs:
 
 ```bash
-code --install-extension veyra-0.2.0.vsix
+veyra
 ```
 
-If you changed the extension version, replace the example filename with the actual generated filename.
+### Using the REPL
 
-## Requirements
+Example session:
 
-- Visual Studio Code version `1.75.0` or later, according to the extension manifest.
-- The Veyra interpreter, if you want to execute Veyra programs.
+```text
+>>> add x = 10
+>>> say x * 2
+20
+>>> add square(n)
+...     return n * n
+... end
+>>> say square(5)
+25
+```
 
-The extension provides editor language support. Running a program requires the Veyra interpreter to be installed and available in your environment.
+The REPL preserves variables, functions, and imports during the session.
 
-## Current Scope
+Type `exit` or `quit` to leave.
 
-The current extension configuration provides syntax highlighting, snippets, automatic bracket and quote closing, and code folding.
+### Interpreter Requirement
 
-Features such as semantic diagnostics, go-to-definition, a dedicated debugger, and a language server are not declared in the current extension manifest. Do not assume these features are available unless they are implemented in a later version.
+The REPL command requires the Veyra interpreter to be installed and available in your system's `PATH`.
 
-## Troubleshooting
+Verify installation:
 
-### Syntax Highlighting Is Not Working
+```bash
+veyra --version
+```
 
-1. Make sure the file uses `.vey`, `.veyra`, or `.vy`.
-2. Open the language mode selector in the bottom-right corner of VS Code.
-3. Select **Veyra** if the language mode was not detected automatically.
-4. If necessary, reload the VS Code window.
+If the command is not recognized, install the interpreter or add its executable directory to `PATH`.
 
-### Snippets Are Not Appearing
+## 7. Running Veyra Programs
 
-1. Confirm that the file is recognized as Veyra.
-2. Type one of the supported snippet prefixes.
-3. Check the editor's suggestion settings and ensure that suggestions are enabled.
+The extension currently provides a REPL command rather than a dedicated script execution command.
 
-### The Program Will Not Run
+To run a `.vey` file, open a terminal:
 
-The extension's syntax highlighting does not itself execute Veyra programs.
+```bash
+veyra hello.vey
+```
 
-Make sure the Veyra interpreter is installed and that you are using the correct command for your interpreter version.
+To execute Veyra test blocks:
 
-## Contributing
+```bash
+veyra --test tests.vey
+```
 
-Contributions, bug reports, and suggestions are welcome. To improve the extension, visit the [Veyra GitHub repository](https://github.com/EmxrWasHere0/veyra) and review the `veyra-vscode` directory.
+For more information, see [Running Veyra](run.md).
 
-When adding new features, update the extension manifest, grammar, snippets, or language configuration as appropriate, and keep this documentation consistent with the implementation.
+## 8. Troubleshooting
+
+### Syntax Highlighting Does Not Work
+
+Check that the file has a supported extension.
+
+If necessary:
+
+1. Open the language mode selector.
+2. Select **Veyra**.
+3. Reload the VS Code window.
+
+### Snippets Do Not Appear
+
+Make sure the file is recognized as Veyra.
+
+You can also check the VS Code setting:
+
+```json
+{
+  "editor.snippetSuggestions": "top"
+}
+```
+
+### REPL Command Is Missing
+
+Make sure version 0.2.6 of the extension is installed.
+
+Try reloading the VS Code window.
+
+If necessary, reinstall the VSIX package.
+
+### REPL Does Not Start
+
+Open a terminal and run:
+
+```bash
+veyra --version
+```
+
+If the executable cannot be found, verify that Veyra is installed and its directory is available in `PATH`.
+
+### A Script Produces an Error
+
+Run the script directly:
+
+```bash
+veyra example.vey
+```
+
+Veyra 0.2.6 reports source locations and function tracebacks for runtime errors.
+
+## 9. Current Limitations
+
+The extension does not currently provide:
+
+- Language Server Protocol (LSP) support.
+- Semantic diagnostics.
+- Intelligent code completion.
+- Go to Definition.
+- Symbol renaming.
+- Integrated debugging.
+
+Syntax highlighting and snippets work without installing the interpreter, but running programs requires Veyra.
+
+## What's Next?
+
+Continue with:
+
+- [Running Veyra](run.md)
+- [Quick Start](quickstart.md)
+- [Modules](modules.md)
+- [Error Handling](error-handling.md)
+
+For extension source code and additional information, visit the [Veyra VS Code Extension repository](https://github.com/EmxrWasHere0/veyra/tree/main/veyra-vscode).

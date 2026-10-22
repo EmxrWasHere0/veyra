@@ -1,327 +1,363 @@
-## Language Overview
+# Language Overview
 
-### Values
+Veyra is a dynamically typed, interpreted programming language with readable, line-based syntax.
 
-| Type       | Example                               |
-| ---------- | ------------------------------------- |
-| `number`   | `42`, `3.14`, `-7`                    |
-| `text`     | `"hello"`, `'single quotes work too'` |
-| `bool`     | `true`, `false`                       |
-| `list`     | `[1, 2, 3]`, `[[1,2],[3,4]]`          |
-| `function` | user-defined or lambda                |
-| `null`     | absence of value                      |
+Blocks are terminated using `end`, and indentation is optional.
 
-Falsy values: `0`, `""`, `[]`, `null`, `false`. Everything else is truthy.
+This page provides a brief overview of the language. For detailed explanations, see the [Learning Guide](learn.md).
 
-### Variables and Constants
+## Values
 
-Regular variables are created by assignment and are **dynamically typed**:
+Veyra supports seven value types:
+
+| Type       | Example                     |
+| ---------- | --------------------------- |
+| `number`   | `42`, `3.14`, `-7`          |
+| `text`     | `"hello"`, `'world'`        |
+| `bool`     | `true`, `false`             |
+| `list`     | `[1, 2, 3]`                 |
+| `jsondata` | `{"name": "Veyra"}`         |
+| `function` | Named functions and lambdas |
+| `null`     | `null`                      |
+
+Values are dynamically typed and can be inspected with `type()`.
 
 ```veyra
-x = 5
-x = "now a string"
-x = [1, 2, 3]
+say type(42)
+say type([1, 2, 3])
+say type({"name": "Veyra"})
 ```
 
-Constants are declared with `set` and **never change**:
+## Variables and Constants
+
+Use `add` to declare mutable variables:
+
+```veyra
+add x = 10
+x = 20
+
+say x
+```
+
+Use `set` to declare constants:
 
 ```veyra
 set PI = 3.14159
-set MAX = 100
+
+say PI
 ```
 
-### Channels
+Assigning to a `set` constant updates its channel rather than changing the original value.
 
-Writing to a constant does **not** modify it — instead it updates a parallel **channel** of the same name:
+## Channels
+
+Channels are one of Veyra's distinctive features.
 
 ```veyra
-set port = 80       # constant = 80
-port = 8080         # channel["port"] = 8080
+set port = 8080
+port = 3000
 
-say port            # 80    (constant)
-say 0 ? port        # 8080  (channel)
+say port
+say 0 ? port
 ```
 
-The `?` operator reads from a channel with a required fallback:
+Output:
 
+```text
+8080
+3000
 ```
-default ? channel_name
-```
 
-- Returns the **channel value** if it exists
-- Returns the **default** otherwise
+The `?` operator returns the channel value when available, otherwise the fallback value.
 
-Channels **follow arguments** when passed to a function:
+Channels can also be passed through function arguments.
+
+For details, see [Channels](learning/channels.md).
+
+## Input and Output
+
+Print values using `say`:
 
 ```veyra
-set port = 80
-port = 8080
-
-add show(c)
-    say c           # 80    (the constant value)
-    say 0 ? c       # 8080  (channel tag "port" carried via argument)
-end
-
-show(port)
+say "Hello, World!"
+say 10 + 20
 ```
 
-### I/O
+Read user input using `get`:
 
 ```veyra
-say "Hello"              # print with newline
-say 1 + 2                # expressions work
-say                      # empty line
+get name "Enter your name: "
 
-get "Your name: "        # prompt + read line
-say "Hi, " + _input      # input is always stored in _input (as text)
+say "Hello, " + name
 ```
 
-To convert input to a number:
+Convert values using built-in functions:
 
 ```veyra
-get "Age: "
-age = num(_input)
-say age + 1
+get age "Enter your age: "
+
+add next_age = num(age) + 1
+say next_age
 ```
 
-### Operators
+## Operators
 
-| Category               | Operators          |
-| ---------------------- | ------------------ |
-| Arithmetic             | `+ - * / %`        |
-| Comparison             | `== != < > <= >=`  |
-| Logical                | `and or not !`     |
-| Assignment             | `= += -= *= /= %=` |
-| Channel                | `?`                |
-| Lambda arrow           | `=>`               |
-| Spread                 | `...`              |
-| Conditional assignment | `?=`               |
-| Null coalescing        | `??`               |
+Veyra supports arithmetic, comparison, logical, and assignment operators.
 
-`+` also concatenates strings: `"n=" + 42` → `"n=42"`.
+| Category               | Operators                         |
+| ---------------------- | --------------------------------- |
+| Arithmetic             | `+`, `-`, `*`, `/`, `%`           |
+| Comparison             | `==`, `!=`, `<`, `>`, `<=`, `>=`  |
+| Logical                | `and`, `or`, `not`, `!`           |
+| Assignment             | `=`, `+=`, `-=`, `*=`, `/=`, `%=` |
+| Membership             | `in`, `not in`                    |
+| Channels               | `?`                               |
+| Conditional assignment | `?=`                              |
+| Null coalescing        | `??`                              |
+| Lambda                 | `=>`                              |
 
-### Control Flow
-
-**Conditionals:**
+Example:
 
 ```veyra
+add numbers = [10, 20, 30]
+
+say 20 in numbers
+say 50 not in numbers
+
+add value = null
+say value ?? "default"
+```
+
+For details, see [Operators](learning/operators.md).
+
+## Control Flow
+
+### Conditionals
+
+```veyra
+add age = 18
+
 if age >= 18
-    say "adult"
-else if age >= 13
-    say "teen"
+    say "Adult"
 else
-    say "child"
+    say "Minor"
 end
 ```
 
-**Counting loop:**
+### Loops
+
+Counted loops:
 
 ```veyra
-repeat 5
-    say "hi"
+repeat 3
+    say "Hello"
 end
 ```
 
-**Conditional loop:**
+Conditional loops:
 
 ```veyra
-i = 0
-repeat while i < 10
-    if i == 5
-        stop         # break
-    end
-    if i % 2 == 0
-        i += 1
-        fwd          # continue
-    end
+add i = 0
+
+while i < 3
     say i
     i += 1
 end
 ```
 
-- `stop` → exit the loop
-- `fwd` → next iteration
-
-`stop` and `fwd` are **only valid inside loops**. In functions, use `return`.
-
-Safety limit: **1,000,000 iterations** per loop.
-
-**Labeled loops:**
-
-Labels let you control an outer loop from inside a nested loop.
+Collection iteration:
 
 ```veyra
-@outer repeat 3
+add colors = ["red", "green", "blue"]
+
+repeat color in colors
+    say color
+end
+```
+
+Labeled loops:
+
+```veyra
+@outer repeat 5
     repeat 3
         stop @outer
     end
 end
 ```
 
-Use `stop @label` to exit the labeled loop and `fwd @label` to continue with the next iteration of that loop.
+Use `stop` to exit a loop and `fwd` to continue to its next iteration.
 
-See [`examples/stage2_test.vy`](examples/stage2_test.vy) for more examples.
+## Lists
 
-### Lists
+Lists support indexing, slicing, and common collection operations.
 
 ```veyra
-nums = [10, 20, 30]
-say nums[0]         # 10
-nums[1] = 99
-say nums            # [10, 99, 30]
-say len(nums)       # 3
+add numbers = [10, 20, 30, 40]
 
-matrix = [[1,2],[3,4]]
-say matrix[1][0]    # 3
+say numbers[0]
+say numbers[-1]
+say numbers[1:3]
+
+numbers[1] = 99
+numbers.append(50)
+
+say numbers
+say numbers.len()
 ```
 
-### Functions
+Available list methods include `append`, `pop`, `insert`, `remove`, `clear`, `sort`, and `reverse`.
 
-Defined with `add`:
+For details, see [Lists](learning/lists.md).
+
+## JSON-like Objects
+
+Veyra provides the `jsondata` type for key-value collections.
 
 ```veyra
-add add_two(a, b)
-    a + b           # last expression returns automatically
+add user = {
+    "name": "Veyra",
+    "version": "0.2.6",
+    "active": true
+}
+
+say user["name"]
+
+user["version"] = "0.2.7"
+
+say user.keys()
+say user.has("active")
+```
+
+Objects support nested indexing, assignment, and iteration over keys.
+
+## Strings
+
+Strings support Unicode-aware indexing, slicing, and common text operations.
+
+```veyra
+add message = "Hello, Veyra!"
+
+say message.upper()
+say message.lower()
+say message.contains("Veyra")
+say message.replace("Hello", "Hi")
+```
+
+Multiline strings use triple quotes:
+
+```veyra
+add message = """
+Hello!
+This is a multiline string.
+"""
+
+say message
+```
+
+## Functions
+
+Functions are declared using `add`:
+
+```veyra
+add greet(name, greeting = "Hello")
+    return greeting + ", " + name
 end
 
-say add_two(3, 4)   # 7
+say greet("Veyra")
 ```
 
-**Early return:**
+Veyra supports default parameters, variadic parameters, recursion, and multiple return values.
+
+Lambdas are also supported:
 
 ```veyra
-add sign(n)
-    if n > 0
-        return "positive"
-    end
-    if n < 0
-        return "negative"
-    end
-    "zero"
-end
+add square = func(x) => x * x
+
+say square(5)
 ```
 
-**Default parameters** (can reference earlier parameters):
+Functions use closed scopes and do not implicitly capture surrounding local variables.
 
-```veyra
-add range(start, stop = start + 10)
-    stop - start
-end
-say range(5)        # 10
-```
+For details, see [Functions](learning/functions.md).
 
-**Variadic** (`...` in any position; becomes a list):
+## Error Handling
 
-```veyra
-add sum_all(...nums)
-    t = 0
-    i = 0
-    repeat while i < len(nums)
-        t += nums[i]
-        i += 1
-    end
-    t
-end
-say sum_all(1, 2, 3, 4, 5)   # 15
-```
-
-**Lambdas** (single-expression anonymous functions):
-
-```veyra
-square = func(x) => x * x
-say square(9)       # 81
-
-add apply(f, x, y)
-    f(x, y)
-end
-say apply(func(a, b) => a - b, 10, 3)   # 7
-```
-
-**Closed scope** — functions cannot see outer variables:
-
-```veyra
-x = 100
-add try()
-    x + 1           # ERROR: Undefined variable: x
-end
-```
-
-Only parameters, locals, other `add` functions (globally registered), and built-ins are visible inside a function. This makes functions predictable and side-effect-free with respect to outer state.
-
-Call stack limit: **1,000** frames.
-
-### Error Handling
-
-Veyra supports `try` / `catch` blocks for handling runtime errors.
+Use `try`, `catch`, and `throw` to handle runtime errors.
 
 ```veyra
 try
-    x = 10 / 0
-catch err
-    say "caught: " + err
+    throw "Something went wrong"
+catch error
+    say error
 end
 ```
 
-The catch variable is optional:
+Uncaught errors include source file and line information, while function errors can include a traceback.
+
+## Modules
+
+Veyra includes several built-in Rust modules:
+
+| Module      | Purpose                            |
+| ----------- | ---------------------------------- |
+| `system`    | Operating system and environment   |
+| `io`        | Input/output and process execution |
+| `base`      | System information                 |
+| `json`      | JSON parsing and serialization     |
+| `http`      | HTTP requests                      |
+| `websocket` | WebSocket connections              |
+| `math`      | Mathematical operations            |
+| `time`      | Date and time utilities            |
+| `fs`        | Filesystem operations              |
+| `random`    | Random number generation           |
+
+Import a module using `mod`:
 
 ```veyra
-try
-    x = undefined_variable
-catch
-    say "Something went wrong"
-end
+mod math
+
+say math.sqrt(144)
 ```
 
-You can also use `??` to provide a fallback when a value is `null`.
+Veyra also supports user-defined `.veymod` modules.
+
+Import individual members:
 
 ```veyra
-value = null
-say value ?? "fallback"
+mod math [sqrt]
+
+say sqrt(144)
 ```
 
-See [`examples/stage2_test.vy`](examples/stage2_test.vy) for nested error handling and additional examples.
+For details, see [Modules](learning/modules.md).
 
-### Built-ins
+## Interactive REPL
 
-| Function  | Description                                                                 |
-| --------- | --------------------------------------------------------------------------- |
-| `len(x)`  | Length of a list or text                                                    |
-| `num(x)`  | Convert to number                                                           |
-| `text(x)` | Convert to text                                                             |
-| `type(x)` | Returns `"number"`, `"text"`, `"bool"`, `"list"`, `"function"`, or `"null"` |
+Start Veyra without specifying a file:
 
-### Modules
-
-Veyra includes built-in modules for interacting with the operating system, environment, files, directories, and external processes.
-
-**Available modules:**
-
-- **`system`** — Operating system information, environment variables, command-line arguments, and process exit control.
-- **`io`** — File and directory operations, working directory management, and external command execution.
-- **`base`** — Basic system information, including hostname, username, home directory, process ID, and CPU core count.
-
-Import a module with `mod`:
-
-```veyra
-mod system
-mod io
+```bash
+veyra
 ```
 
-Import all exported names from `base`:
+The REPL supports persistent variables, functions, imports, and multiline blocks.
 
-```veyra
-mod base *
-say hostname()
-say pid()
+```text
+>>> add x = 10
+>>> say x * 2
+20
 ```
 
-Import selected names:
+Type `exit` or `quit` to leave the REPL.
 
-```veyra
-mod system [get_env, args]
-say get_env("HOME")
-```
+## Learn More
 
-For more examples, see [`examples/mod_test.vy`](examples/mod_test.vy).
+Continue with the detailed guides:
 
-**Note:** Functions that access files, environment variables, or external processes interact with the host system.
+- [Getting Started](learning/quickstart.md)
+- [Variables](learning/variables.md)
+- [Channels](learning/channels.md)
+- [Functions](learning/functions.md)
+- [Control Flow](learning/control-flow.md)
+- [Lists](learning/lists.md)
+- [Modules](learning/modules.md)
+- [Error Handling](learning/error-handling.md)

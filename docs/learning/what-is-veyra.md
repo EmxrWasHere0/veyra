@@ -1,28 +1,105 @@
+# What Is Veyra?
+
 <div align="center">
-<img src="https://raw.githubusercontent.com/EmxrWasHere0/veyra/refs/heads/main/media/veyra-banner.png">
+  <img src="https://raw.githubusercontent.com/EmxrWasHere0/veyra/refs/heads/main/media/veyra-banner.png" alt="Veyra Banner">
 </div>
 
-# What is Veyra?
+Veyra is a dynamically typed, interpreted programming language written in Rust.
 
-**Veyra** is a small, dynamically-typed, interpreted programming language with easy-to-understand keywords and a unique mechanisms for runtime value overrides.
+It uses readable keywords, simple block structures, and a unique channel mechanism for runtime value overrides.
 
-# Why Veyra?
+Veyra is an experimental language developed to explore programming language design.
 
-Veyra started as a learning project built around a simple question:
+## How Does Veyra Work?
 
-**What if a programming language could make runtime overrides explicit without losing the original value?**
+Veyra programs are written in source files such as `hello.vey`.
 
-That idea became Veyra's channel mechanism — a way for a name to hold a stable default and a separate runtime override at the same time.
+The interpreter reads and executes these files directly.
 
-But Veyra is more than just channels.
+For example:
 
-- **Explicit runtime overrides** — Channels let programs distinguish between a value's original definition and its runtime override.
-- **Predictable function scope** — Functions use a closed-scope model, preventing accidental access to surrounding local variables.
-- **Readable syntax** — A small set of distinctive keywords keeps the language approachable while still supporting functions, recursion, lists, and structured control flow.
-- **Room to experiment** — Veyra is a playground for exploring programming language design, runtime behavior, and new ideas without the complexity of a large language ecosystem.
+```veyra
+say "Hello, World!"
+```
 
-Veyra isn't trying to replace established programming languages. It's an experiment in building something small, understandable, and interesting — one feature at a time.
+Run the program using:
 
-**Small language. Different ideas. Built for curiosity.**
+```bash
+veyra hello.vey
+```
 
-Come join us on the unique path of learning Veyra!
+Output:
+
+```text
+Hello, World!
+```
+
+You can also start an interactive REPL by running:
+
+```bash
+veyra
+```
+
+## What Can Veyra Do?
+
+Veyra supports several programming features:
+
+- **Dynamic typing** — Variables can store different value types.
+- **Functions** — Named functions, lambdas, recursion, and default parameters.
+- **Collections** — Lists and JSON-like objects.
+- **Control flow** — Conditions, loops, and collection iteration.
+- **Error handling** — `try`, `catch`, and `throw`.
+- **Modules** — Built-in Rust modules and user-defined `.veymod` modules.
+- **Developer tools** — Interactive REPL, automated tests, and VSCode support.
+
+## Channels
+
+One of Veyra's distinctive features is its channel mechanism.
+
+Channels allow constants to preserve their original values while holding separate runtime overrides.
+
+```veyra
+set port = 8080
+
+port = 3000
+
+say port
+say 0 ? port
+```
+
+Output:
+
+```text
+8080
+3000
+```
+
+The first expression reads the constant.
+
+The second reads its channel value, using `0` as a fallback when no override exists.
+
+Channels can also be carried through function arguments.
+
+For details, see [Channels](channels.md).
+
+## Why Learn Veyra?
+
+Veyra provides an opportunity to explore:
+
+- How interpreted programming languages work.
+- Dynamic typing and runtime evaluation.
+- Functions and scope rules.
+- Module systems.
+- Alternative approaches to variable and constant behavior.
+
+It is designed as a learning and experimentation project rather than a replacement for established languages.
+
+## What's Next?
+
+Start learning Veyra:
+
+- [Installation](installation.md)
+- [Quick Start](quickstart.md)
+- [Values](values.md)
+- [Variables and Types](variables.md)
+- [Channels](channels.md)

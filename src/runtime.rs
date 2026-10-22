@@ -79,7 +79,7 @@ pub struct VeyraMod {
 impl Value {
     pub fn type_name(&self) -> &'static str {
         match self {
-            Value::Num(_) => "num",
+            Value::Num(_) => "number",
             Value::Text(_) => "text",
             Value::Bool(_) => "bool",
             Value::List(_) => "list",
