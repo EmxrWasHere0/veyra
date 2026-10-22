@@ -95,7 +95,7 @@ Verify the installation:
 veyra --version
 ```
 
-> [!INFO]
+> [!NOTE]
 > You can also install Veyra using Veyra Installer. Check out our [latest release](https://github.com/EmxrWasHere0/veyra/releases/latest) to find the installer for your operating system.
 
 ## Quick Start
@@ -210,7 +210,7 @@ You can then open the Command Palette and run:
 
 See the [extension README](veyra-vscode/README.md) for details.
 
-> [!INFO]
+> [!NOTE]
 > You can also install the VSCode extension from our [latest release](https://github.com/EmxrWasHere0/veyra/releases/latest).
 
 ## Development
