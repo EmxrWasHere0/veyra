@@ -21,10 +21,7 @@ impl RandomModule {
 
 fn expect_count(args: &[Value], expected: usize, func: &str) -> Result<(), String> {
     if args.len() != expected {
-        return Err(format!(
-            "random.{} expects {} argument(s)",
-            func, expected
-        ));
+        return Err(format!("random.{} expects {} argument(s)", func, expected));
     }
 
     Ok(())
@@ -53,7 +50,9 @@ impl VeyraModule for RandomModule {
     }
 
     fn call_func(&self, func: &str, args: Vec<Value>) -> Result<Value, String> {
-        let mut rng = self.rng.lock()
+        let mut rng = self
+            .rng
+            .lock()
             .map_err(|_| "Random generator lock poisoned".to_string())?;
 
         match func {
@@ -164,14 +163,7 @@ impl VeyraModule for RandomModule {
 
     fn list_members(&self) -> Vec<String> {
         [
-            "seed",
-            "random",
-            "randint",
-            "uniform",
-            "boolean",
-            "choice",
-            "shuffle",
-            "sample",
+            "seed", "random", "randint", "uniform", "boolean", "choice", "shuffle", "sample",
         ]
         .iter()
         .map(|name| name.to_string())

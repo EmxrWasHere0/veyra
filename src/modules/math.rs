@@ -15,10 +15,8 @@ impl VeyraModule for MathModule {
             "TAU" => Ok(Value::Num(std::f64::consts::TAU)),
             "INF" => Ok(Value::Num(f64::INFINITY)),
 
-            "abs" | "sqrt" | "floor" | "ceil" | "round"
-            | "sin" | "cos" | "tan"
-            | "asin" | "acos" | "atan"
-            | "ln" | "log10" | "exp" => {
+            "abs" | "sqrt" | "floor" | "ceil" | "round" | "sin" | "cos" | "tan" | "asin"
+            | "acos" | "atan" | "ln" | "log10" | "exp" => {
                 if args.len() != 1 {
                     return Err(format!("math.{} expects 1 argument", func));
                 }
@@ -89,8 +87,7 @@ impl VeyraModule for MathModule {
                     }
                 }
 
-                let (value, minimum, maximum) =
-                    (numbers[0], numbers[1], numbers[2]);
+                let (value, minimum, maximum) = (numbers[0], numbers[1], numbers[2]);
 
                 if minimum > maximum {
                     return Err("math.clamp minimum cannot exceed maximum".into());
@@ -105,11 +102,8 @@ impl VeyraModule for MathModule {
 
     fn list_members(&self) -> Vec<String> {
         [
-            "PI", "E", "TAU", "INF",
-            "abs", "sqrt", "floor", "ceil", "round",
-            "sin", "cos", "tan", "asin", "acos", "atan",
-            "ln", "log10", "exp",
-            "pow", "atan2", "min", "max", "clamp",
+            "PI", "E", "TAU", "INF", "abs", "sqrt", "floor", "ceil", "round", "sin", "cos", "tan",
+            "asin", "acos", "atan", "ln", "log10", "exp", "pow", "atan2", "min", "max", "clamp",
         ]
         .iter()
         .map(|name| name.to_string())

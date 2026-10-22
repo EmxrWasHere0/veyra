@@ -435,11 +435,7 @@ impl Runtime {
         Ok(result)
     }
 
-    fn postfix(
-        &mut self,
-        tokens: &[Token],
-        position: &mut usize,
-    ) -> Result<Value, String> {
+    fn postfix(&mut self, tokens: &[Token], position: &mut usize) -> Result<Value, String> {
         let mut value = self.primary(tokens, position)?;
 
         while *position < tokens.len() {
@@ -476,9 +472,7 @@ impl Runtime {
                 if *position < tokens.len() && tokens[*position].kind == Tok::Colon {
                     *position += 1;
 
-                    if *position < tokens.len()
-                        && tokens[*position].kind != Tok::RBracket
-                    {
+                    if *position < tokens.len() && tokens[*position].kind != Tok::RBracket {
                         third = Some(self.expr(tokens, position, 0)?);
                     }
                 }
@@ -510,12 +504,7 @@ impl Runtime {
 
                         let indices = Self::slice_indices(chars.len(), start, end, step)?;
 
-                        Value::Text(
-                            indices
-                                .into_iter()
-                                .map(|index| chars[index])
-                                .collect(),
-                        )
+                        Value::Text(indices.into_iter().map(|index| chars[index]).collect())
                     }
 
                     _ => return Err("Slicing requires a list or text".into()),
@@ -552,15 +541,12 @@ impl Runtime {
                     }
 
                     _ => return Err("Indexing requires a list, text or jsondata".into()),
-
-                    
                 };
             }
         }
 
         Ok(value)
     }
-
 
     fn expr(
         &mut self,
@@ -594,14 +580,23 @@ impl Runtime {
                 continue;
             }
 
-            let op = token.text.as_str();
+            let is_not_in = token.text == "not"
+                && *position + 1 < tokens.len()
+                && tokens[*position + 1].text == "in";
+
+            let op = if is_not_in {
+                "not in"
+            } else {
+                token.text.as_str()
+            };
+
             let precedence = precedence(op);
 
             if precedence == 0 || precedence < min_precedence {
                 break;
             }
 
-            *position += 1;
+            *position += if is_not_in { 2 } else { 1 };
 
             let right = self.expr(tokens, position, precedence + 1)?;
 
@@ -720,7 +715,120 @@ impl Runtime {
                 Ok(Value::Num(-1.0))
             }
 
+            "insert" => {
+                if args.len() != 2 {
+                    return Err("list.insert expects 2 arguments".into());
+                }
+
+                let number = match &args[0] {
+                    Value::Num(n) if n.is_finite() && n.fract() == 0.0 => *n,
+                    _ => return Err("list.insert expects an integer index".into()),
+                };
+
+                if number < i64::MIN as f64 || number >= i64::MAX as f64 {
+                    return Err("List index out of range".into());
+                }
+
+                let length = items.len() as i64;
+                let mut index = number as i64;
+
+                if index < 0 {
+                    index += length;
+                }
+
+                let index = index.clamp(0, length) as usize;
+
+                items.insert(index, args[1].clone());
+
+                self.assign(name, Value::List(items))?;
+
+                Ok(Value::Null)
+            }
+
+            "remove" => {
+                if args.len() != 1 {
+                    return Err("list.remove expects 1 argument".into());
+                }
+
+                let index = items
+                    .iter()
+                    .position(|item| values_equal(item, &args[0]))
+                    .ok_or("Value not found in list")?;
+
+                items.remove(index);
+
+                self.assign(name, Value::List(items))?;
+
+                Ok(Value::Null)
+            }
+
+            "clear" => {
+                if !args.is_empty() {
+                    return Err("list.clear expects no arguments".into());
+                }
+
+                self.assign(name, Value::List(Vec::new()))?;
+
+                Ok(Value::Null)
+            }
+
+            "reverse" => {
+                if !args.is_empty() {
+                    return Err("list.reverse expects no arguments".into());
+                }
+
+                items.reverse();
+
+                Ok(Value::List(items))
+            }
+
+            "sort" => {
+                if !args.is_empty() {
+                    return Err("list.sort expects no arguments".into());
+                }
+
+                let all_numbers = items.iter().all(|item| matches!(item, Value::Num(_)));
+                let all_text = items.iter().all(|item| matches!(item, Value::Text(_)));
+
+                if !all_numbers && !all_text && !items.is_empty() {
+                    return Err("list.sort requires numbers or text of the same type".into());
+                }
+
+                if all_numbers {
+                    items.sort_by(|a, b| match (a, b) {
+                        (Value::Num(x), Value::Num(y)) => x.total_cmp(y),
+                        _ => std::cmp::Ordering::Equal,
+                    });
+                } else {
+                    items.sort_by(|a, b| match (a, b) {
+                        (Value::Text(x), Value::Text(y)) => x.cmp(y),
+                        _ => std::cmp::Ordering::Equal,
+                    });
+                }
+
+                Ok(Value::List(items))
+            }
+
             _ => Err(format!("Unknown list method '{}'", method)),
+        }
+    }
+
+    fn contains_value(&self, needle: &Value, collection: &Value) -> Result<bool, String> {
+        match collection {
+            Value::List(items) => Ok(items.iter().any(|item| values_equal(item, needle))),
+
+            Value::Text(text) => match needle {
+                Value::Text(part) => Ok(text.contains(part)),
+                _ => Err("Text membership requires text".into()),
+            },
+
+            Value::Object(entries) => match needle {
+                Value::Text(key) => Ok(entries.iter().any(|(name, _)| name == key)),
+
+                _ => Err("Jsondata membership requires a text key".into()),
+            },
+
+            _ => Err("Right operand of 'in' must be list, text or jsondata".into()),
         }
     }
 
@@ -767,10 +875,7 @@ impl Runtime {
                 }
 
                 Ok(Value::List(
-                    entries
-                        .iter()
-                        .map(|(_, value)| value.clone())
-                        .collect(),
+                    entries.iter().map(|(_, value)| value.clone()).collect(),
                 ))
             }
 
@@ -897,10 +1002,7 @@ impl Runtime {
 
                         let arguments = self.parse_call_args(tokens, position)?;
 
-                        let values = arguments
-                            .into_iter()
-                            .map(|argument| argument.0)
-                            .collect();
+                        let values = arguments.into_iter().map(|argument| argument.0).collect();
 
                         return self.call_text_method(&name, &member, values);
                     }
@@ -910,10 +1012,7 @@ impl Runtime {
 
                         let arguments = self.parse_call_args(tokens, position)?;
 
-                        let values = arguments
-                            .into_iter()
-                            .map(|argument| argument.0)
-                            .collect();
+                        let values = arguments.into_iter().map(|argument| argument.0).collect();
 
                         return self.call_jsondata_method(&name, &member, values);
                     }
@@ -1051,9 +1150,7 @@ impl Runtime {
 
                 let mut entries = Vec::new();
 
-                while *position < tokens.len()
-                    && tokens[*position].kind != Tok::RBrace
-                {
+                while *position < tokens.len() && tokens[*position].kind != Tok::RBrace {
                     let key_value = self.expr(tokens, position, 0)?;
 
                     let key = match key_value {
@@ -1065,17 +1162,13 @@ impl Runtime {
 
                     let value = self.expr(tokens, position, 0)?;
 
-                    if let Some((_, existing)) =
-                        entries.iter_mut().find(|(name, _)| name == &key)
-                    {
+                    if let Some((_, existing)) = entries.iter_mut().find(|(name, _)| name == &key) {
                         *existing = value;
                     } else {
                         entries.push((key, value));
                     }
 
-                    if *position < tokens.len()
-                        && tokens[*position].kind == Tok::Comma
-                    {
+                    if *position < tokens.len() && tokens[*position].kind == Tok::Comma {
                         *position += 1;
                     } else {
                         break;
@@ -1298,6 +1391,10 @@ impl Runtime {
             "and" => Ok(Value::Bool(left.is_truthy() && right.is_truthy())),
 
             "or" => Ok(Value::Bool(left.is_truthy() || right.is_truthy())),
+
+            "in" => Ok(Value::Bool(self.contains_value(&left, &right)?)),
+
+            "not in" => Ok(Value::Bool(!self.contains_value(&left, &right)?)),
 
             _ => Err(format!("Unknown operator '{}'", op)),
         }
@@ -1540,11 +1637,7 @@ impl Runtime {
             .get(name)
             .ok_or_else(|| format!("Undefined '{}'", name))?;
 
-        fn update(
-            target: &mut Value,
-            indices: &[Value],
-            value: Value,
-        ) -> Result<(), String> {
+        fn update(target: &mut Value, indices: &[Value], value: Value) -> Result<(), String> {
             match target {
                 Value::List(items) => {
                     let index = normalize_index(&indices[0], items.len())?;
@@ -1681,17 +1774,39 @@ impl Runtime {
             }
 
             "get" => {
-                if tokens.len() < 2 {
+                if tokens.len() < 2 || tokens[1].kind != Tok::Id {
                     return Err("get requires a variable name".into());
                 }
 
                 let name = tokens[1].text.clone();
 
+                // Optional prompt expression.
+                if tokens.len() > 2 {
+                    let prompt = self.eval(&tokens[2..])?;
+
+                    let text = match prompt {
+                        Value::Text(text) => text,
+                        _ => return Err("get prompt must be text".into()),
+                    };
+
+                    use std::io::Write;
+
+                    print!("{}", text);
+
+                    std::io::stdout()
+                        .flush()
+                        .map_err(|error| format!("Output error: {}", error))?;
+                }
+
                 let mut input = String::new();
 
-                std::io::stdin()
+                let bytes_read = std::io::stdin()
                     .read_line(&mut input)
-                    .map_err(|e| format!("Input error: {}", e))?;
+                    .map_err(|error| format!("Input error: {}", error))?;
+
+                if bytes_read == 0 {
+                    return Err("End of input".into());
+                }
 
                 let input = input.trim_end_matches(['\r', '\n']).to_string();
 
@@ -1753,6 +1868,24 @@ impl Runtime {
                 return Ok(Flow::Normal);
             }
 
+            "throw" => {
+                if tokens.len() < 2 {
+                    return Err("throw requires an expression".into());
+                }
+
+                let value = self.eval(&tokens[1..])?;
+
+                let message = match value {
+                    Value::Text(text) => text,
+                    Value::Num(number) => number.to_string(),
+                    Value::Bool(boolean) => boolean.to_string(),
+                    Value::Null => "null".to_string(),
+                    _ => return Err("throw requires text, num, bool or null".into()),
+                };
+
+                return Err(message);
+            }
+
             _ => {}
         }
 
@@ -1773,10 +1906,7 @@ impl Runtime {
         }
 
         // Indexed assignment: items[index] = value
-        if tokens.len() >= 4
-            && tokens[0].kind == Tok::Id
-            && tokens[1].kind == Tok::LBracket
-        {
+        if tokens.len() >= 4 && tokens[0].kind == Tok::Id && tokens[1].kind == Tok::LBracket {
             let name = tokens[0].text.clone();
             let mut position = 1;
             let mut indices = Vec::new();
@@ -2135,10 +2265,9 @@ impl Runtime {
         let body = &lines[start + 1..end];
 
         // Detect: repeat item in collection
-        let is_collection_loop =
-            tokens.len() > expression_start + 2
-                && tokens[expression_start].kind == Tok::Id
-                && tokens[expression_start + 1].text == "in";
+        let is_collection_loop = tokens.len() > expression_start + 2
+            && tokens[expression_start].kind == Tok::Id
+            && tokens[expression_start + 1].text == "in";
 
         let (iteration_values, variable_name) = if is_collection_loop {
             let name = tokens[expression_start].text.clone();
@@ -2167,10 +2296,7 @@ impl Runtime {
 
             let count = match value {
                 Value::Num(n)
-                    if n.is_finite()
-                        && n >= 0.0
-                        && n.fract() == 0.0
-                        && n <= usize::MAX as f64 =>
+                    if n.is_finite() && n >= 0.0 && n.fract() == 0.0 && n <= usize::MAX as f64 =>
                 {
                     n as usize
                 }
@@ -2179,20 +2305,14 @@ impl Runtime {
             };
 
             if count > LOOP_LIMIT {
-                return Err(format!(
-                    "Loop iteration limit reached ({})",
-                    LOOP_LIMIT
-                ));
+                return Err(format!("Loop iteration limit reached ({})", LOOP_LIMIT));
             }
 
             (vec![Value::Null; count], None)
         };
 
         if iteration_values.len() > LOOP_LIMIT {
-            return Err(format!(
-                "Loop iteration limit reached ({})",
-                LOOP_LIMIT
-            ));
+            return Err(format!("Loop iteration limit reached ({})", LOOP_LIMIT));
         }
 
         self.loop_depth += 1;
@@ -2258,10 +2378,7 @@ impl Runtime {
 
         let expect_count = |expected: usize| -> Result<(), String> {
             if args.len() != expected {
-                return Err(format!(
-                    "text.{} expects {} argument(s)",
-                    method, expected
-                ));
+                return Err(format!("text.{} expects {} argument(s)", method, expected));
             }
 
             Ok(())
@@ -2327,9 +2444,7 @@ impl Runtime {
             "replace" => {
                 expect_count(2)?;
 
-                Ok(Value::Text(
-                    text.replace(text_arg(0)?, text_arg(1)?)
-                ))
+                Ok(Value::Text(text.replace(text_arg(0)?, text_arg(1)?)))
             }
 
             "split" => {
@@ -2340,7 +2455,7 @@ impl Runtime {
                 Ok(Value::List(
                     text.split(separator)
                         .map(|part| Value::Text(part.to_string()))
-                        .collect()
+                        .collect(),
                 ))
             }
 
@@ -2634,22 +2749,61 @@ impl Runtime {
     fn find_module_file(&self, name: &str) -> Result<PathBuf, String> {
         let filename = format!("{}.veymod", name);
 
+        let script_dir = PathBuf::from(&self.script_dir);
+
         let mut directories = vec![
-            PathBuf::from(&self.script_dir),
-            PathBuf::from(&self.script_dir).join("lib"),
+            script_dir.clone(),
+            script_dir.join("modules"),
+            script_dir.join("lib"),
             PathBuf::from("."),
+            PathBuf::from("./modules"),
             PathBuf::from("./lib"),
         ];
 
+        // Additional paths from VEYRA_PATH.
+        if let Some(paths) = std::env::var_os("VEYRA_PATH") {
+            directories.extend(std::env::split_paths(&paths));
+        }
+
+        // User-specific module directories.
+        #[cfg(target_os = "linux")]
+        {
+            if let Some(home) = std::env::var_os("HOME") {
+                directories.push(PathBuf::from(home).join(".local/share/vey/modules"));
+            }
+        }
+
+        #[cfg(target_os = "macos")]
+        {
+            if let Some(home) = std::env::var_os("HOME") {
+                directories
+                    .push(PathBuf::from(home).join("Library/Application Support/vey/modules"));
+            }
+        }
+
+        #[cfg(windows)]
+        {
+            if let Some(appdata) = std::env::var_os("APPDATA") {
+                directories.push(PathBuf::from(appdata).join("vey").join("modules"));
+            }
+        }
+
+        // System-wide module directories.
         #[cfg(unix)]
         {
+            directories.push(PathBuf::from("/usr/share/vey/modules"));
+
+            // Backward compatibility with existing installations.
             directories.push(PathBuf::from("/usr/share/vey/libs"));
         }
 
         #[cfg(windows)]
         {
-            if let Ok(program_files) = std::env::var("ProgramFiles") {
-                directories.push(PathBuf::from(program_files).join("vey").join("libs"));
+            if let Some(program_files) = std::env::var_os("ProgramFiles") {
+                let base = PathBuf::from(program_files).join("vey");
+
+                directories.push(base.join("modules"));
+                directories.push(base.join("libs"));
             }
         }
 
@@ -2938,7 +3092,7 @@ fn precedence(op: &str) -> u8 {
         "or" => 2,
         "and" => 3,
 
-        "==" | "!=" | "<" | ">" | "<=" | ">=" => 4,
+        "==" | "!=" | "<" | ">" | "<=" | ">=" | "in" | "not in" => 4,
 
         "+" | "-" => 5,
 

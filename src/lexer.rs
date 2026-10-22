@@ -55,6 +55,73 @@ pub fn lex(source: &str) -> Result<Vec<Token>, String> {
             continue;
         }
 
+        // Triple-quoted multiline strings
+        if (c == '"' || c == '\'')
+            && i + 2 < len
+            && chars[i + 1] == c
+            && chars[i + 2] == c
+        {
+            let quote = c;
+            let start = i;
+
+            i += 3;
+
+            let mut content = String::new();
+            let mut closed = false;
+
+            while i < len {
+                // Preserve escaped characters.
+                if chars[i] == '\\' && i + 1 < len {
+                    content.push(chars[i]);
+                    content.push(chars[i + 1]);
+
+                    i += 2;
+                    continue;
+                }
+
+                // Closing triple quote.
+                if i + 2 < len
+                    && chars[i] == quote
+                    && chars[i + 1] == quote
+                    && chars[i + 2] == quote
+                {
+                    i += 3;
+                    closed = true;
+                    break;
+                }
+
+                content.push(chars[i]);
+                i += 1;
+            }
+
+            if !closed {
+                return Err(format!(
+                    "Unterminated multiline string starting at column {}",
+                    start + 1
+                ));
+            }
+
+            // Convert the multiline literal into a regular string token.
+            // Escape physical newlines so the existing string parser can decode them.
+            let mut encoded = String::new();
+
+            for character in content.chars() {
+                match character {
+                    '\n' => encoded.push_str("\\n"),
+                    '\r' => encoded.push_str("\\r"),
+                    '"' => encoded.push_str("\\\""),
+                    other => encoded.push(other),
+                }
+            }
+
+            tokens.push(Token {
+                kind: Tok::Val,
+                text: format!("\"{}\"", encoded),
+            });
+
+            continue;
+        }
+
         // Strings: single and double quotes
         if c == '"' || c == '\'' {
             let quote = c;
@@ -141,7 +208,9 @@ pub fn lex(source: &str) -> Result<Vec<Token>, String> {
 
                 "true" | "false" | "null" => Tok::Val,
 
-                "and" | "or" | "not" => Tok::Op,
+                "and" | "or" | "not" | "in" => Tok::Op,
+
+                "throw" => Tok::Id,
 
                 _ => Tok::Id,
             };
@@ -234,40 +303,128 @@ pub fn parse_lines(source: &str, filename: &str) -> Result<Vec<Line>, String> {
     let mut lines = Vec::new();
     let source_name = Rc::new(filename.to_string());
 
-    let mut pending_tokens: Vec<Token> = Vec::new();
+    let mut pending_source = String::new();
     let mut pending_line = 0usize;
 
     let mut delimiters: Vec<(Tok, usize)> = Vec::new();
 
+    // Currently open triple-quoted string, if any.
+    let mut triple_quote: Option<char> = None;
+
     for (index, raw_line) in source.lines().enumerate() {
         let line_number = index + 1;
-        let trimmed = raw_line.trim();
 
-        if trimmed.is_empty() || trimmed.starts_with('#') {
+        if pending_source.is_empty()
+            && triple_quote.is_none()
+            && raw_line.trim().is_empty()
+        {
             continue;
         }
 
-        // Lex the original line to preserve column positions.
-        let tokens = lex(raw_line)
-            .map_err(|error| format!("{}:{}: {}", filename, line_number, error))?;
+        if pending_source.is_empty()
+            && triple_quote.is_none()
+            && raw_line.trim().starts_with('#')
+        {
+            continue;
+        }
+
+        if pending_source.is_empty() {
+            pending_line = line_number;
+        } else {
+            pending_source.push('\n');
+        }
+
+        pending_source.push_str(raw_line);
+
+        // Detect triple-quoted string boundaries.
+        // Ignore delimiters inside normal strings and comments.
+        let chars: Vec<char> = raw_line.chars().collect();
+
+        let mut i = 0usize;
+        let mut normal_quote: Option<char> = None;
+
+        while i < chars.len() {
+            let c = chars[i];
+
+            if let Some(quote) = triple_quote {
+                if c == '\\' && i + 1 < chars.len() {
+                    i += 2;
+                    continue;
+                }
+
+                if c == quote
+                    && i + 2 < chars.len()
+                    && chars[i + 1] == quote
+                    && chars[i + 2] == quote
+                {
+                    triple_quote = None;
+                    i += 3;
+                    continue;
+                }
+
+                i += 1;
+                continue;
+            }
+
+            if let Some(quote) = normal_quote {
+                if c == '\\' && i + 1 < chars.len() {
+                    i += 2;
+                    continue;
+                }
+
+                if c == quote {
+                    normal_quote = None;
+                }
+
+                i += 1;
+                continue;
+            }
+
+            if c == '#' {
+                break;
+            }
+
+            if c == '"' || c == '\'' {
+                if i + 2 < chars.len()
+                    && chars[i + 1] == c
+                    && chars[i + 2] == c
+                {
+                    triple_quote = Some(c);
+                    i += 3;
+                    continue;
+                }
+
+                normal_quote = Some(c);
+                i += 1;
+                continue;
+            }
+
+            i += 1;
+        }
+
+        // Wait until the multiline string is closed.
+        if triple_quote.is_some() {
+            continue;
+        }
+
+        // Lex the accumulated source.
+        let tokens = lex(&pending_source)
+            .map_err(|error| {
+                format!("{}:{}: {}", filename, pending_line, error)
+            })?;
 
         let meaningful: Vec<Token> = tokens
             .into_iter()
             .filter(|token| token.kind != Tok::Eof)
             .collect();
 
-        if meaningful.is_empty() {
-            continue;
-        }
+        // Rebuild delimiter state from the accumulated tokens.
+        delimiters.clear();
 
-        if pending_tokens.is_empty() {
-            pending_line = line_number;
-        }
-
-        for token in meaningful {
+        for token in &meaningful {
             match token.kind {
                 Tok::LParen | Tok::LBracket | Tok::LBrace => {
-                    delimiters.push((token.kind.clone(), line_number));
+                    delimiters.push((token.kind.clone(), pending_line));
                 }
 
                 Tok::RParen => {
@@ -311,18 +468,27 @@ pub fn parse_lines(source: &str, filename: &str) -> Result<Vec<Line>, String> {
 
                 _ => {}
             }
-
-            pending_tokens.push(token);
         }
 
-        // All delimiters closed: complete the logical line.
+        // The logical expression is complete.
         if delimiters.is_empty() {
-            lines.push(Line {
-                tokens: std::mem::take(&mut pending_tokens),
-                source: source_name.clone(),
-                number: pending_line,
-            });
+            if !meaningful.is_empty() {
+                lines.push(Line {
+                    tokens: meaningful,
+                    source: source_name.clone(),
+                    number: pending_line,
+                });
+            }
+
+            pending_source.clear();
         }
+    }
+
+    if triple_quote.is_some() {
+        return Err(format!(
+            "{}:{}: Unterminated multiline string",
+            filename, pending_line
+        ));
     }
 
     if let Some((kind, opened_at)) = delimiters.last() {

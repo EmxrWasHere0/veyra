@@ -2,8 +2,7 @@ use crate::modules::VeyraModule;
 use crate::runtime::Value;
 
 use chrono::{
-    DateTime, Datelike, Duration, Local, NaiveDate, NaiveDateTime,
-    TimeZone, Timelike, Utc,
+    DateTime, Datelike, Duration, Local, NaiveDate, NaiveDateTime, TimeZone, Timelike, Utc,
 };
 
 use std::sync::OnceLock;
@@ -54,8 +53,7 @@ fn parse_datetime(value: &Value) -> Result<NaiveDateTime, String> {
 
     NaiveDateTime::parse_from_str(s, "%Y-%m-%d %H:%M:%S")
         .or_else(|_| {
-            NaiveDate::parse_from_str(s, "%Y-%m-%d")
-                .map(|date| date.and_hms_opt(0, 0, 0).unwrap())
+            NaiveDate::parse_from_str(s, "%Y-%m-%d").map(|date| date.and_hms_opt(0, 0, 0).unwrap())
         })
         .map_err(|_| format!("Invalid datetime '{}'", s))
 }
@@ -75,7 +73,7 @@ impl VeyraModule for TimeModule {
                 check_args(&args, 0, func)?;
 
                 Ok(Value::Text(
-                    Local::now().format("%Y-%m-%d %H:%M:%S").to_string()
+                    Local::now().format("%Y-%m-%d %H:%M:%S").to_string(),
                 ))
             }
 
@@ -83,7 +81,7 @@ impl VeyraModule for TimeModule {
                 check_args(&args, 0, func)?;
 
                 Ok(Value::Text(
-                    Utc::now().format("%Y-%m-%d %H:%M:%S").to_string()
+                    Utc::now().format("%Y-%m-%d %H:%M:%S").to_string(),
                 ))
             }
 
@@ -100,12 +98,8 @@ impl VeyraModule for TimeModule {
                 let month = integer(&args[1], func)?;
                 let day = integer(&args[2], func)?;
 
-                let date = NaiveDate::from_ymd_opt(
-                    year as i32,
-                    month as u32,
-                    day as u32,
-                )
-                .ok_or("Invalid date")?;
+                let date = NaiveDate::from_ymd_opt(year as i32, month as u32, day as u32)
+                    .ok_or("Invalid date")?;
 
                 Ok(Value::Text(date.format("%Y-%m-%d").to_string()))
             }
@@ -211,9 +205,7 @@ impl VeyraModule for TimeModule {
             "monotonic_ms" => {
                 check_args(&args, 0, func)?;
 
-                Ok(Value::Num(
-                    start_instant().elapsed().as_secs_f64() * 1000.0
-                ))
+                Ok(Value::Num(start_instant().elapsed().as_secs_f64() * 1000.0))
             }
 
             "is_leap" => {
@@ -221,8 +213,7 @@ impl VeyraModule for TimeModule {
 
                 let year = integer(&args[0], func)?;
 
-                let leap =
-                    year % 4 == 0 && (year % 100 != 0 || year % 400 == 0);
+                let leap = year % 4 == 0 && (year % 100 != 0 || year % 400 == 0);
 
                 Ok(Value::Bool(leap))
             }
@@ -233,8 +224,8 @@ impl VeyraModule for TimeModule {
                 let year = integer(&args[0], func)? as i32;
                 let month = integer(&args[1], func)? as u32;
 
-                let first = NaiveDate::from_ymd_opt(year, month, 1)
-                    .ok_or("Invalid year or month")?;
+                let first =
+                    NaiveDate::from_ymd_opt(year, month, 1).ok_or("Invalid year or month")?;
 
                 let next = if month == 12 {
                     NaiveDate::from_ymd_opt(year + 1, 1, 1)
@@ -252,14 +243,28 @@ impl VeyraModule for TimeModule {
 
     fn list_members(&self) -> Vec<String> {
         [
-            "now", "utcnow", "timestamp",
-            "date", "parse", "format",
-            "year", "month", "day",
-            "hour", "minute", "second", "weekday",
-            "add_days", "add_hours", "diff",
-            "sleep", "sleep_ms",
-            "monotonic", "monotonic_ms",
-            "is_leap", "days_in_month",
+            "now",
+            "utcnow",
+            "timestamp",
+            "date",
+            "parse",
+            "format",
+            "year",
+            "month",
+            "day",
+            "hour",
+            "minute",
+            "second",
+            "weekday",
+            "add_days",
+            "add_hours",
+            "diff",
+            "sleep",
+            "sleep_ms",
+            "monotonic",
+            "monotonic_ms",
+            "is_leap",
+            "days_in_month",
         ]
         .iter()
         .map(|name| name.to_string())

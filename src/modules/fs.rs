@@ -52,8 +52,7 @@ impl VeyraModule for FsModule {
                 let path = text_arg(&args, 0, func)?;
                 let content = text_arg(&args, 1, func)?;
 
-                fs::write(path, content)
-                    .map_err(|error| format!("fs.write error: {}", error))?;
+                fs::write(path, content).map_err(|error| format!("fs.write error: {}", error))?;
 
                 Ok(Value::Null)
             }
@@ -81,25 +80,19 @@ impl VeyraModule for FsModule {
             "exists" => {
                 expect_count(&args, 1, func)?;
 
-                Ok(Value::Bool(
-                    Path::new(text_arg(&args, 0, func)?).exists()
-                ))
+                Ok(Value::Bool(Path::new(text_arg(&args, 0, func)?).exists()))
             }
 
             "is_file" => {
                 expect_count(&args, 1, func)?;
 
-                Ok(Value::Bool(
-                    Path::new(text_arg(&args, 0, func)?).is_file()
-                ))
+                Ok(Value::Bool(Path::new(text_arg(&args, 0, func)?).is_file()))
             }
 
             "is_dir" => {
                 expect_count(&args, 1, func)?;
 
-                Ok(Value::Bool(
-                    Path::new(text_arg(&args, 0, func)?).is_dir()
-                ))
+                Ok(Value::Bool(Path::new(text_arg(&args, 0, func)?).is_dir()))
             }
 
             "mkdir" => {
@@ -127,15 +120,12 @@ impl VeyraModule for FsModule {
 
                 let mut entries = Vec::new();
 
-                for entry in fs::read_dir(path)
-                    .map_err(|error| format!("fs.listdir error: {}", error))?
+                for entry in
+                    fs::read_dir(path).map_err(|error| format!("fs.listdir error: {}", error))?
                 {
-                    let entry =
-                        entry.map_err(|error| format!("fs.listdir error: {}", error))?;
+                    let entry = entry.map_err(|error| format!("fs.listdir error: {}", error))?;
 
-                    entries.push(Value::Text(
-                        entry.file_name().to_string_lossy().to_string()
-                    ));
+                    entries.push(Value::Text(entry.file_name().to_string_lossy().to_string()));
                 }
 
                 Ok(Value::List(entries))
@@ -171,11 +161,8 @@ impl VeyraModule for FsModule {
             "rename" => {
                 expect_count(&args, 2, func)?;
 
-                fs::rename(
-                    text_arg(&args, 0, func)?,
-                    text_arg(&args, 1, func)?,
-                )
-                .map_err(|error| format!("fs.rename error: {}", error))?;
+                fs::rename(text_arg(&args, 0, func)?, text_arg(&args, 1, func)?)
+                    .map_err(|error| format!("fs.rename error: {}", error))?;
 
                 Ok(Value::Null)
             }
@@ -183,11 +170,8 @@ impl VeyraModule for FsModule {
             "copy" => {
                 expect_count(&args, 2, func)?;
 
-                let bytes = fs::copy(
-                    text_arg(&args, 0, func)?,
-                    text_arg(&args, 1, func)?,
-                )
-                .map_err(|error| format!("fs.copy error: {}", error))?;
+                let bytes = fs::copy(text_arg(&args, 0, func)?, text_arg(&args, 1, func)?)
+                    .map_err(|error| format!("fs.copy error: {}", error))?;
 
                 Ok(Value::Num(bytes as f64))
             }
@@ -242,7 +226,7 @@ impl VeyraModule for FsModule {
                 Ok(Value::Text(
                     path.file_name()
                         .map(|name| name.to_string_lossy().to_string())
-                        .unwrap_or_default()
+                        .unwrap_or_default(),
                 ))
             }
 
@@ -252,9 +236,7 @@ impl VeyraModule for FsModule {
                 let path = Path::new(text_arg(&args, 0, func)?);
 
                 Ok(Value::Text(
-                    path.parent()
-                        .map(path_text)
-                        .unwrap_or_default()
+                    path.parent().map(path_text).unwrap_or_default(),
                 ))
             }
 
@@ -266,7 +248,7 @@ impl VeyraModule for FsModule {
                 Ok(Value::Text(
                     path.extension()
                         .map(|ext| ext.to_string_lossy().to_string())
-                        .unwrap_or_default()
+                        .unwrap_or_default(),
                 ))
             }
 
@@ -284,13 +266,27 @@ impl VeyraModule for FsModule {
 
     fn list_members(&self) -> Vec<String> {
         [
-            "read", "write", "append",
-            "exists", "is_file", "is_dir",
-            "mkdir", "mkdirs", "listdir",
-            "remove", "rmdir", "rmtree",
-            "rename", "copy", "size",
-            "absolute", "join", "basename",
-            "dirname", "extension", "cwd",
+            "read",
+            "write",
+            "append",
+            "exists",
+            "is_file",
+            "is_dir",
+            "mkdir",
+            "mkdirs",
+            "listdir",
+            "remove",
+            "rmdir",
+            "rmtree",
+            "rename",
+            "copy",
+            "size",
+            "absolute",
+            "join",
+            "basename",
+            "dirname",
+            "extension",
+            "cwd",
         ]
         .iter()
         .map(|name| name.to_string())
