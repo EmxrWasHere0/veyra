@@ -85,7 +85,7 @@ impl Value {
             Value::List(_) => "list",
             Value::Func(_) | Value::Native(_) => "function",
             Value::Null => "null",
-            Value::Object(_) => "object",
+            Value::Object(_) => "jsondata",
         }
     }
 
@@ -538,13 +538,29 @@ impl Runtime {
                         Value::Text(chars[index].to_string())
                     }
 
-                    _ => return Err("Indexing requires a list or text".into()),
+                    Value::Object(entries) => {
+                        let key = match index {
+                            Value::Text(key) => key,
+                            _ => return Err("Jsondata index must be text".into()),
+                        };
+
+                        entries
+                            .iter()
+                            .find(|(name, _)| name == &key)
+                            .map(|(_, value)| value.clone())
+                            .ok_or_else(|| format!("Jsondata key '{}' not found", key))?
+                    }
+
+                    _ => return Err("Indexing requires a list, text or jsondata".into()),
+
+                    
                 };
             }
         }
 
         Ok(value)
     }
+
 
     fn expr(
         &mut self,
@@ -708,6 +724,112 @@ impl Runtime {
         }
     }
 
+    fn call_jsondata_method(
+        &mut self,
+        name: &str,
+        method: &str,
+        args: Vec<Value>,
+    ) -> Result<Value, String> {
+        let value = self
+            .get(name)
+            .ok_or_else(|| format!("Undefined '{}'", name))?;
+
+        let mut entries = match value {
+            Value::Object(entries) => entries,
+            _ => return Err(format!("'{}' is not jsondata", name)),
+        };
+
+        match method {
+            "len" => {
+                if !args.is_empty() {
+                    return Err("jsondata.len expects no arguments".into());
+                }
+
+                Ok(Value::Num(entries.len() as f64))
+            }
+
+            "keys" => {
+                if !args.is_empty() {
+                    return Err("jsondata.keys expects no arguments".into());
+                }
+
+                Ok(Value::List(
+                    entries
+                        .iter()
+                        .map(|(key, _)| Value::Text(key.clone()))
+                        .collect(),
+                ))
+            }
+
+            "values" => {
+                if !args.is_empty() {
+                    return Err("jsondata.values expects no arguments".into());
+                }
+
+                Ok(Value::List(
+                    entries
+                        .iter()
+                        .map(|(_, value)| value.clone())
+                        .collect(),
+                ))
+            }
+
+            "has" => {
+                if args.len() != 1 {
+                    return Err("jsondata.has expects 1 argument".into());
+                }
+
+                let key = match &args[0] {
+                    Value::Text(key) => key,
+                    _ => return Err("jsondata.has expects a text key".into()),
+                };
+
+                Ok(Value::Bool(entries.iter().any(|(name, _)| name == key)))
+            }
+
+            "get" => {
+                if args.len() != 1 {
+                    return Err("jsondata.get expects 1 argument".into());
+                }
+
+                let key = match &args[0] {
+                    Value::Text(key) => key,
+                    _ => return Err("jsondata.get expects a text key".into()),
+                };
+
+                Ok(entries
+                    .iter()
+                    .find(|(name, _)| name == key)
+                    .map(|(_, value)| value.clone())
+                    .unwrap_or(Value::Null))
+            }
+
+            "remove" => {
+                if args.len() != 1 {
+                    return Err("jsondata.remove expects 1 argument".into());
+                }
+
+                let key = match &args[0] {
+                    Value::Text(key) => key,
+                    _ => return Err("jsondata.remove expects a text key".into()),
+                };
+
+                let index = entries
+                    .iter()
+                    .position(|(name, _)| name == key)
+                    .ok_or_else(|| format!("Jsondata key '{}' not found", key))?;
+
+                let (_, removed) = entries.remove(index);
+
+                self.assign(name, Value::Object(entries))?;
+
+                Ok(removed)
+            }
+
+            _ => Err(format!("Unknown jsondata method '{}'", method)),
+        }
+    }
+
     fn primary(&mut self, tokens: &[Token], position: &mut usize) -> Result<Value, String> {
         if *position >= tokens.len() {
             return Err("Expected value".into());
@@ -768,6 +890,19 @@ impl Runtime {
                         let values = arguments.into_iter().map(|argument| argument.0).collect();
 
                         return self.call_list_method(&name, &member, values);
+                    }
+
+                    if let Some(Value::Object(_)) = self.get(&name) {
+                        expect_token(tokens, position, Tok::LParen)?;
+
+                        let arguments = self.parse_call_args(tokens, position)?;
+
+                        let values = arguments
+                            .into_iter()
+                            .map(|argument| argument.0)
+                            .collect();
+
+                        return self.call_jsondata_method(&name, &member, values);
                     }
 
                     // Existing module behavior.
@@ -896,6 +1031,47 @@ impl Runtime {
                     is_closure: true,
                     owner_module: self.active_module.clone(),
                 })))
+            }
+
+            Tok::LBrace => {
+                *position += 1;
+
+                let mut entries = Vec::new();
+
+                while *position < tokens.len()
+                    && tokens[*position].kind != Tok::RBrace
+                {
+                    let key_value = self.expr(tokens, position, 0)?;
+
+                    let key = match key_value {
+                        Value::Text(text) => text,
+                        _ => return Err("Jsondata keys must be text".into()),
+                    };
+
+                    expect_token(tokens, position, Tok::Colon)?;
+
+                    let value = self.expr(tokens, position, 0)?;
+
+                    if let Some((_, existing)) =
+                        entries.iter_mut().find(|(name, _)| name == &key)
+                    {
+                        *existing = value;
+                    } else {
+                        entries.push((key, value));
+                    }
+
+                    if *position < tokens.len()
+                        && tokens[*position].kind == Tok::Comma
+                    {
+                        *position += 1;
+                    } else {
+                        break;
+                    }
+                }
+
+                expect_token(tokens, position, Tok::RBrace)?;
+
+                Ok(Value::Object(entries))
             }
 
             _ => Err(format!("Unexpected token '{}'", token.text)),
@@ -1365,6 +1541,32 @@ impl Runtime {
                         Ok(())
                     } else {
                         update(&mut items[index], &indices[1..], value)
+                    }
+                }
+
+                Value::Object(entries) => {
+                    let key = match &indices[0] {
+                        Value::Text(key) => key.clone(),
+                        _ => return Err("Jsondata index must be text".into()),
+                    };
+
+                    if indices.len() == 1 {
+                        if let Some((_, existing)) =
+                            entries.iter_mut().find(|(name, _)| name == &key)
+                        {
+                            *existing = value;
+                        } else {
+                            entries.push((key, value));
+                        }
+
+                        Ok(())
+                    } else {
+                        let (_, nested) = entries
+                            .iter_mut()
+                            .find(|(name, _)| name == &key)
+                            .ok_or_else(|| format!("Jsondata key '{}' not found", key))?;
+
+                        update(nested, &indices[1..], value)
                     }
                 }
 
@@ -1913,29 +2115,82 @@ impl Runtime {
         label: Option<String>,
     ) -> Result<(Flow, usize), String> {
         let end = self.find_end(lines, start)?;
-
         let tokens = &lines[start].tokens;
 
         let expression_start = if tokens[0].kind == Tok::At { 3 } else { 1 };
 
-        let value = self.eval(&tokens[expression_start..])?;
+        let body = &lines[start + 1..end];
 
-        let count = match value {
-            Value::Num(n) if n.is_finite() && n >= 0.0 && n.fract() == 0.0 => n as usize,
+        // Detect: repeat item in collection
+        let is_collection_loop =
+            tokens.len() > expression_start + 2
+                && tokens[expression_start].kind == Tok::Id
+                && tokens[expression_start + 1].text == "in";
 
-            _ => return Err("repeat requires a non-negative integer".into()),
+        let (iteration_values, variable_name) = if is_collection_loop {
+            let name = tokens[expression_start].text.clone();
+
+            let collection = self.eval(&tokens[expression_start + 2..])?;
+
+            let values = match collection {
+                Value::List(items) => items,
+
+                Value::Text(text) => text
+                    .chars()
+                    .map(|character| Value::Text(character.to_string()))
+                    .collect(),
+
+                Value::Object(entries) => entries
+                    .into_iter()
+                    .map(|(key, _)| Value::Text(key))
+                    .collect(),
+
+                _ => return Err("repeat in requires a list, text or jsondata".into()),
+            };
+
+            (values, Some(name))
+        } else {
+            let value = self.eval(&tokens[expression_start..])?;
+
+            let count = match value {
+                Value::Num(n)
+                    if n.is_finite()
+                        && n >= 0.0
+                        && n.fract() == 0.0
+                        && n <= usize::MAX as f64 =>
+                {
+                    n as usize
+                }
+
+                _ => return Err("repeat requires a non-negative integer".into()),
+            };
+
+            if count > LOOP_LIMIT {
+                return Err(format!(
+                    "Loop iteration limit reached ({})",
+                    LOOP_LIMIT
+                ));
+            }
+
+            (vec![Value::Null; count], None)
         };
 
-        if count > LOOP_LIMIT {
-            return Err(format!("Loop iteration limit reached ({})", LOOP_LIMIT));
+        if iteration_values.len() > LOOP_LIMIT {
+            return Err(format!(
+                "Loop iteration limit reached ({})",
+                LOOP_LIMIT
+            ));
         }
-
-        let body = &lines[start + 1..end];
 
         self.loop_depth += 1;
 
         let result = (|| -> Result<Flow, String> {
-            for _ in 0..count {
+            for value in iteration_values {
+                if let Some(name) = &variable_name {
+                    // Bind the current element.
+                    self.define_var(name, value);
+                }
+
                 let flow = self.run(body)?;
 
                 match flow {

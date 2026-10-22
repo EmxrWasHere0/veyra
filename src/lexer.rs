@@ -21,6 +21,8 @@ pub enum Tok {
     At,
     Eof,
     Colon,
+    LBrace,
+    RBrace,
 }
 
 #[derive(Clone, Debug)]
@@ -188,6 +190,9 @@ pub fn lex(source: &str) -> Result<Vec<Token>, String> {
 
             '[' => Some(Tok::LBracket),
             ']' => Some(Tok::RBracket),
+
+            '{' => Some(Tok::LBrace),
+            '}' => Some(Tok::RBrace),
 
             ',' => Some(Tok::Comma),
 
