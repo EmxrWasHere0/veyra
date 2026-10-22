@@ -20,6 +20,7 @@ pub enum Tok {
     Dot,
     At,
     Eof,
+    Colon,
 }
 
 #[derive(Clone, Debug)]
@@ -194,6 +195,8 @@ pub fn lex(source: &str) -> Result<Vec<Token>, String> {
             '@' => Some(Tok::At),
 
             '?' => Some(Tok::Question),
+
+            ':' => Some(Tok::Colon),
 
             '+' | '-' | '*' | '/' | '%' | '<' | '>' | '=' | '!' => Some(Tok::Op),
 

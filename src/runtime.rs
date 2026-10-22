@@ -435,7 +435,11 @@ impl Runtime {
         Ok(result)
     }
 
-    fn postfix(&mut self, tokens: &[Token], position: &mut usize) -> Result<Value, String> {
+    fn postfix(
+        &mut self,
+        tokens: &[Token],
+        position: &mut usize,
+    ) -> Result<Value, String> {
         let mut value = self.primary(tokens, position)?;
 
         while *position < tokens.len() {
@@ -445,29 +449,98 @@ impl Runtime {
 
             *position += 1;
 
-            let index = self.expr(tokens, position, 0)?;
-
-            expect_token(tokens, position, Tok::RBracket)?;
-
-            value = match value {
-                Value::List(items) => {
-                    let index = normalize_index(&index, items.len())?;
-
-                    items[index].clone()
-                }
-
-                Value::Text(text) => {
-                    let chars: Vec<char> = text.chars().collect();
-
-                    let index = normalize_index(&index, chars.len())?;
-
-                    Value::Text(chars[index].to_string())
-                }
-
-                _ => {
-                    return Err("Indexing requires a list or text".into());
-                }
+            let first = if *position < tokens.len()
+                && tokens[*position].kind != Tok::Colon
+                && tokens[*position].kind != Tok::RBracket
+            {
+                Some(self.expr(tokens, position, 0)?)
+            } else {
+                None
             };
+
+            if *position < tokens.len() && tokens[*position].kind == Tok::Colon {
+                // Slice: value[start:end:step]
+                *position += 1;
+
+                let second = if *position < tokens.len()
+                    && tokens[*position].kind != Tok::Colon
+                    && tokens[*position].kind != Tok::RBracket
+                {
+                    Some(self.expr(tokens, position, 0)?)
+                } else {
+                    None
+                };
+
+                let mut third = None;
+
+                if *position < tokens.len() && tokens[*position].kind == Tok::Colon {
+                    *position += 1;
+
+                    if *position < tokens.len()
+                        && tokens[*position].kind != Tok::RBracket
+                    {
+                        third = Some(self.expr(tokens, position, 0)?);
+                    }
+                }
+
+                expect_token(tokens, position, Tok::RBracket)?;
+
+                let start = first.as_ref().map(Self::slice_number).transpose()?;
+                let end = second.as_ref().map(Self::slice_number).transpose()?;
+                let step = third
+                    .as_ref()
+                    .map(Self::slice_number)
+                    .transpose()?
+                    .unwrap_or(1);
+
+                value = match value {
+                    Value::List(items) => {
+                        let indices = Self::slice_indices(items.len(), start, end, step)?;
+
+                        Value::List(
+                            indices
+                                .into_iter()
+                                .map(|index| items[index].clone())
+                                .collect(),
+                        )
+                    }
+
+                    Value::Text(text) => {
+                        let chars: Vec<char> = text.chars().collect();
+
+                        let indices = Self::slice_indices(chars.len(), start, end, step)?;
+
+                        Value::Text(
+                            indices
+                                .into_iter()
+                                .map(|index| chars[index])
+                                .collect(),
+                        )
+                    }
+
+                    _ => return Err("Slicing requires a list or text".into()),
+                };
+            } else {
+                // Normal indexing: value[index]
+                let index = first.ok_or("Empty index expression")?;
+
+                expect_token(tokens, position, Tok::RBracket)?;
+
+                value = match value {
+                    Value::List(items) => {
+                        let index = normalize_index(&index, items.len())?;
+                        items[index].clone()
+                    }
+
+                    Value::Text(text) => {
+                        let chars: Vec<char> = text.chars().collect();
+                        let index = normalize_index(&index, chars.len())?;
+                        Value::Text(chars[index].to_string())
+                    }
+
+                    _ => return Err("Indexing requires a list or text".into()),
+                };
+            }
         }
 
         Ok(value)
@@ -1135,6 +1208,81 @@ impl Runtime {
         self.active_module = saved_module;
 
         result
+    }
+
+    fn slice_number(value: &Value) -> Result<i64, String> {
+        match value {
+            Value::Num(number)
+                if number.is_finite()
+                    && number.fract() == 0.0
+                    && *number >= i64::MIN as f64
+                    && *number < i64::MAX as f64 =>
+            {
+                Ok(*number as i64)
+            }
+
+            _ => Err("Slice index must be an integer".into()),
+        }
+    }
+
+    fn slice_indices(
+        length: usize,
+        start: Option<i64>,
+        end: Option<i64>,
+        step: i64,
+    ) -> Result<Vec<usize>, String> {
+        if step == 0 {
+            return Err("Slice step cannot be zero".into());
+        }
+
+        let len = length as i64;
+        let mut result = Vec::new();
+
+        if step > 0 {
+            let mut i = start.unwrap_or(0);
+            let mut stop = end.unwrap_or(len);
+
+            if i < 0 {
+                i += len;
+            }
+
+            if stop < 0 {
+                stop += len;
+            }
+
+            i = i.clamp(0, len);
+            stop = stop.clamp(0, len);
+
+            while i < stop {
+                result.push(i as usize);
+                i += step;
+            }
+        } else {
+            let mut i = start.unwrap_or(len - 1);
+            let mut stop = end.unwrap_or(-1);
+
+            if let Some(_) = start {
+                if i < 0 {
+                    i += len;
+                }
+            }
+
+            if let Some(_) = end {
+                if stop < 0 {
+                    stop += len;
+                }
+            }
+
+            i = i.clamp(-1, len - 1);
+            stop = stop.clamp(-1, len - 1);
+
+            while i > stop {
+                result.push(i as usize);
+                i += step;
+            }
+        }
+
+        Ok(result)
     }
 
     pub fn module_call(
