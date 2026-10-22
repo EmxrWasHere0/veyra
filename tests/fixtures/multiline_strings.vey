@@ -1,0 +1,4 @@
+add message = """Hello
+World"""
+
+say message

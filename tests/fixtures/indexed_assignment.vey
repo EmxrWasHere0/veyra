@@ -1,0 +1,11 @@
+add numbers = [10, 20, 30]
+
+numbers[0] = 99
+
+say numbers[0]
+
+add matrix = [[10, 20], [30, 40]]
+
+matrix[1][0] = 50
+
+say matrix[1][0]

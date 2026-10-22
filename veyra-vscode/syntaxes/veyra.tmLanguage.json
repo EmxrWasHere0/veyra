@@ -9,14 +9,16 @@
     { "include": "#constants" },
     { "include": "#mod-statement" },
     { "include": "#labeled-loops" },
-    { "include": "#keywords" },
     { "include": "#function-definition" },
     { "include": "#lambda" },
+    { "include": "#collection-loop" },
+    { "include": "#keywords" },
+    { "include": "#builtins" },
     { "include": "#module-access" },
     { "include": "#function-call" },
-    { "include": "#builtins" },
     { "include": "#special-variables" },
     { "include": "#operators" },
+    { "include": "#punctuation" },
     { "include": "#identifiers" }
   ],
   "repository": {
@@ -30,6 +32,28 @@
     },
     "strings": {
       "patterns": [
+        {
+          "name": "string.quoted.triple.double.veyra",
+          "begin": "\"\"\"",
+          "end": "\"\"\"",
+          "patterns": [
+            {
+              "name": "constant.character.escape.veyra",
+              "match": "\\\\(n|t|r|\\\\|\"|')"
+            }
+          ]
+        },
+        {
+          "name": "string.quoted.triple.single.veyra",
+          "begin": "'''",
+          "end": "'''",
+          "patterns": [
+            {
+              "name": "constant.character.escape.veyra",
+              "match": "\\\\(n|t|r|\\\\|\"|')"
+            }
+          ]
+        },
         {
           "name": "string.quoted.double.veyra",
           "begin": "\"",
@@ -73,7 +97,6 @@
     "mod-statement": {
       "patterns": [
         {
-          "comment": "Selective module import: mod system [get_env, args]",
           "match": "^\\s*(mod)\\s+([a-zA-Z_][a-zA-Z0-9_]*)\\s*(\\[)([^\\]]*)(\\])",
           "captures": {
             "1": { "name": "keyword.control.import.veyra" },
@@ -95,7 +118,6 @@
           }
         },
         {
-          "comment": "Wildcard module import: mod base *",
           "match": "^\\s*(mod)\\s+([a-zA-Z_][a-zA-Z0-9_]*)\\s*(\\*)",
           "captures": {
             "1": { "name": "keyword.control.import.veyra" },
@@ -104,7 +126,6 @@
           }
         },
         {
-          "comment": "Simple module import: mod system",
           "match": "^\\s*(mod)\\s+([a-zA-Z_][a-zA-Z0-9_]*)\\s*$",
           "captures": {
             "1": { "name": "keyword.control.import.veyra" },
@@ -116,7 +137,6 @@
     "labeled-loops": {
       "patterns": [
         {
-          "comment": "Labeled loop: @outer repeat",
           "match": "(^\\s*)(@)([a-zA-Z_][a-zA-Z0-9_]*)(?=\\s+repeat\\b)",
           "captures": {
             "2": { "name": "punctuation.definition.label.veyra" },
@@ -124,7 +144,6 @@
           }
         },
         {
-          "comment": "Labeled loop control: stop @outer or fwd @outer",
           "match": "\\b(stop|fwd)\\b\\s+(@)([a-zA-Z_][a-zA-Z0-9_]*)",
           "captures": {
             "1": { "name": "keyword.control.veyra" },
@@ -134,32 +153,12 @@
         }
       ]
     },
-    "keywords": {
-      "patterns": [
-        {
-          "name": "keyword.control.veyra",
-          "match": "\\b(if|else|end|repeat|while|stop|fwd|return|try|catch)\\b"
-        },
-        {
-          "name": "keyword.declaration.veyra",
-          "match": "\\b(set|add|func)\\b"
-        },
-        {
-          "name": "keyword.other.veyra",
-          "match": "\\b(say|get|assert)\\b"
-        },
-        {
-          "name": "keyword.operator.logical.veyra",
-          "match": "\\b(and|or|not)\\b"
-        }
-      ]
-    },
     "function-definition": {
       "patterns": [
         {
-          "match": "\\b(add)\\s+([a-zA-Z_][a-zA-Z0-9_]*)\\s*(\\()",
+          "match": "\\b(add|func)\\s+([a-zA-Z_][a-zA-Z0-9_]*)\\s*(\\()",
           "captures": {
-            "1": { "name": "keyword.declaration.veyra" },
+            "1": { "name": "keyword.declaration.function.veyra" },
             "2": { "name": "entity.name.function.veyra" },
             "3": { "name": "punctuation.definition.parameters.begin.veyra" }
           }
@@ -181,11 +180,54 @@
         }
       ]
     },
+    "collection-loop": {
+      "patterns": [
+        {
+          "match": "\\b(repeat)\\s+([a-zA-Z_][a-zA-Z0-9_]*)\\s+(in)\\b",
+          "captures": {
+            "1": { "name": "keyword.control.loop.veyra" },
+            "2": { "name": "variable.other.loop.veyra" },
+            "3": { "name": "keyword.operator.membership.veyra" }
+          }
+        }
+      ]
+    },
+    "keywords": {
+      "patterns": [
+        {
+          "name": "keyword.control.veyra",
+          "match": "\\b(if|else|end|repeat|while|stop|fwd|return|try|catch|throw|test)\\b"
+        },
+        {
+          "name": "keyword.declaration.veyra",
+          "match": "\\b(set|add|func)\\b"
+        },
+        {
+          "name": "keyword.other.veyra",
+          "match": "\\b(say|get|assert)\\b"
+        },
+        {
+          "name": "keyword.operator.logical.veyra",
+          "match": "\\b(and|or|not)\\b"
+        },
+        {
+          "name": "keyword.operator.membership.veyra",
+          "match": "\\bin\\b"
+        }
+      ]
+    },
+    "builtins": {
+      "patterns": [
+        {
+          "name": "support.function.builtin.veyra",
+          "match": "\\b(len|num|text|type)\\b(?=\\s*\\()"
+        }
+      ]
+    },
     "module-access": {
       "patterns": [
         {
-          "comment": "Built-in module function call",
-          "match": "\\b(system|io|base)(\\.)\\s*([a-zA-Z_][a-zA-Z0-9_]*)(?=\\s*\\()",
+          "match": "\\b(system|io|base|json|http|websocket|math|time|fs|random)(\\.)([a-zA-Z_][a-zA-Z0-9_]*)(?=\\s*\\()",
           "captures": {
             "1": { "name": "support.class.module.builtin.veyra" },
             "2": { "name": "punctuation.accessor.dot.veyra" },
@@ -193,8 +235,7 @@
           }
         },
         {
-          "comment": "Built-in module member access",
-          "match": "\\b(system|io|base)(\\.)([a-zA-Z_][a-zA-Z0-9_]*)",
+          "match": "\\b(system|io|base|json|http|websocket|math|time|fs|random)(\\.)([a-zA-Z_][a-zA-Z0-9_]*)",
           "captures": {
             "1": { "name": "support.class.module.builtin.veyra" },
             "2": { "name": "punctuation.accessor.dot.veyra" },
@@ -202,7 +243,14 @@
           }
         },
         {
-          "comment": "Generic module function call",
+          "match": "\\b([a-zA-Z_][a-zA-Z0-9_]*)(\\.)(append|pop|len|index|insert|remove|clear|reverse|sort|upper|lower|trim|trim_start|trim_end|contains|starts_with|ends_with|replace|split|join|keys|values|has|get)(?=\\s*\\()",
+          "captures": {
+            "1": { "name": "variable.other.veyra" },
+            "2": { "name": "punctuation.accessor.dot.veyra" },
+            "3": { "name": "support.function.method.veyra" }
+          }
+        },
+        {
           "match": "\\b([a-zA-Z_][a-zA-Z0-9_]*)(\\.)([a-zA-Z_][a-zA-Z0-9_]*)(?=\\s*\\()",
           "captures": {
             "1": { "name": "entity.name.namespace.veyra" },
@@ -211,7 +259,6 @@
           }
         },
         {
-          "comment": "Generic module member access",
           "match": "\\b([a-zA-Z_][a-zA-Z0-9_]*)(\\.)([a-zA-Z_][a-zA-Z0-9_]*)",
           "captures": {
             "1": { "name": "entity.name.namespace.veyra" },
@@ -231,14 +278,6 @@
         }
       ]
     },
-    "builtins": {
-      "patterns": [
-        {
-          "name": "support.function.builtin.veyra",
-          "match": "\\b(len|num|text|type)\\b(?=\\s*\\()"
-        }
-      ]
-    },
     "special-variables": {
       "patterns": [
         {
@@ -250,17 +289,14 @@
     "operators": {
       "patterns": [
         {
-          "comment": "Null-coalescing operator",
           "name": "keyword.operator.null-coalescing.veyra",
           "match": "\\?\\?"
         },
         {
-          "comment": "Conditional assignment operator",
           "name": "keyword.operator.assignment.conditional.veyra",
           "match": "\\?="
         },
         {
-          "comment": "Channel operator",
           "name": "keyword.operator.channel.veyra",
           "match": "\\?(?![?=])"
         },
@@ -273,10 +309,6 @@
           "match": "==|!=|<=|>=|<|>"
         },
         {
-          "name": "keyword.operator.assignment.augmented.veyra",
-          "match": "\\+=|-=|\\*=|/=|%="
-        },
-        {
           "name": "keyword.operator.assignment.veyra",
           "match": "="
         },
@@ -287,6 +319,34 @@
         {
           "name": "punctuation.accessor.dot.veyra",
           "match": "\\."
+        }
+      ]
+    },
+    "punctuation": {
+      "patterns": [
+        {
+          "name": "punctuation.definition.list.begin.veyra",
+          "match": "\\["
+        },
+        {
+          "name": "punctuation.definition.list.end.veyra",
+          "match": "\\]"
+        },
+        {
+          "name": "punctuation.definition.jsondata.begin.veyra",
+          "match": "\\{"
+        },
+        {
+          "name": "punctuation.definition.jsondata.end.veyra",
+          "match": "\\}"
+        },
+        {
+          "name": "punctuation.separator.key-value.veyra",
+          "match": ":"
+        },
+        {
+          "name": "punctuation.separator.comma.veyra",
+          "match": ","
         }
       ]
     },

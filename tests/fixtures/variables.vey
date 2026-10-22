@@ -1,0 +1,5 @@
+add x = 10
+say x
+
+x = 20
+say x

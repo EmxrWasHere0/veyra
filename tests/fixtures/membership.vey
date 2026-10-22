@@ -1,0 +1,6 @@
+add numbers = [10, 20, 30]
+add data = {"name": "Veyra"}
+
+say 20 in numbers
+say 50 not in numbers
+say "name" in data

@@ -2,7 +2,7 @@
   "name": "veyra",
   "displayName": "Veyra",
   "description": "Syntax highlighting and language support for the Veyra programming language.",
-  "version": "0.2.4",
+  "version": "0.2.6",
   "publisher": "veyra-lang",
   "license": "GPL-3.0-only",
   "engines": {
@@ -16,7 +16,8 @@
     "veyra",
     "vey",
     "syntax-highlighting",
-    "language-support"
+    "language-support",
+    "repl"
   ],
   "repository": {
     "type": "git",
@@ -25,6 +26,7 @@
   "files": [
     "README.md",
     "package.json",
+    "extension.js",
     "icons/**",
     "syntaxes/**",
     "snippets/**",
@@ -32,6 +34,10 @@
     "LICENSE"
   ],
   "icon": "icons/veyra.png",
+  "main": "./extension.js",
+  "activationEvents": [
+    "onCommand:veyra.startREPL"
+  ],
   "contributes": {
     "languages": [
       {
@@ -65,6 +71,13 @@
       {
         "language": "veyra",
         "path": "./snippets/veyra.json"
+      }
+    ],
+    "commands": [
+      {
+        "command": "veyra.startREPL",
+        "title": "Start REPL",
+        "category": "Veyra"
       }
     ]
   },

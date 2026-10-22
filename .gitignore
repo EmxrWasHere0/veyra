@@ -14,5 +14,3 @@ Cargo.lock
 *.pdb
 
 veyra
-
-tests

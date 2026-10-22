@@ -1,0 +1,7 @@
+try
+    throw "Caught"
+catch error
+    say "Caught"
+end
+
+say "Finished"

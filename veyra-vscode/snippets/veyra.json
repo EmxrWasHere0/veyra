@@ -14,6 +14,7 @@
     "body": ["mod ${1:name} [${2:member1}, ${3:member2}]", "$0"],
     "description": "Import selected members from a module"
   },
+
   "mod system": {
     "prefix": "modsys",
     "body": ["mod system", "$0"],
@@ -29,6 +30,7 @@
     "body": ["mod system [${1:get_env}, ${2:args}]", "$0"],
     "description": "Import selected members from the system module"
   },
+
   "mod io": {
     "prefix": "modio",
     "body": ["mod io", "$0"],
@@ -44,6 +46,7 @@
     "body": ["mod io [${1:read}, ${2:write}]", "$0"],
     "description": "Import selected members from the io module"
   },
+
   "mod base": {
     "prefix": "modbase",
     "body": ["mod base", "$0"],
@@ -58,5 +61,162 @@
     "prefix": "modbasei",
     "body": ["mod base [${1:hostname}, ${2:pid}]", "$0"],
     "description": "Import selected members from the base module"
+  },
+
+  "mod json": {
+    "prefix": "modjson",
+    "body": ["mod json", "$0"],
+    "description": "Import the JSON module"
+  },
+  "mod http": {
+    "prefix": "modhttp",
+    "body": ["mod http", "$0"],
+    "description": "Import the HTTP module"
+  },
+  "mod websocket": {
+    "prefix": "modws",
+    "body": ["mod websocket", "$0"],
+    "description": "Import the WebSocket module"
+  },
+  "mod math": {
+    "prefix": "modmath",
+    "body": ["mod math", "$0"],
+    "description": "Import the math module"
+  },
+  "mod time": {
+    "prefix": "modtime",
+    "body": ["mod time", "$0"],
+    "description": "Import the time module"
+  },
+  "mod fs": {
+    "prefix": "modfs",
+    "body": ["mod fs", "$0"],
+    "description": "Import the filesystem module"
+  },
+  "mod random": {
+    "prefix": "modrandom",
+    "body": ["mod random", "$0"],
+    "description": "Import the random module"
+  },
+
+  "add variable": {
+    "prefix": "add",
+    "body": ["add ${1:name} = ${2:value}", "$0"],
+    "description": "Declare a mutable variable"
+  },
+  "set constant": {
+    "prefix": "set",
+    "body": ["set ${1:name} = ${2:value}", "$0"],
+    "description": "Declare a constant and channel"
+  },
+  "say": {
+    "prefix": "say",
+    "body": ["say ${1:value}", "$0"],
+    "description": "Print a value"
+  },
+  "get input": {
+    "prefix": "get",
+    "body": ["get ${1:name} \"${2:Enter a value: }\"", "$0"],
+    "description": "Read user input with a prompt"
+  },
+
+  "if": {
+    "prefix": "if",
+    "body": ["if ${1:condition}", "    $0", "end"],
+    "description": "Create an if block"
+  },
+  "if else": {
+    "prefix": "ifelse",
+    "body": [
+      "if ${1:condition}",
+      "    ${2:statement}",
+      "else",
+      "    $0",
+      "end"
+    ],
+    "description": "Create an if-else block"
+  },
+  "while": {
+    "prefix": "while",
+    "body": ["while ${1:condition}", "    $0", "end"],
+    "description": "Create a while loop"
+  },
+  "repeat": {
+    "prefix": "repeat",
+    "body": ["repeat ${1:count}", "    $0", "end"],
+    "description": "Repeat a block a fixed number of times"
+  },
+  "repeat collection": {
+    "prefix": "repeatin",
+    "body": ["repeat ${1:item} in ${2:collection}", "    $0", "end"],
+    "description": "Iterate over a collection"
+  },
+  "repeat labeled": {
+    "prefix": "repeatlabel",
+    "body": ["@${1:outer} repeat ${2:count}", "    $0", "end"],
+    "description": "Create a labeled repeat loop"
+  },
+  "stop": {
+    "prefix": "stop",
+    "body": ["stop${1: @outer}$0"],
+    "description": "Stop a loop, optionally by label"
+  },
+  "fwd": {
+    "prefix": "fwd",
+    "body": ["fwd${1: @outer}$0"],
+    "description": "Continue a loop, optionally by label"
+  },
+
+  "function": {
+    "prefix": "func",
+    "body": ["add ${1:name}(${2:params})", "    $0", "end"],
+    "description": "Declare a Veyra function"
+  },
+  "lambda": {
+    "prefix": "lambda",
+    "body": ["func(${1:params}) => ${2:expression}$0"],
+    "description": "Create a lambda expression"
+  },
+  "return": {
+    "prefix": "return",
+    "body": ["return ${1:value}$0"],
+    "description": "Return a value from a function"
+  },
+
+  "try catch": {
+    "prefix": "try",
+    "body": ["try", "    ${1:statement}", "catch ${2:error}", "    $0", "end"],
+    "description": "Handle runtime errors"
+  },
+  "throw": {
+    "prefix": "throw",
+    "body": ["throw ${1:\"Error message\"}$0"],
+    "description": "Throw a runtime error"
+  },
+  "test": {
+    "prefix": "test",
+    "body": ["test ${1:name}", "    $0", "end"],
+    "description": "Declare a test block"
+  },
+  "assert": {
+    "prefix": "assert",
+    "body": ["assert ${1:condition}$0"],
+    "description": "Assert that a condition is true"
+  },
+
+  "list": {
+    "prefix": "list",
+    "body": ["add ${1:items} = [${2:1, 2, 3}]$0"],
+    "description": "Create a list"
+  },
+  "jsondata": {
+    "prefix": "jsondata",
+    "body": ["add ${1:data} = {", "    \"${2:key}\": ${3:value}", "}$0"],
+    "description": "Create a JSON-like object"
+  },
+  "multiline string": {
+    "prefix": "multistr",
+    "body": ["add ${1:text} = \"\"\"", "${2:Text goes here}", "\"\"\"$0"],
+    "description": "Create a multiline string"
   }
 }

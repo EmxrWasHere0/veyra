@@ -1,0 +1,5 @@
+add numbers = [10, 20, 30, 40, 50]
+
+say numbers[1]
+say numbers[-1]
+say numbers[1:4][1]

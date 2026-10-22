@@ -1,0 +1,14 @@
+add double(x)
+    return x * 2
+end
+
+add factorial(n)
+    if n <= 1
+        return 1
+    end
+
+    return n * factorial(n - 1)
+end
+
+say double(21)
+say factorial(5)

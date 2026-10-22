@@ -1,0 +1,4 @@
+add x = 10
+add y = 0
+
+say x / y

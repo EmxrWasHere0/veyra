@@ -1,0 +1,13 @@
+add numbers = [10, 20]
+
+numbers.append(30)
+
+say numbers.len()
+
+numbers.pop()
+
+say numbers.len()
+
+numbers.clear()
+
+say numbers.len()

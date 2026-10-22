@@ -1,0 +1,5 @@
+add data = {"name": "Veyra"}
+
+say data["name"]
+say data.has("name")
+say type(data)

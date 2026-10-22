@@ -4,11 +4,22 @@
   },
   "brackets": [
     ["(", ")"],
-    ["[", "]"]
+    ["[", "]"],
+    ["{", "}"]
   ],
   "autoClosingPairs": [
-    { "open": "(", "close": ")" },
-    { "open": "[", "close": "]" },
+    {
+      "open": "(",
+      "close": ")"
+    },
+    {
+      "open": "[",
+      "close": "]"
+    },
+    {
+      "open": "{",
+      "close": "}"
+    },
     {
       "open": "\"",
       "close": "\"",
@@ -23,28 +34,23 @@
   "surroundingPairs": [
     ["(", ")"],
     ["[", "]"],
+    ["{", "}"],
     ["\"", "\""],
     ["'", "'"]
   ],
   "indentationRules": {
-    "increaseIndentPattern": "^\\s*(?:(?:@[a-zA-Z_][a-zA-Z0-9_]*\\s+)?(?:if|else\\s+if|else|repeat(?:\\s+while)?|add)\\b.*|try\\b.*|catch(?:\\s+\\w+)?\\b.*)$",
-    "decreaseIndentPattern": "^\\s*(?:end\\b|else(?:\\s+if\\b)?|catch(?:\\s+\\w+)?\\b).*$"
+    "increaseIndentPattern": "^\\s*(?:(?:if|else\\s+if|else|while|try|catch)\\b.*|(?:@[a-zA-Z_][a-zA-Z0-9_]*\\s+)?repeat\\b.*|(?:add|func)\\s+[a-zA-Z_][a-zA-Z0-9_]*\\s*\\([^)]*\\)\\s*(?:#.*)?)$",
+    "decreaseIndentPattern": "^\\s*(?:end\\b|else(?:\\s+if\\b)?|catch\\b).*$"
   },
   "folding": {
     "markers": {
-      "start": "^\\s*(?:(?:@[a-zA-Z_][a-zA-Z0-9_]*\\s+)?(?:if|repeat(?:\\s+while)?|add)\\b|try\\b|catch(?:\\s+\\w+)?\\b)",
-      "end": "^\\s*end\\s*$"
+      "start": "^\\s*(?:(?:if|while|try)\\b|(?:@[a-zA-Z_][a-zA-Z0-9_]*\\s+)?repeat\\b|(?:add|func)\\s+[a-zA-Z_][a-zA-Z0-9_]*\\s*\\(|else\\b|catch\\b)",
+      "end": "^\\s*end\\s*(?:#.*)?$"
     }
   },
   "onEnterRules": [
     {
-      "beforeText": "^\\s*(?:(?:@[a-zA-Z_][a-zA-Z0-9_]*\\s+)?(?:if|else\\s+if|else|repeat(?:\\s+while)?|add)\\b.*|try\\b.*|catch(?:\\s+\\w+)?\\b.*)$",
-      "action": {
-        "indent": "indent"
-      }
-    },
-    {
-      "beforeText": "^\\s*(?:else(?:\\s+if)?|catch(?:\\s+\\w+)?)\\b.*$",
+      "beforeText": "^\\s*(?:(?:if|else\\s+if|else|while|try|catch)\\b.*|(?:@[a-zA-Z_][a-zA-Z0-9_]*\\s+)?repeat\\b.*|(?:add|func)\\s+[a-zA-Z_][a-zA-Z0-9_]*\\s*\\([^)]*\\)\\s*(?:#.*)?)$",
       "action": {
         "indent": "indent"
       }

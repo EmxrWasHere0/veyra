@@ -200,6 +200,8 @@ pub struct Runtime {
     // Function execution state.
     function_depth: usize,
     loop_depth: usize,
+
+    current_line: Option<(String, usize)>,
 }
 
 fn normalize_index(index: &Value, length: usize) -> Result<usize, String> {
@@ -294,6 +296,8 @@ impl Runtime {
 
             function_depth: 0,
             loop_depth: 0,
+
+            current_line: None,
         };
 
         for (name, module) in builtin_modules() {
@@ -1446,55 +1450,69 @@ impl Runtime {
     // ========================================================
 
     pub fn call_tagged(
-        &mut self,
-        func: &Rc<Function>,
-        args: Vec<(Value, Option<String>)>,
-    ) -> Result<Value, String> {
-        if self.call_depth >= CALL_LIMIT {
-            return Err(format!("Call stack limit reached ({})", CALL_LIMIT));
-        }
-
-        let (values, tags): (Vec<_>, Vec<_>) = args.into_iter().unzip();
-
-        let planned_values = plan_values(func, values)?;
-        let planned_tags = plan_tags(func, tags);
-
-        let saved_module = self.active_module.clone();
-
-        self.active_module = func.owner_module.clone();
-
-        // Functions have closed scopes.
-        let saved_scopes = std::mem::replace(&mut self.scopes, vec![HashMap::new()]);
-
-        let saved_consts = std::mem::replace(&mut self.consts, vec![HashSet::new()]);
-
-        let saved_tags = std::mem::replace(&mut self.tags, vec![HashMap::new()]);
-
-        let saved_return = self.return_value.take();
-        let saved_last = self.last_value.take();
-        let saved_loop_depth = self.loop_depth;
-
-        self.loop_depth = 0;
-        self.call_depth += 1;
-        self.function_depth += 1;
-
-        let result = call_inner(self, func, planned_values, planned_tags);
-
-        self.function_depth -= 1;
-        self.call_depth -= 1;
-        self.loop_depth = saved_loop_depth;
-
-        self.scopes = saved_scopes;
-        self.consts = saved_consts;
-        self.tags = saved_tags;
-
-        self.return_value = saved_return;
-        self.last_value = saved_last;
-
-        self.active_module = saved_module;
-
-        result
+    &mut self,
+    func: &Rc<Function>,
+    args: Vec<(Value, Option<String>)>,
+) -> Result<Value, String> {
+    if self.call_depth >= CALL_LIMIT {
+        return Err(format!("Call stack limit reached ({})", CALL_LIMIT));
     }
+
+    let (values, tags): (Vec<_>, Vec<_>) = args.into_iter().unzip();
+
+    let planned_values = plan_values(func, values)?;
+    let planned_tags = plan_tags(func, tags);
+
+    // Capture the caller's source location.
+    let call_site = self.current_line.clone();
+
+    let saved_module = self.active_module.clone();
+    self.active_module = func.owner_module.clone();
+
+    // Functions have closed scopes.
+    let saved_scopes =
+        std::mem::replace(&mut self.scopes, vec![HashMap::new()]);
+
+    let saved_consts =
+        std::mem::replace(&mut self.consts, vec![HashSet::new()]);
+
+    let saved_tags =
+        std::mem::replace(&mut self.tags, vec![HashMap::new()]);
+
+    let saved_return = self.return_value.take();
+    let saved_last = self.last_value.take();
+    let saved_loop_depth = self.loop_depth;
+
+    self.loop_depth = 0;
+    self.call_depth += 1;
+    self.function_depth += 1;
+
+    let result = call_inner(self, func, planned_values, planned_tags);
+
+    self.function_depth -= 1;
+    self.call_depth -= 1;
+    self.loop_depth = saved_loop_depth;
+
+    self.scopes = saved_scopes;
+    self.consts = saved_consts;
+    self.tags = saved_tags;
+
+    self.return_value = saved_return;
+    self.last_value = saved_last;
+    self.active_module = saved_module;
+
+    // Append a traceback frame when the function fails.
+    result.map_err(|error| {
+        if let Some((file, line)) = call_site {
+            format!(
+                "{}\n  at {}:{} in {}()",
+                error, file, line, func.name
+            )
+        } else {
+            format!("{}\n  at <unknown> in {}()", error, func.name)
+        }
+    })
+}
 
     fn slice_number(value: &Value) -> Result<i64, String> {
         match value {
@@ -2060,9 +2078,16 @@ impl Runtime {
     // ========================================================
 
     pub fn run(&mut self, lines: &[Line]) -> Result<Flow, String> {
-        let mut position = 0;
+        let saved_line = self.current_line.clone();
+
+        let result = (|| -> Result<Flow, String> {
+            let mut position = 0;
 
         while position < lines.len() {
+            self.current_line = Some((
+                lines[position].source.to_string(),
+                lines[position].number,
+            ));
             let tokens = &lines[position].tokens;
 
             if tokens.is_empty() {
@@ -2174,7 +2199,12 @@ impl Runtime {
         }
 
         Ok(Flow::Normal)
-    }
+    })();
+
+    self.current_line = saved_line;
+
+    result
+}
 
     fn find_end(&self, lines: &[Line], start: usize) -> Result<usize, String> {
         let mut depth = 1usize;
@@ -3233,10 +3263,41 @@ fn unescape_string(text: &str) -> String {
     result
 }
 fn format_error(line: &Line, error: String) -> String {
-    // Errors already containing a source location are preserved.
+    // Preserve errors that already contain source locations.
     if error.contains(".vey:") || error.contains(".veymod:") {
         return error;
     }
 
-    format!("{}:{}: {}", line.source, line.number, error)
+    let location = format!("{}:{}", line.source, line.number);
+
+    let source_line = std::fs::read_to_string(line.source.as_str())
+        .ok()
+        .and_then(|source| {
+            source
+                .lines()
+                .nth(line.number.saturating_sub(1))
+                .map(str::to_string)
+        });
+
+    match source_line {
+        Some(source) => {
+            let trimmed = source.trim_end();
+
+            let line_width = line.number.to_string().len();
+
+            let marker_length = trimmed.chars().count().max(1);
+
+            format!(
+                "{}: {}\n\n  {} | {}\n  {} | {}",
+                location,
+                error,
+                line.number,
+                trimmed,
+                " ".repeat(line_width),
+                "^".repeat(marker_length)
+            )
+        }
+
+        None => format!("{}: {}", location, error),
+    }
 }

@@ -1,0 +1,5 @@
+add text = "Hello"
+
+say text.upper()
+say text.lower()
+say text.contains("ell")
