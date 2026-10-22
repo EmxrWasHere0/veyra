@@ -505,6 +505,9 @@ Veyra includes built-in modules for interacting with the operating system, envir
 - **`system`** — Operating system information, environment variables, command-line arguments, and process exit control.
 - **`io`** — File and directory operations, working directory management, and external command execution.
 - **`base`** — Basic system information, including hostname, username, home directory, process ID, and CPU core count.
+- **`json`** — Built-in JSON parser, powered by `serde_json`.
+- **`http`** — HTTP client with header and return code support, powered by `reqwest`.
+- **`websocket`** — WebSocket client with detailed configuration, powered by `tungstenite`.
 
 Import a module with `mod`:
 
@@ -528,8 +531,6 @@ mod system [get_env, args]
 say get_env("HOME")
 ```
 
-For more examples, see [`examples/mod_test.vy`](examples/mod_test.vy).
-
 **Note:** Functions that access files, environment variables, or external processes interact with the host system.
 
 ---
@@ -542,7 +543,7 @@ Syntax highlighting, snippets, and basic language configuration are available as
 cd veyra-vscode
 npm install -g @vscode/vsce
 vsce package
-code --install-extension veyra-0.1.0.vsix
+code --install-extension veyra-0.2.4.vsix
 ```
 
 ---

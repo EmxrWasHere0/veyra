@@ -46,6 +46,7 @@ pub struct Function {
     pub params: Vec<Param>,
     pub body: Vec<Line>,
     pub is_closure: bool,
+    pub owner_module: Option<String>,
 }
 
 #[derive(Clone, Debug)]
@@ -820,6 +821,7 @@ impl Runtime {
                         number: 1,
                     }],
                     is_closure: true,
+                    owner_module: self.active_module.clone(),
                 })))
             }
 
@@ -1098,6 +1100,10 @@ impl Runtime {
         let planned_values = plan_values(func, values)?;
         let planned_tags = plan_tags(func, tags);
 
+        let saved_module = self.active_module.clone();
+
+        self.active_module = func.owner_module.clone();
+
         // Functions have closed scopes.
         let saved_scopes = std::mem::replace(&mut self.scopes, vec![HashMap::new()]);
 
@@ -1125,6 +1131,8 @@ impl Runtime {
 
         self.return_value = saved_return;
         self.last_value = saved_last;
+
+        self.active_module = saved_module;
 
         result
     }
@@ -1159,10 +1167,6 @@ impl Runtime {
                 return Err(format!("'{}.{}' is private", mod_name, func_name));
             }
 
-            let previous_module = self.active_module.clone();
-
-            self.active_module = Some(mod_name.to_string());
-
             let arguments = args
                 .into_iter()
                 .enumerate()
@@ -1172,11 +1176,7 @@ impl Runtime {
                 })
                 .collect();
 
-            let result = self.call_tagged(&func, arguments);
-
-            self.active_module = previous_module;
-
-            return result;
+            return self.call_tagged(&func, arguments);
         }
 
         if self.veyra_modules.contains_key(mod_name) {
@@ -1187,6 +1187,46 @@ impl Runtime {
         }
 
         Err(format!("Unknown module '{}'", mod_name))
+    }
+
+    fn assign_indexed(
+        &mut self,
+        name: &str,
+        indices: &[Value],
+        value: Value,
+    ) -> Result<(), String> {
+        if indices.is_empty() {
+            return Err("Indexed assignment requires an index".into());
+        }
+
+        let mut root = self
+            .get(name)
+            .ok_or_else(|| format!("Undefined '{}'", name))?;
+
+        fn update(
+            target: &mut Value,
+            indices: &[Value],
+            value: Value,
+        ) -> Result<(), String> {
+            match target {
+                Value::List(items) => {
+                    let index = normalize_index(&indices[0], items.len())?;
+
+                    if indices.len() == 1 {
+                        items[index] = value;
+                        Ok(())
+                    } else {
+                        update(&mut items[index], &indices[1..], value)
+                    }
+                }
+
+                _ => Err("Indexed assignment requires a list".into()),
+            }
+        }
+
+        update(&mut root, indices, value)?;
+
+        self.assign(name, root)
     }
 
     fn module_constant(&self, mod_name: &str, member: &str) -> Result<Value, String> {
@@ -1367,6 +1407,61 @@ impl Runtime {
             }
 
             return Ok(Flow::Normal);
+        }
+
+        // Indexed assignment: items[index] = value
+        if tokens.len() >= 4
+            && tokens[0].kind == Tok::Id
+            && tokens[1].kind == Tok::LBracket
+        {
+            let name = tokens[0].text.clone();
+            let mut position = 1;
+            let mut indices = Vec::new();
+
+            while position < tokens.len() && tokens[position].kind == Tok::LBracket {
+                position += 1;
+
+                let start = position;
+                let mut depth = 1usize;
+
+                while position < tokens.len() && depth > 0 {
+                    match tokens[position].kind {
+                        Tok::LBracket => depth += 1,
+                        Tok::RBracket => depth -= 1,
+                        _ => {}
+                    }
+
+                    if depth > 0 {
+                        position += 1;
+                    }
+                }
+
+                if depth != 0 {
+                    return Err("Unclosed index bracket".into());
+                }
+
+                let index_tokens = &tokens[start..position];
+
+                if index_tokens.is_empty() {
+                    return Err("Empty index expression".into());
+                }
+
+                indices.push(self.eval(index_tokens)?);
+
+                position += 1;
+            }
+
+            if position < tokens.len() && tokens[position].text == "=" {
+                if position + 1 >= tokens.len() {
+                    return Err("Expected value after '='".into());
+                }
+
+                let value = self.eval(&tokens[position + 1..])?;
+
+                self.assign_indexed(&name, &indices, value)?;
+
+                return Ok(Flow::Normal);
+            }
         }
 
         if tokens.len() >= 3 && tokens[0].kind == Tok::Id && tokens[1].text == "=" {
@@ -1831,6 +1926,7 @@ impl Runtime {
             params,
             body,
             is_closure: false,
+            owner_module: self.active_module.clone(),
         });
 
         self.functions.insert(name, func);

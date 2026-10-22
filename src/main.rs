@@ -110,7 +110,7 @@ fn main() {
 
 fn print_help() {
     println!(
-        "Veyra {} - A Turkish-flavored programming language",
+        "Veyra {} - a programming language made for fun",
         env!("CARGO_PKG_VERSION")
     );
     println!();
