@@ -892,6 +892,19 @@ impl Runtime {
                         return self.call_list_method(&name, &member, values);
                     }
 
+                    if let Some(Value::Text(_)) = self.get(&name) {
+                        expect_token(tokens, position, Tok::LParen)?;
+
+                        let arguments = self.parse_call_args(tokens, position)?;
+
+                        let values = arguments
+                            .into_iter()
+                            .map(|argument| argument.0)
+                            .collect();
+
+                        return self.call_text_method(&name, &member, values);
+                    }
+
                     if let Some(Value::Object(_)) = self.get(&name) {
                         expect_token(tokens, position, Tok::LParen)?;
 
@@ -2226,6 +2239,133 @@ impl Runtime {
         self.loop_depth -= 1;
 
         Ok((result?, end + 1))
+    }
+
+    fn call_text_method(
+        &mut self,
+        name: &str,
+        method: &str,
+        args: Vec<Value>,
+    ) -> Result<Value, String> {
+        let value = self
+            .get(name)
+            .ok_or_else(|| format!("Undefined '{}'", name))?;
+
+        let text = match value {
+            Value::Text(text) => text,
+            _ => return Err(format!("'{}' is not text", name)),
+        };
+
+        let expect_count = |expected: usize| -> Result<(), String> {
+            if args.len() != expected {
+                return Err(format!(
+                    "text.{} expects {} argument(s)",
+                    method, expected
+                ));
+            }
+
+            Ok(())
+        };
+
+        let text_arg = |index: usize| -> Result<&str, String> {
+            match args.get(index) {
+                Some(Value::Text(value)) => Ok(value.as_str()),
+                _ => Err(format!(
+                    "text.{} expects text argument at position {}",
+                    method,
+                    index + 1
+                )),
+            }
+        };
+
+        match method {
+            "len" => {
+                expect_count(0)?;
+                Ok(Value::Num(text.chars().count() as f64))
+            }
+
+            "upper" => {
+                expect_count(0)?;
+                Ok(Value::Text(text.to_uppercase()))
+            }
+
+            "lower" => {
+                expect_count(0)?;
+                Ok(Value::Text(text.to_lowercase()))
+            }
+
+            "trim" => {
+                expect_count(0)?;
+                Ok(Value::Text(text.trim().to_string()))
+            }
+
+            "trim_start" => {
+                expect_count(0)?;
+                Ok(Value::Text(text.trim_start().to_string()))
+            }
+
+            "trim_end" => {
+                expect_count(0)?;
+                Ok(Value::Text(text.trim_end().to_string()))
+            }
+
+            "contains" => {
+                expect_count(1)?;
+                Ok(Value::Bool(text.contains(text_arg(0)?)))
+            }
+
+            "starts_with" => {
+                expect_count(1)?;
+                Ok(Value::Bool(text.starts_with(text_arg(0)?)))
+            }
+
+            "ends_with" => {
+                expect_count(1)?;
+                Ok(Value::Bool(text.ends_with(text_arg(0)?)))
+            }
+
+            "replace" => {
+                expect_count(2)?;
+
+                Ok(Value::Text(
+                    text.replace(text_arg(0)?, text_arg(1)?)
+                ))
+            }
+
+            "split" => {
+                expect_count(1)?;
+
+                let separator = text_arg(0)?;
+
+                Ok(Value::List(
+                    text.split(separator)
+                        .map(|part| Value::Text(part.to_string()))
+                        .collect()
+                ))
+            }
+
+            "join" => {
+                expect_count(1)?;
+
+                let items = match &args[0] {
+                    Value::List(items) => items,
+                    _ => return Err("text.join expects a list".into()),
+                };
+
+                let mut parts = Vec::new();
+
+                for item in items {
+                    match item {
+                        Value::Text(part) => parts.push(part.as_str()),
+                        _ => return Err("text.join requires a list of text values".into()),
+                    }
+                }
+
+                Ok(Value::Text(parts.join(&text)))
+            }
+
+            _ => Err(format!("Unknown text method '{}'", method)),
+        }
     }
 
     fn handle_while(&mut self, lines: &[Line], start: usize) -> Result<(Flow, usize), String> {
