@@ -4,6 +4,10 @@ pub mod io;
 pub mod json;
 pub mod system;
 pub mod websocket;
+pub mod math;
+pub mod time;
+pub mod fs;
+pub mod random;
 
 use crate::runtime::Value;
 
@@ -31,5 +35,9 @@ pub fn builtin_modules() -> Vec<(String, Box<dyn VeyraModule>)> {
             "websocket".into(),
             Box::new(websocket::WebSocketModule::new()),
         ),
+        ("math".into(), Box::new(math::MathModule)),
+        ("time".into(), Box::new(time::TimeModule)),
+        ("fs".into(), Box::new(fs::FsModule)),
+        ("random".into(), Box::new(random::RandomModule::new())),
     ]
 }

@@ -15,3 +15,5 @@ tungstenite = { version = "0.24", default-features = false, features = [
     "handshake",
     "rustls-tls-webpki-roots"
 ] }
+chrono = { version = "0.4", features = ["clock"] }
+rand = "0.8"
