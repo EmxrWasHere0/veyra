@@ -2,7 +2,7 @@ use std::collections::{HashMap, HashSet};
 use std::path::PathBuf;
 use std::rc::Rc;
 
-use crate::lexer::{Tok, Token};
+use crate::lexer::{lex, Tok, Token};
 use crate::modules::{builtin_modules, VeyraModule};
 
 pub const CALL_LIMIT: usize = 1000;
@@ -552,6 +552,118 @@ impl Runtime {
         Ok(value)
     }
 
+    fn eval_interpolated_string(&mut self, source: &str) -> Result<Value, String> {
+        let chars: Vec<char> = source.chars().collect();
+
+        let mut result = String::new();
+        let mut literal = String::new();
+        let mut position = 0usize;
+
+        while position < chars.len() {
+            match chars[position] {
+                '{' => {
+                    if position + 1 < chars.len() && chars[position + 1] == '{' {
+                        literal.push('{');
+                        position += 2;
+                        continue;
+                    }
+
+                    result.push_str(&unescape_string(&literal));
+                    literal.clear();
+
+                    position += 1;
+
+                    let start = position;
+                    let mut depth = 1usize;
+                    let mut quote: Option<char> = None;
+
+                    while position < chars.len() {
+                        let character = chars[position];
+
+                        if let Some(active_quote) = quote {
+                            if character == '\\' && position + 1 < chars.len() {
+                                position += 2;
+                                continue;
+                            }
+
+                            if character == active_quote {
+                                quote = None;
+                            }
+
+                            position += 1;
+                            continue;
+                        }
+
+                        match character {
+                            '"' | '\'' => {
+                                quote = Some(character);
+                            }
+
+                            '{' => {
+                                depth += 1;
+                            }
+
+                            '}' => {
+                                depth -= 1;
+
+                                if depth == 0 {
+                                    break;
+                                }
+                            }
+
+                            _ => {}
+                        }
+
+                        position += 1;
+                    }
+
+                    if depth != 0 {
+                        return Err("Unclosed interpolation expression".into());
+                    }
+
+                    let expression: String = chars[start..position]
+                        .iter()
+                        .collect();
+
+                    if expression.trim().is_empty() {
+                        return Err("Empty interpolation expression".into());
+                    }
+
+                    let tokens = lex(&expression)?;
+
+                    let expression_tokens: Vec<Token> = tokens
+                        .into_iter()
+                        .filter(|token| token.kind != Tok::Eof)
+                        .collect();
+
+                    let value = self.eval(&expression_tokens)?;
+
+                    result.push_str(&value.to_string());
+
+                    position += 1;
+                }
+
+                '}' => {
+                    if position + 1 < chars.len() && chars[position + 1] == '}' {
+                        literal.push('}');
+                        position += 2;
+                    } else {
+                        return Err("Unexpected '}' in interpolated string".into());
+                    }
+                }
+
+                character => {
+                    literal.push(character);
+                    position += 1;
+                }
+            }
+        }
+
+        result.push_str(&unescape_string(&literal));
+
+        Ok(Value::Text(result))
+    }
+
     fn expr(
         &mut self,
         tokens: &[Token],
@@ -946,7 +1058,14 @@ impl Runtime {
 
         let token = tokens[*position].clone();
 
+        
         match token.kind {
+            Tok::InterpolatedString => {
+                *position += 1;
+
+                self.eval_interpolated_string(&token.text)
+            }
+
             Tok::Val => {
                 *position += 1;
 

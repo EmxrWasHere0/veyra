@@ -86,10 +86,7 @@ fn while_dispatch() {
 
 #[test]
 fn multiline_strings() {
-    assert_output(
-        "multiline_strings.vey",
-        "Hello\nWorld\n",
-    );
+    assert_output("multiline_strings.vey", "Hello\nWorld\n");
 }
 
 #[test]
@@ -112,50 +109,32 @@ use std::process::Stdio;
 
 #[test]
 fn list_slicing() {
-    assert_output(
-        "list_slicing.vey",
-        "20\n50\n30\n",
-    );
+    assert_output("list_slicing.vey", "20\n50\n30\n");
 }
 
 #[test]
 fn indexed_assignment() {
-    assert_output(
-        "indexed_assignment.vey",
-        "99\n50\n",
-    );
+    assert_output("indexed_assignment.vey", "99\n50\n");
 }
 
 #[test]
 fn membership() {
-    assert_output(
-        "membership.vey",
-        "true\ntrue\ntrue\n",
-    );
+    assert_output("membership.vey", "true\ntrue\ntrue\n");
 }
 
 #[test]
 fn throw_catch() {
-    assert_output(
-        "throw_catch.vey",
-        "Caught\nFinished\n",
-    );
+    assert_output("throw_catch.vey", "Caught\nFinished\n");
 }
 
 #[test]
 fn collection_repeat() {
-    assert_output(
-        "collection_repeat.vey",
-        "10\n20\n30\n",
-    );
+    assert_output("collection_repeat.vey", "10\n20\n30\n");
 }
 
 #[test]
 fn list_methods() {
-    assert_output(
-        "list_methods.vey",
-        "3\n2\n0\n",
-    );
+    assert_output("list_methods.vey", "3\n2\n0\n");
 }
 
 #[test]
@@ -171,14 +150,10 @@ fn get_input() {
     {
         let stdin = child.stdin.as_mut().expect("Missing stdin");
 
-        stdin
-            .write_all(b"Veyra\n")
-            .expect("Failed to send input");
+        stdin.write_all(b"Veyra\n").expect("Failed to send input");
     }
 
-    let output = child
-        .wait_with_output()
-        .expect("Failed to wait for Veyra");
+    let output = child.wait_with_output().expect("Failed to wait for Veyra");
 
     assert!(
         output.status.success(),
@@ -215,21 +190,14 @@ fn error_location_with_source() {
         stderr
     );
 
-    assert!(
-        stderr.contains('^'),
-        "Error marker is missing:\n{}",
-        stderr
-    );
+    assert!(stderr.contains('^'), "Error marker is missing:\n{}", stderr);
 }
 
 #[test]
 fn function_traceback() {
     let output = run_script("traceback.vey");
 
-    assert!(
-        !output.status.success(),
-        "Script should fail"
-    );
+    assert!(!output.status.success(), "Script should fail");
 
     let stderr = String::from_utf8_lossy(&output.stderr);
 
@@ -249,5 +217,30 @@ fn function_traceback() {
         stderr.contains("in calculate()"),
         "Missing calculate() traceback frame:\n{}",
         stderr
+    );
+}
+
+#[test]
+fn string_interpolation() {
+    let output = std::process::Command::new(env!("CARGO_BIN_EXE_veyra"))
+        .arg("--test")
+        .arg("tests/fixtures/string_interpolation.vey")
+        .output()
+        .expect("Failed to execute Veyra");
+
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    let stderr = String::from_utf8_lossy(&output.stderr);
+
+    assert!(
+        output.status.success(),
+        "Veyra exited with an error:\n{}\n{}",
+        stdout,
+        stderr
+    );
+
+    assert!(
+        stdout.contains("13 passed, 0 failed"),
+        "Unexpected test results:\n{}",
+        stdout
     );
 }

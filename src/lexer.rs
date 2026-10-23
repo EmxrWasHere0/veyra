@@ -5,6 +5,7 @@ use crate::runtime::Line;
 #[derive(Clone, Debug, PartialEq)]
 pub enum Tok {
     Val,
+    InterpolatedString,
     Id,
     Op,
     LParen,
@@ -52,6 +53,70 @@ pub fn lex(source: &str) -> Result<Vec<Token>, String> {
             while i < len && chars[i] != '\n' {
                 i += 1;
             }
+            continue;
+        }
+
+        // Interpolated strings
+        if c == 'f'
+            && i + 1 < len
+            && (chars[i + 1] == '"' || chars[i + 1] == '\'')
+        {
+            let quote = chars[i + 1];
+            let start = i;
+
+            i += 2;
+
+            let triple = i + 1 < len
+                && chars[i] == quote
+                && chars[i + 1] == quote;
+
+            if triple {
+                i += 2;
+            }
+
+            let mut content = String::new();
+            let mut closed = false;
+
+            while i < len {
+                if chars[i] == '\\' && i + 1 < len {
+                    content.push(chars[i]);
+                    content.push(chars[i + 1]);
+                    i += 2;
+                    continue;
+                }
+
+                if triple {
+                    if i + 2 < len
+                        && chars[i] == quote
+                        && chars[i + 1] == quote
+                        && chars[i + 2] == quote
+                    {
+                        i += 3;
+                        closed = true;
+                        break;
+                    }
+                } else if chars[i] == quote {
+                    i += 1;
+                    closed = true;
+                    break;
+                }
+
+                content.push(chars[i]);
+                i += 1;
+            }
+
+            if !closed {
+                return Err(format!(
+                    "Unterminated interpolated string starting at column {}",
+                    start + 1
+                ));
+            }
+
+            tokens.push(Token {
+                kind: Tok::InterpolatedString,
+                text: content,
+            });
+
             continue;
         }
 

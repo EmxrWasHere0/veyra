@@ -1,0 +1,33 @@
+add name = "Alex"
+add age = 20
+
+assert f"Hello, {name}!" == "Hello, Alex!"
+assert f"Next year: {age + 1}" == "Next year: 21"
+
+assert f"{{name}}" == "{name}"
+assert f"{{name}} = {name}" == "{name} = Alex"
+
+assert f"Boolean: {age >= 18}" == "Boolean: true"
+
+add numbers = [10, 20, 30]
+
+assert f"Second: {numbers[1]}" == "Second: 20"
+assert f"Total: {numbers[0] + numbers[2]}" == "Total: 40"
+
+add user = {"name": "Veyra", "version": 0.27}
+
+assert f"Language: {user['name']}" == "Language: Veyra"
+
+assert f"List: {numbers}" == "List: [10, 20, 30]"
+
+assert f'Hello, {name}!' == "Hello, Alex!"
+
+add report = f"""
+Name: {name}
+Age: {age}
+Adult: {age >= 18}
+"""
+
+assert report.contains("Name: Alex")
+assert report.contains("Age: 20")
+assert report.contains("Adult: true")
