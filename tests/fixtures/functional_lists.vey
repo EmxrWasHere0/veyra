@@ -1,0 +1,35 @@
+add numbers = [1, 2, 3, 4, 5]
+
+add doubled = numbers.map(func(x) => x * 2)
+assert doubled == [2, 4, 6, 8, 10]
+
+add evens = numbers.filter(func(x) => x % 2 == 0)
+assert evens == [2, 4]
+
+add total = numbers.reduce(func(acc, x) => acc + x, 0)
+assert total == 15
+
+assert numbers.any(func(x) => x > 3) == true
+assert numbers.any(func(x) => x > 10) == false
+
+assert numbers.all(func(x) => x > 0) == true
+assert numbers.all(func(x) => x < 5) == false
+
+assert numbers == [1, 2, 3, 4, 5]
+
+add empty = []
+
+assert empty.map(func(x) => x * 2) == []
+assert empty.filter(func(x) => true) == []
+assert empty.reduce(func(acc, x) => acc + x, 100) == 100
+
+assert empty.any(func(x) => true) == false
+assert empty.all(func(x) => false) == true
+
+add words = ["hello", "veyra"]
+
+add upper_words = words.map(func(x) => x + "!")
+assert upper_words == ["hello!", "veyra!"]
+
+add lengths = words.map(len)
+assert lengths == [5, 5]

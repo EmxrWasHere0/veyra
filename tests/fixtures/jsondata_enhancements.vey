@@ -1,0 +1,38 @@
+add user = {"name": "Alex", "age": 20}
+add extra = {"age": 21, "active": true}
+
+add merged = user.merge(extra)
+
+assert merged["name"] == "Alex"
+assert merged["age"] == 21
+assert merged["active"] == true
+
+assert user["age"] == 20
+assert extra["age"] == 21
+
+add combined = user + extra
+
+assert combined == merged
+
+add pairs = user.items()
+
+assert pairs.len() == 2
+assert pairs[0] == ["name", "Alex"]
+assert pairs[1] == ["age", 20]
+
+add empty = {}
+
+assert empty.items() == []
+assert empty.merge(user) == user
+assert user.merge(empty) == user
+
+add nested = {"data": {"x": 1}}
+add update = {"data": {"y": 2}}
+
+add result = nested.merge(update)
+
+assert result["data"]["y"] == 2
+add data = result["data"]
+assert data.has("x") == false
+
+assert type(merged) == "jsondata"

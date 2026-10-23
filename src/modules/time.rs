@@ -1,9 +1,7 @@
 use crate::modules::VeyraModule;
 use crate::runtime::Value;
 
-use chrono::{
-    Datelike, Duration, Local, NaiveDate, NaiveDateTime, Timelike, Utc,
-};
+use chrono::{Datelike, Duration, Local, NaiveDate, NaiveDateTime, Timelike, Utc};
 
 use std::sync::OnceLock;
 use std::time::Instant;

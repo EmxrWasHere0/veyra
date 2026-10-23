@@ -244,3 +244,53 @@ fn string_interpolation() {
         stdout
     );
 }
+
+#[test]
+fn functional_lists() {
+    let output = std::process::Command::new(env!("CARGO_BIN_EXE_veyra"))
+        .arg("--test")
+        .arg("tests/fixtures/functional_lists.vey")
+        .output()
+        .expect("Failed to execute Veyra");
+
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    let stderr = String::from_utf8_lossy(&output.stderr);
+
+    assert!(
+        output.status.success(),
+        "Veyra exited with an error:\n{}\n{}",
+        stdout,
+        stderr
+    );
+
+    assert!(
+        stdout.contains("15 passed, 0 failed"),
+        "Unexpected test results:\n{}",
+        stdout
+    );
+}
+
+#[test]
+fn jsondata_enhancements() {
+    let output = std::process::Command::new(env!("CARGO_BIN_EXE_veyra"))
+        .arg("--test")
+        .arg("tests/fixtures/jsondata_enhancements.vey")
+        .output()
+        .expect("Failed to execute Veyra");
+
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    let stderr = String::from_utf8_lossy(&output.stderr);
+
+    assert!(
+        output.status.success(),
+        "Veyra exited with an error:\n{}\n{}",
+        stdout,
+        stderr
+    );
+
+    assert!(
+        stdout.contains("15 passed, 0 failed"),
+        "Unexpected test results:\n{}",
+        stdout
+    );
+}

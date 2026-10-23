@@ -259,6 +259,21 @@ fn values_equal(a: &Value, b: &Value) -> bool {
     }
 }
 
+fn merge_objects(
+    mut left: Vec<(String, Value)>,
+    right: Vec<(String, Value)>,
+) -> Vec<(String, Value)> {
+    for (key, value) in right {
+        if let Some((_, existing)) = left.iter_mut().find(|(name, _)| name == &key) {
+            *existing = value;
+        } else {
+            left.push((key, value));
+        }
+    }
+
+    left
+}
+
 impl Runtime {
     pub fn new() -> Self {
         let mut runtime = Self {
@@ -621,9 +636,7 @@ impl Runtime {
                         return Err("Unclosed interpolation expression".into());
                     }
 
-                    let expression: String = chars[start..position]
-                        .iter()
-                        .collect();
+                    let expression: String = chars[start..position].iter().collect();
 
                     if expression.trim().is_empty() {
                         return Err("Empty interpolation expression".into());
@@ -925,6 +938,84 @@ impl Runtime {
                 Ok(Value::List(items))
             }
 
+            "map" => {
+                if args.len() != 1 {
+                    return Err("list.map expects 1 argument".into());
+                }
+
+                let mut result = Vec::with_capacity(items.len());
+
+                for item in items {
+                    result.push(self.call_list_callback(&args[0], vec![item])?);
+                }
+
+                Ok(Value::List(result))
+            }
+
+            "filter" => {
+                if args.len() != 1 {
+                    return Err("list.filter expects 1 argument".into());
+                }
+
+                let mut result = Vec::new();
+
+                for item in items {
+                    let keep = self.call_list_callback(&args[0], vec![item.clone()])?;
+
+                    if keep.is_truthy() {
+                        result.push(item);
+                    }
+                }
+
+                Ok(Value::List(result))
+            }
+
+            "reduce" => {
+                if args.len() != 2 {
+                    return Err("list.reduce expects 2 arguments".into());
+                }
+
+                let mut accumulator = args[1].clone();
+
+                for item in items {
+                    accumulator = self.call_list_callback(&args[0], vec![accumulator, item])?;
+                }
+
+                Ok(accumulator)
+            }
+
+            "any" => {
+                if args.len() != 1 {
+                    return Err("list.any expects 1 argument".into());
+                }
+
+                for item in items {
+                    let result = self.call_list_callback(&args[0], vec![item])?;
+
+                    if result.is_truthy() {
+                        return Ok(Value::Bool(true));
+                    }
+                }
+
+                Ok(Value::Bool(false))
+            }
+
+            "all" => {
+                if args.len() != 1 {
+                    return Err("list.all expects 1 argument".into());
+                }
+
+                for item in items {
+                    let result = self.call_list_callback(&args[0], vec![item])?;
+
+                    if !result.is_truthy() {
+                        return Ok(Value::Bool(false));
+                    }
+                }
+
+                Ok(Value::Bool(true))
+            }
+
             _ => Err(format!("Unknown list method '{}'", method)),
         }
     }
@@ -1047,7 +1138,54 @@ impl Runtime {
                 Ok(removed)
             }
 
+            "merge" => {
+                if args.len() != 1 {
+                    return Err("jsondata.merge expects 1 argument".into());
+                }
+
+                let other = match &args[0] {
+                    Value::Object(entries) => entries.clone(),
+                    _ => return Err("jsondata.merge expects jsondata".into()),
+                };
+
+                Ok(Value::Object(merge_objects(entries, other)))
+            }
+
+            "items" => {
+                if !args.is_empty() {
+                    return Err("jsondata.items expects no arguments".into());
+                }
+
+                Ok(Value::List(
+                    entries
+                        .iter()
+                        .map(|(key, value)| {
+                            Value::List(vec![
+                                Value::Text(key.clone()),
+                                value.clone(),
+                            ])
+                        })
+                        .collect(),
+                ))
+            }
+
             _ => Err(format!("Unknown jsondata method '{}'", method)),
+        }
+    }
+
+    fn call_list_callback(&mut self, callback: &Value, args: Vec<Value>) -> Result<Value, String> {
+        let tagged_args = args.into_iter().map(|value| (value, None)).collect();
+
+        match callback {
+            Value::Func(func) => self.call_tagged(func, tagged_args),
+
+            Value::Native(name) => {
+                let values = tagged_args.into_iter().map(|(value, _)| value).collect();
+
+                self.call_native(name, values)
+            }
+
+            _ => Err("List callback must be a function".into()),
         }
     }
 
@@ -1058,7 +1196,6 @@ impl Runtime {
 
         let token = tokens[*position].clone();
 
-        
         match token.kind {
             Tok::InterpolatedString => {
                 *position += 1;
@@ -1232,7 +1369,6 @@ impl Runtime {
             }
 
             Tok::FuncKw => {
-                // Lambda: func(x, y) => x + y
                 *position += 1;
 
                 expect_token(tokens, position, Tok::LParen)?;
@@ -1241,8 +1377,35 @@ impl Runtime {
 
                 expect_token(tokens, position, Tok::Arrow)?;
 
-                let expression = tokens[*position..].to_vec();
-                *position = tokens.len();
+                let start = *position;
+
+                let mut depth = 0usize;
+
+                while *position < tokens.len() {
+                    match tokens[*position].kind {
+                        Tok::LParen | Tok::LBracket | Tok::LBrace => {
+                            depth += 1;
+                        }
+
+                        Tok::RParen | Tok::RBracket | Tok::RBrace => {
+                            if depth == 0 {
+                                break;
+                            }
+
+                            depth -= 1;
+                        }
+
+                        Tok::Comma if depth == 0 => {
+                            break;
+                        }
+
+                        _ => {}
+                    }
+
+                    *position += 1;
+                }
+
+                let expression = tokens[start..*position].to_vec();
 
                 if expression.is_empty() {
                     return Err("Lambda requires an expression".into());
@@ -1453,6 +1616,8 @@ impl Runtime {
                     Ok(Value::List(a))
                 }
 
+                (Value::Object(a), Value::Object(b)) => Ok(Value::Object(merge_objects(a, b))),
+
                 _ => Err("Invalid operands for '+'".into()),
             },
 
@@ -1569,69 +1734,63 @@ impl Runtime {
     // ========================================================
 
     pub fn call_tagged(
-    &mut self,
-    func: &Rc<Function>,
-    args: Vec<(Value, Option<String>)>,
-) -> Result<Value, String> {
-    if self.call_depth >= CALL_LIMIT {
-        return Err(format!("Call stack limit reached ({})", CALL_LIMIT));
-    }
-
-    let (values, tags): (Vec<_>, Vec<_>) = args.into_iter().unzip();
-
-    let planned_values = plan_values(func, values)?;
-    let planned_tags = plan_tags(func, tags);
-
-    // Capture the caller's source location.
-    let call_site = self.current_line.clone();
-
-    let saved_module = self.active_module.clone();
-    self.active_module = func.owner_module.clone();
-
-    // Functions have closed scopes.
-    let saved_scopes =
-        std::mem::replace(&mut self.scopes, vec![HashMap::new()]);
-
-    let saved_consts =
-        std::mem::replace(&mut self.consts, vec![HashSet::new()]);
-
-    let saved_tags =
-        std::mem::replace(&mut self.tags, vec![HashMap::new()]);
-
-    let saved_return = self.return_value.take();
-    let saved_last = self.last_value.take();
-    let saved_loop_depth = self.loop_depth;
-
-    self.loop_depth = 0;
-    self.call_depth += 1;
-    self.function_depth += 1;
-
-    let result = call_inner(self, func, planned_values, planned_tags);
-
-    self.function_depth -= 1;
-    self.call_depth -= 1;
-    self.loop_depth = saved_loop_depth;
-
-    self.scopes = saved_scopes;
-    self.consts = saved_consts;
-    self.tags = saved_tags;
-
-    self.return_value = saved_return;
-    self.last_value = saved_last;
-    self.active_module = saved_module;
-
-    // Append a traceback frame when the function fails.
-    result.map_err(|error| {
-        if let Some((file, line)) = call_site {
-            format!(
-                "{}\n  at {}:{} in {}()",
-                error, file, line, func.name
-            )
-        } else {
-            format!("{}\n  at <unknown> in {}()", error, func.name)
+        &mut self,
+        func: &Rc<Function>,
+        args: Vec<(Value, Option<String>)>,
+    ) -> Result<Value, String> {
+        if self.call_depth >= CALL_LIMIT {
+            return Err(format!("Call stack limit reached ({})", CALL_LIMIT));
         }
-    })
-}
+
+        let (values, tags): (Vec<_>, Vec<_>) = args.into_iter().unzip();
+
+        let planned_values = plan_values(func, values)?;
+        let planned_tags = plan_tags(func, tags);
+
+        // Capture the caller's source location.
+        let call_site = self.current_line.clone();
+
+        let saved_module = self.active_module.clone();
+        self.active_module = func.owner_module.clone();
+
+        // Functions have closed scopes.
+        let saved_scopes = std::mem::replace(&mut self.scopes, vec![HashMap::new()]);
+
+        let saved_consts = std::mem::replace(&mut self.consts, vec![HashSet::new()]);
+
+        let saved_tags = std::mem::replace(&mut self.tags, vec![HashMap::new()]);
+
+        let saved_return = self.return_value.take();
+        let saved_last = self.last_value.take();
+        let saved_loop_depth = self.loop_depth;
+
+        self.loop_depth = 0;
+        self.call_depth += 1;
+        self.function_depth += 1;
+
+        let result = call_inner(self, func, planned_values, planned_tags);
+
+        self.function_depth -= 1;
+        self.call_depth -= 1;
+        self.loop_depth = saved_loop_depth;
+
+        self.scopes = saved_scopes;
+        self.consts = saved_consts;
+        self.tags = saved_tags;
+
+        self.return_value = saved_return;
+        self.last_value = saved_last;
+        self.active_module = saved_module;
+
+        // Append a traceback frame when the function fails.
+        result.map_err(|error| {
+            if let Some((file, line)) = call_site {
+                format!("{}\n  at {}:{} in {}()", error, file, line, func.name)
+            } else {
+                format!("{}\n  at <unknown> in {}()", error, func.name)
+            }
+        })
+    }
 
     fn slice_number(value: &Value) -> Result<i64, String> {
         match value {
@@ -2202,128 +2361,126 @@ impl Runtime {
         let result = (|| -> Result<Flow, String> {
             let mut position = 0;
 
-        while position < lines.len() {
-            self.current_line = Some((
-                lines[position].source.to_string(),
-                lines[position].number,
-            ));
-            let tokens = &lines[position].tokens;
+            while position < lines.len() {
+                self.current_line =
+                    Some((lines[position].source.to_string(), lines[position].number));
+                let tokens = &lines[position].tokens;
 
-            if tokens.is_empty() {
-                position += 1;
-                continue;
+                if tokens.is_empty() {
+                    position += 1;
+                    continue;
+                }
+
+                let first = tokens[0].text.as_str();
+
+                match first {
+                    "if" => {
+                        let (flow, next) = self
+                            .handle_if(lines, position)
+                            .map_err(|error| format_error(&lines[position], error))?;
+
+                        position = next;
+
+                        if !matches!(flow, Flow::Normal) {
+                            return Ok(flow);
+                        }
+                    }
+
+                    "repeat" => {
+                        let (flow, next) = self
+                            .handle_repeat(lines, position, None)
+                            .map_err(|error| format_error(&lines[position], error))?;
+
+                        position = next;
+
+                        if !matches!(flow, Flow::Normal) {
+                            return Ok(flow);
+                        }
+                    }
+
+                    "while" => {
+                        let (flow, next) = self
+                            .handle_while(lines, position)
+                            .map_err(|error| format_error(&lines[position], error))?;
+
+                        position = next;
+
+                        if !matches!(flow, Flow::Normal) {
+                            return Ok(flow);
+                        }
+                    }
+
+                    "try" => {
+                        let (flow, next) = self
+                            .handle_try(lines, position)
+                            .map_err(|error| format_error(&lines[position], error))?;
+
+                        position = next;
+
+                        if !matches!(flow, Flow::Normal) {
+                            return Ok(flow);
+                        }
+                    }
+
+                    "add" | "func" if is_function_definition(tokens) => {
+                        position = self
+                            .handle_func_def(lines, position)
+                            .map_err(|error| format_error(&lines[position], error))?;
+                    }
+
+                    "mod" => {
+                        self.handle_mod(tokens)
+                            .map_err(|error| format_error(&lines[position], error))?;
+
+                        position += 1;
+                    }
+
+                    "test" => {
+                        position = self
+                            .handle_test(lines, position)
+                            .map_err(|error| format_error(&lines[position], error))?;
+                    }
+
+                    "end" | "else" | "catch" => {
+                        return Err(format_error(
+                            &lines[position],
+                            format!("Unexpected '{}'", first),
+                        ));
+                    }
+
+                    _ if tokens[0].kind == Tok::At => {
+                        let (flow, next) = self
+                            .handle_labeled(lines, position)
+                            .map_err(|error| format_error(&lines[position], error))?;
+
+                        position = next;
+
+                        if !matches!(flow, Flow::Normal) {
+                            return Ok(flow);
+                        }
+                    }
+
+                    _ => {
+                        let flow = self
+                            .run_line(&lines[position])
+                            .map_err(|error| format_error(&lines[position], error))?;
+
+                        if !matches!(flow, Flow::Normal) {
+                            return Ok(flow);
+                        }
+
+                        position += 1;
+                    }
+                }
             }
 
-            let first = tokens[0].text.as_str();
+            Ok(Flow::Normal)
+        })();
 
-            match first {
-                "if" => {
-                    let (flow, next) = self
-                        .handle_if(lines, position)
-                        .map_err(|error| format_error(&lines[position], error))?;
+        self.current_line = saved_line;
 
-                    position = next;
-
-                    if !matches!(flow, Flow::Normal) {
-                        return Ok(flow);
-                    }
-                }
-
-                "repeat" => {
-                    let (flow, next) = self
-                        .handle_repeat(lines, position, None)
-                        .map_err(|error| format_error(&lines[position], error))?;
-
-                    position = next;
-
-                    if !matches!(flow, Flow::Normal) {
-                        return Ok(flow);
-                    }
-                }
-
-                "while" => {
-                    let (flow, next) = self
-                        .handle_while(lines, position)
-                        .map_err(|error| format_error(&lines[position], error))?;
-
-                    position = next;
-
-                    if !matches!(flow, Flow::Normal) {
-                        return Ok(flow);
-                    }
-                }
-
-                "try" => {
-                    let (flow, next) = self
-                        .handle_try(lines, position)
-                        .map_err(|error| format_error(&lines[position], error))?;
-
-                    position = next;
-
-                    if !matches!(flow, Flow::Normal) {
-                        return Ok(flow);
-                    }
-                }
-
-                "add" | "func" if is_function_definition(tokens) => {
-                    position = self
-                        .handle_func_def(lines, position)
-                        .map_err(|error| format_error(&lines[position], error))?;
-                }
-
-                "mod" => {
-                    self.handle_mod(tokens)
-                        .map_err(|error| format_error(&lines[position], error))?;
-
-                    position += 1;
-                }
-
-                "test" => {
-                    position = self
-                        .handle_test(lines, position)
-                        .map_err(|error| format_error(&lines[position], error))?;
-                }
-
-                "end" | "else" | "catch" => {
-                    return Err(format_error(
-                        &lines[position],
-                        format!("Unexpected '{}'", first),
-                    ));
-                }
-
-                _ if tokens[0].kind == Tok::At => {
-                    let (flow, next) = self
-                        .handle_labeled(lines, position)
-                        .map_err(|error| format_error(&lines[position], error))?;
-
-                    position = next;
-
-                    if !matches!(flow, Flow::Normal) {
-                        return Ok(flow);
-                    }
-                }
-
-                _ => {
-                    let flow = self
-                        .run_line(&lines[position])
-                        .map_err(|error| format_error(&lines[position], error))?;
-
-                    if !matches!(flow, Flow::Normal) {
-                        return Ok(flow);
-                    }
-
-                    position += 1;
-                }
-            }
-        }
-
-        Ok(Flow::Normal)
-    })();
-
-    self.current_line = saved_line;
-
-    result
-}
+        result
+    }
 
     fn find_end(&self, lines: &[Line], start: usize) -> Result<usize, String> {
         let mut depth = 1usize;

@@ -57,18 +57,13 @@ pub fn lex(source: &str) -> Result<Vec<Token>, String> {
         }
 
         // Interpolated strings
-        if c == 'f'
-            && i + 1 < len
-            && (chars[i + 1] == '"' || chars[i + 1] == '\'')
-        {
+        if c == 'f' && i + 1 < len && (chars[i + 1] == '"' || chars[i + 1] == '\'') {
             let quote = chars[i + 1];
             let start = i;
 
             i += 2;
 
-            let triple = i + 1 < len
-                && chars[i] == quote
-                && chars[i + 1] == quote;
+            let triple = i + 1 < len && chars[i] == quote && chars[i + 1] == quote;
 
             if triple {
                 i += 2;
@@ -121,11 +116,7 @@ pub fn lex(source: &str) -> Result<Vec<Token>, String> {
         }
 
         // Triple-quoted multiline strings
-        if (c == '"' || c == '\'')
-            && i + 2 < len
-            && chars[i + 1] == c
-            && chars[i + 2] == c
-        {
+        if (c == '"' || c == '\'') && i + 2 < len && chars[i + 1] == c && chars[i + 2] == c {
             let quote = c;
             let start = i;
 
@@ -379,17 +370,11 @@ pub fn parse_lines(source: &str, filename: &str) -> Result<Vec<Line>, String> {
     for (index, raw_line) in source.lines().enumerate() {
         let line_number = index + 1;
 
-        if pending_source.is_empty()
-            && triple_quote.is_none()
-            && raw_line.trim().is_empty()
-        {
+        if pending_source.is_empty() && triple_quote.is_none() && raw_line.trim().is_empty() {
             continue;
         }
 
-        if pending_source.is_empty()
-            && triple_quote.is_none()
-            && raw_line.trim().starts_with('#')
-        {
+        if pending_source.is_empty() && triple_quote.is_none() && raw_line.trim().starts_with('#') {
             continue;
         }
 
@@ -450,10 +435,7 @@ pub fn parse_lines(source: &str, filename: &str) -> Result<Vec<Line>, String> {
             }
 
             if c == '"' || c == '\'' {
-                if i + 2 < chars.len()
-                    && chars[i + 1] == c
-                    && chars[i + 2] == c
-                {
+                if i + 2 < chars.len() && chars[i + 1] == c && chars[i + 2] == c {
                     triple_quote = Some(c);
                     i += 3;
                     continue;
@@ -474,9 +456,7 @@ pub fn parse_lines(source: &str, filename: &str) -> Result<Vec<Line>, String> {
 
         // Lex the accumulated source.
         let tokens = lex(&pending_source)
-            .map_err(|error| {
-                format!("{}:{}: {}", filename, pending_line, error)
-            })?;
+            .map_err(|error| format!("{}:{}: {}", filename, pending_line, error))?;
 
         let meaningful: Vec<Token> = tokens
             .into_iter()
@@ -492,44 +472,29 @@ pub fn parse_lines(source: &str, filename: &str) -> Result<Vec<Line>, String> {
                     delimiters.push((token.kind.clone(), pending_line));
                 }
 
-                Tok::RParen => {
-                    match delimiters.pop() {
-                        Some((Tok::LParen, _)) => {}
+                Tok::RParen => match delimiters.pop() {
+                    Some((Tok::LParen, _)) => {}
 
-                        _ => {
-                            return Err(format!(
-                                "{}:{}: Unexpected ')'",
-                                filename, line_number
-                            ));
-                        }
+                    _ => {
+                        return Err(format!("{}:{}: Unexpected ')'", filename, line_number));
                     }
-                }
+                },
 
-                Tok::RBracket => {
-                    match delimiters.pop() {
-                        Some((Tok::LBracket, _)) => {}
+                Tok::RBracket => match delimiters.pop() {
+                    Some((Tok::LBracket, _)) => {}
 
-                        _ => {
-                            return Err(format!(
-                                "{}:{}: Unexpected ']'",
-                                filename, line_number
-                            ));
-                        }
+                    _ => {
+                        return Err(format!("{}:{}: Unexpected ']'", filename, line_number));
                     }
-                }
+                },
 
-                Tok::RBrace => {
-                    match delimiters.pop() {
-                        Some((Tok::LBrace, _)) => {}
+                Tok::RBrace => match delimiters.pop() {
+                    Some((Tok::LBrace, _)) => {}
 
-                        _ => {
-                            return Err(format!(
-                                "{}:{}: Unexpected '}}'",
-                                filename, line_number
-                            ));
-                        }
+                    _ => {
+                        return Err(format!("{}:{}: Unexpected '}}'", filename, line_number));
                     }
-                }
+                },
 
                 _ => {}
             }
@@ -564,10 +529,7 @@ pub fn parse_lines(source: &str, filename: &str) -> Result<Vec<Line>, String> {
             _ => "?",
         };
 
-        return Err(format!(
-            "{}:{}: Unclosed '{}'",
-            filename, opened_at, symbol
-        ));
+        return Err(format!("{}:{}: Unclosed '{}'", filename, opened_at, symbol));
     }
 
     Ok(lines)
