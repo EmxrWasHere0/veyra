@@ -294,3 +294,28 @@ fn jsondata_enhancements() {
         stdout
     );
 }
+
+#[test]
+fn compound_assignment() {
+    let output = std::process::Command::new(env!("CARGO_BIN_EXE_veyra"))
+        .arg("--test")
+        .arg("tests/fixtures/compound_assignment.vey")
+        .output()
+        .expect("Failed to execute Veyra");
+
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    let stderr = String::from_utf8_lossy(&output.stderr);
+
+    assert!(
+        output.status.success(),
+        "Veyra exited with an error:\n{}\n{}",
+        stdout,
+        stderr
+    );
+
+    assert!(
+        stdout.contains("13 passed, 0 failed"),
+        "Unexpected test results:\n{}",
+        stdout
+    );
+}

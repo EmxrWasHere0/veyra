@@ -292,7 +292,8 @@ pub fn lex(source: &str) -> Result<Vec<Token>, String> {
             let two: String = chars[i..i + 2].iter().collect();
 
             let kind = match two.as_str() {
-                "??" | "==" | "!=" | "<=" | ">=" => Some(Tok::Op),
+                "??" | "==" | "!=" | "<=" | ">="
+                | "+=" | "-=" | "*=" | "/=" | "%=" => Some(Tok::Op),
 
                 "?=" => Some(Tok::QuestionEq),
                 "=>" => Some(Tok::Arrow),

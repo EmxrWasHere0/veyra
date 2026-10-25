@@ -1,0 +1,66 @@
+test numeric_compound_assignment
+    add x = 10
+
+    x += 5
+    assert x == 15
+
+    x -= 3
+    assert x == 12
+
+    x *= 2
+    assert x == 24
+
+    x /= 4
+    assert x == 6
+
+    x %= 4
+    assert x == 2
+end
+
+test text_compound_assignment
+    add message = "Hello"
+
+    message += " World"
+
+    assert message == "Hello World"
+end
+
+test list_compound_assignment
+    add numbers = [1, 2]
+
+    numbers += [3, 4]
+
+    assert numbers == [1, 2, 3, 4]
+end
+
+test jsondata_compound_assignment
+    add user = {"name": "Alex"}
+
+    user += {"age": 20}
+
+    assert user["name"] == "Alex"
+    assert user["age"] == 20
+end
+
+test channel_compound_assignment
+    set score = 10
+
+    score += 5
+    score += 3
+
+    assert score == 10
+    assert (0 ? score) == 18
+end
+
+test compound_assignment_errors
+    add x = 10
+
+    try
+        x /= 0
+        assert false
+    catch err
+        assert err.contains("Division by zero")
+    end
+
+    assert x == 10
+end

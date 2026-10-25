@@ -435,6 +435,76 @@ impl Runtime {
         Err(format!("Undefined variable '{}'", name))
     }
 
+    fn compound_assign(
+        &mut self,
+        name: &str,
+        operator: &str,
+        right: Value,
+    ) -> Result<(), String> {
+        let base_operator = match operator {
+            "+=" => "+",
+            "-=" => "-",
+            "*=" => "*",
+            "/=" => "/",
+            "%=" => "%",
+            _ => return Err(format!("Unknown assignment operator '{}'", operator)),
+        };
+
+        let original = self
+            .get(name)
+            .ok_or_else(|| format!("Undefined variable '{}'", name))?;
+
+        let mut current = original.clone();
+        let mut channel_name = None;
+        let mut found_local = false;
+
+        // Resolve the nearest local binding.
+        for index in (0..self.scopes.len()).rev() {
+            if self.scopes[index].contains_key(name) {
+                found_local = true;
+
+                // Only constants write to channels.
+                if self.consts[index].contains(name) {
+                    channel_name = Some(
+                        self.tags[index]
+                            .get(name)
+                            .cloned()
+                            .unwrap_or_else(|| name.to_string()),
+                    );
+                }
+
+                break;
+            }
+        }
+
+        // Resolve module constants only when no local binding exists.
+        if !found_local {
+            if let Some(module_name) = &self.active_module {
+                let is_module_constant = self
+                    .veyra_modules
+                    .get(module_name)
+                    .map(|module| module.constants.contains_key(name))
+                    .unwrap_or(false);
+
+                if is_module_constant {
+                    channel_name = Some(name.to_string());
+                }
+            }
+        }
+
+        // Constants use their current channel value.
+        if let Some(tag) = &channel_name {
+            if let Some(channel_value) = self.channels.get(tag) {
+                current = channel_value.clone();
+            }
+        }
+
+        let result = self.binop(current, base_operator, right)?;
+
+        // Preserve regular assignment semantics.
+        self.assign(name, result)
+    }
+
     // ========================================================
     // EXPRESSIONS
     // ========================================================
@@ -2189,16 +2259,26 @@ impl Runtime {
             return self.handle_destructure(tokens);
         }
 
-        if tokens.len() >= 3 && tokens[0].kind == Tok::Id && tokens[1].kind == Tok::QuestionEq {
+        // Regular and compound assignments.
+        if tokens.len() >= 3 && tokens[0].kind == Tok::Id {
             let name = tokens[0].text.clone();
+            let operator = tokens[1].text.as_str();
 
-            let value = self.eval(&tokens[2..])?;
+            if operator == "=" {
+                let value = self.eval(&tokens[2..])?;
 
-            if self.get(&name).is_none() {
-                self.define_var(&name, value);
+                self.assign(&name, value)?;
+
+                return Ok(Flow::Normal);
             }
 
-            return Ok(Flow::Normal);
+            if matches!(operator, "+=" | "-=" | "*=" | "/=" | "%=") {
+                let right = self.eval(&tokens[2..])?;
+
+                self.compound_assign(&name, operator, right)?;
+
+                return Ok(Flow::Normal);
+            }
         }
 
         // Indexed assignment: items[index] = value
