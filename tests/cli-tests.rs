@@ -319,3 +319,53 @@ fn compound_assignment() {
         stdout
     );
 }
+
+#[test]
+fn short_circuit() {
+    let output = std::process::Command::new(env!("CARGO_BIN_EXE_veyra"))
+        .arg("--test")
+        .arg("tests/fixtures/short_circuit.vey")
+        .output()
+        .expect("Failed to execute Veyra");
+
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    let stderr = String::from_utf8_lossy(&output.stderr);
+
+    assert!(
+        output.status.success(),
+        "Veyra exited with an error:\n{}\n{}",
+        stdout,
+        stderr
+    );
+
+    assert!(
+        stdout.contains("22 passed, 0 failed"),
+        "Unexpected test results:\n{}",
+        stdout
+    );
+}
+
+#[test]
+fn interpolation_edge_cases() {
+    let output = std::process::Command::new(env!("CARGO_BIN_EXE_veyra"))
+        .arg("--test")
+        .arg("tests/fixtures/interpolation_edge_cases.vey")
+        .output()
+        .expect("Failed to execute Veyra");
+
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    let stderr = String::from_utf8_lossy(&output.stderr);
+
+    assert!(
+        output.status.success(),
+        "Veyra exited with an error:\n{}\n{}",
+        stdout,
+        stderr
+    );
+
+    assert!(
+        stdout.contains("22 passed, 0 failed"),
+        "Unexpected test results:\n{}",
+        stdout
+    );
+}

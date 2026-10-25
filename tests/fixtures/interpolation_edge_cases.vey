@@ -1,0 +1,87 @@
+test basic_interpolation
+    add name = "Alex"
+    add age = 20
+
+    assert f"Hello, {name}!" == "Hello, Alex!"
+    assert f"Next year: {age + 1}" == "Next year: 21"
+end
+
+test nested_parentheses
+    assert f"Result: {(10 + 5) * 2}" == "Result: 30"
+    assert f"Result: {((2 + 3) * (4 + 1))}" == "Result: 25"
+end
+
+test indexing
+    add numbers = [10, 20, 30]
+    add user = {"name": "Alex", "age": 20}
+
+    assert f"Number: {numbers[1]}" == "Number: 20"
+    assert f"Name: {user['name']}" == "Name: Alex"
+    assert f"Age: {user['age'] + 1}" == "Age: 21"
+end
+
+test function_calls
+    add double(x)
+        return x * 2
+    end
+
+    assert f"Double: {double(5)}" == "Double: 10"
+    assert f"Length: {len([1, 2, 3])}" == "Length: 3"
+end
+
+test escaped_braces
+    add value = 42
+
+    assert f"{{value}}" == "{value}"
+    assert f"{{ {value} }}" == "{ 42 }"
+    assert f"{{}}" == "{}"
+end
+
+test quoted_strings
+    assert f"Text: {'hello'}" == "Text: hello"
+    assert f'Text: {"hello"}' == "Text: hello"
+    assert f"Length: {len('hello')}" == "Length: 5"
+end
+
+test multiline_interpolation
+    add name = "Alex"
+
+    add message = f"""
+Hello, {name}!
+Welcome to Veyra.
+"""
+
+    assert message.contains("Hello, Alex!")
+    assert message.contains("Welcome to Veyra.")
+end
+
+test nested_collections
+    add data = {"user": {"name": "Alex"}}
+    add user = data["user"]
+
+    assert f"User: {user['name']}" == "User: Alex"
+    assert f"List: {[1, 2, 3]}" == "List: [1, 2, 3]"
+end
+
+test interpolation_errors
+    try
+        add result = f"Value: {}"
+        assert false
+    catch err
+        assert err.contains("Empty interpolation expression")
+    end
+
+    try
+        add result = f"Value: {unknown_variable}"
+        assert false
+    catch err
+        assert err.contains("Undefined")
+    end
+
+    try
+        add result = f"Value: }"
+        assert false
+    catch err
+        assert err.contains("Unexpected '}'")
+    end
+end

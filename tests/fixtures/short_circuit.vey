@@ -1,0 +1,48 @@
+test and_short_circuit
+    assert (false and (10 / 0)) == false
+    assert (true and true) == true
+    assert (true and false) == false
+end
+
+test or_short_circuit
+    assert (true or (10 / 0)) == true
+    assert (false or true) == true
+    assert (false or false) == false
+end
+
+test null_coalescing
+    assert (42 ?? (10 / 0)) == 42
+    assert (null ?? 100) == 100
+    assert (false ?? true) == false
+    assert (0 ?? 10) == 0
+end
+
+test operator_precedence
+    assert (false and 10 / 0 or true) == true
+    assert (true or false and (10 / 0)) == true
+    assert (null ?? 5 + 5) == 10
+end
+
+test nested_expressions
+    assert (false and [10 / 0][0]) == false
+    assert (true or {"value": 10 / 0}) == true
+    assert (42 ?? (10 / 0 + 5)) == 42
+end
+
+test side_effects
+    add counter = 0
+
+    add increment()
+        counter = counter + 1
+        return true
+    end
+
+    assert (false and increment()) == false
+    assert counter == 0
+
+    assert (true or increment()) == true
+    assert counter == 0
+
+    assert (100 ?? increment()) == 100
+    assert counter == 0
+end

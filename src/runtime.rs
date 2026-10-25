@@ -505,6 +505,106 @@ impl Runtime {
         self.assign(name, result)
     }
 
+    fn skip_expression(
+        tokens: &[Token],
+        position: &mut usize,
+        min_precedence: u8,
+    ) -> Result<(), String> {
+        let mut paren_depth = 0usize;
+        let mut bracket_depth = 0usize;
+        let mut brace_depth = 0usize;
+
+        let start = *position;
+
+        while *position < tokens.len() {
+            let token = &tokens[*position];
+
+            let at_top_level =
+                paren_depth == 0 && bracket_depth == 0 && brace_depth == 0;
+
+            if at_top_level {
+                // Stop at expression delimiters.
+                if matches!(
+                    token.kind,
+                    Tok::RParen
+                        | Tok::RBracket
+                        | Tok::RBrace
+                        | Tok::Comma
+                        | Tok::Colon
+                ) {
+                    break;
+                }
+
+                // Handle combined membership operators.
+                let is_not_in = token.text == "not"
+                    && *position + 1 < tokens.len()
+                    && tokens[*position + 1].text == "in";
+
+                let op = if is_not_in {
+                    "not in"
+                } else {
+                    token.text.as_str()
+                };
+
+                let op_precedence = precedence(op);
+
+                // A lower-precedence operator belongs to the outer expression.
+                if op_precedence > 0 && op_precedence < min_precedence {
+                    break;
+                }
+
+                if is_not_in {
+                    *position += 2;
+                    continue;
+                }
+            }
+
+            match token.kind {
+                Tok::LParen => paren_depth += 1,
+                Tok::LBracket => bracket_depth += 1,
+                Tok::LBrace => brace_depth += 1,
+
+                Tok::RParen => {
+                    if paren_depth == 0 {
+                        break;
+                    }
+
+                    paren_depth -= 1;
+                }
+
+                Tok::RBracket => {
+                    if bracket_depth == 0 {
+                        break;
+                    }
+
+                    bracket_depth -= 1;
+                }
+
+                Tok::RBrace => {
+                    if brace_depth == 0 {
+                        break;
+                    }
+
+                    brace_depth -= 1;
+                }
+
+                _ => {}
+            }
+
+            *position += 1;
+        }
+
+        if *position == start {
+            return Err("Expected expression".into());
+        }
+
+        if paren_depth != 0 || bracket_depth != 0 || brace_depth != 0 {
+            return Err("Unclosed delimiter in expression".into());
+        }
+
+        Ok(())
+    }
+
     // ========================================================
     // EXPRESSIONS
     // ========================================================
@@ -789,15 +889,40 @@ impl Runtime {
                 token.text.as_str()
             };
 
-            let precedence = precedence(op);
+            let op_precedence = precedence(op);
 
-            if precedence == 0 || precedence < min_precedence {
+            if op_precedence == 0 || op_precedence < min_precedence {
                 break;
             }
 
             *position += if is_not_in { 2 } else { 1 };
 
-            let right = self.expr(tokens, position, precedence + 1)?;
+            // Determine whether the right operand must be evaluated.
+            let skip_right = match op {
+                "and" => !left.is_truthy(),
+                "or" => left.is_truthy(),
+                "??" => !matches!(left, Value::Null),
+                _ => false,
+            };
+
+            if skip_right {
+                Self::skip_expression(
+                    tokens,
+                    position,
+                    op_precedence + 1,
+                )?;
+
+                left = match op {
+                    "and" => Value::Bool(false),
+                    "or" => Value::Bool(true),
+                    "??" => left,
+                    _ => unreachable!(),
+                };
+
+                continue;
+            }
+
+            let right = self.expr(tokens, position, op_precedence + 1)?;
 
             if op == "??" {
                 if matches!(left, Value::Null) {
