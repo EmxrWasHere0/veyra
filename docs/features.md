@@ -10,6 +10,7 @@
 - **Null coalescing** with `??`.
 - **Membership operators** — `in` and `not in`.
 - **Multiple return values** and list destructuring, including rest elements.
+- **String interpolation** — Embed variables and expressions using `f"Hello, {name}!"`.
 
 ### Functions
 
@@ -18,6 +19,7 @@
 - **Variadic parameters** (`...args`).
 - **Closed-scope functions** that do not implicitly capture surrounding local variables.
 - **Implicit and explicit returns** using the last expression or `return`.
+- **Callback support** for functional list operations and other higher-order functions.
 
 ### Control Flow
 
@@ -31,10 +33,14 @@
 
 - **Lists** with nested indexing, negative indices, indexed assignment, and slicing.
 - **List methods** — `append`, `pop`, `len`, `index`, `insert`, `remove`, `clear`, `sort`, and `reverse`.
-- **JSON-like objects (`jsondata`)** with key-based access, nested assignment, and object methods.
-- **Object methods** — `keys`, `values`, `get`, `has`, `remove`, and `len`.
+- **Functional list methods** — `map`, `filter`, `reduce`, `any`, and `all`, using callbacks.
+- **JSONData objects** with key-based access, nested assignment, and object methods.
+- **JSONData methods** — `keys`, `values`, `get`, `has`, `remove`, `len`, `merge`, and `items`.
+- **JSONData merging** — Combine objects using `merge()` or the `+` operator, with right-hand values taking precedence.
 - **String operations** — Unicode-aware indexing, slicing, searching, splitting, joining, and replacement.
 - **Multiline strings** using triple double quotes (`"""`) or triple single quotes (`'''`).
+- **Interpolated strings** using `f"..."`, `f'...'`, `f"""..."""`, or `f'''...'''`.
+- **Escaped interpolation braces** — Use `{{` and `}}` to include literal braces in interpolated strings.
 
 ### Modules
 
@@ -55,6 +61,7 @@
 - **Automated regression tests** using Cargo.
 - **CLI commands** for running scripts, executing tests, and displaying version information.
 - **VSCode extension** with syntax highlighting, snippets, automatic indentation, code folding, and REPL integration.
+- **VSCode interpolation highlighting** for embedded expressions and functional collection methods.
 
 ### Implementation
 

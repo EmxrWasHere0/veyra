@@ -73,6 +73,63 @@ say message
 
 Triple single quotes (`'''`) are also supported.
 
+### String Interpolation
+
+Veyra 0.2.7 introduces string interpolation using the `f` prefix.
+
+Interpolated strings can contain variables and expressions inside `{}`.
+
+```veyra
+add name = "Alex"
+add age = 20
+
+say f"Hello, {name}!"
+say f"Next year: {age + 1}"
+say f"Adult: {age >= 18}"
+```
+
+Output:
+
+```text
+Hello, Alex!
+Next year: 21
+Adult: true
+```
+
+Interpolation supports arithmetic, comparisons, indexing, and function calls.
+
+Use `{{` and `}}` to include literal braces:
+
+```veyra
+say f"{{name}} = {name}"
+```
+
+Output:
+
+```text
+{name} = Alex
+```
+
+Single-quoted and multiline interpolated strings are also supported:
+
+```veyra
+add report = f"""
+Name: {name}
+Age: {age}
+"""
+
+say report
+```
+
+Supported forms include:
+
+- `f"..."`
+- `f'...'`
+- `f"""..."""`
+- `f'''...'''`
+
+Normal strings without the `f` prefix do not evaluate expressions inside braces.
+
 ## Bool
 
 The `bool` type represents two logical values:
@@ -117,6 +174,37 @@ say matrix[1][0]
 
 Lists support indexing, slicing, and methods such as `append()`, `pop()`, `sort()`, and `reverse()`.
 
+### Functional List Methods
+
+Veyra 0.2.7 adds methods for processing lists with callback functions.
+
+```veyra
+add numbers = [1, 2, 3, 4, 5]
+
+add doubled = numbers.map(func(x) => x * 2)
+add evens = numbers.filter(func(x) => x % 2 == 0)
+add total = numbers.reduce(func(acc, x) => acc + x, 0)
+
+say doubled
+say evens
+say total
+```
+
+Output:
+
+```text
+[2, 4, 6, 8, 10]
+[2, 4]
+15
+```
+
+Other functional methods include:
+
+- `any(callback)` — Returns `true` if at least one element satisfies the callback.
+- `all(callback)` — Returns `true` if every element satisfies the callback.
+
+These operations do not modify the original list.
+
 See [Lists](lists.md) for details.
 
 ## JSONData
@@ -145,7 +233,59 @@ user["age"] = 29
 say user["age"]
 ```
 
-JSONData objects support methods such as `keys()`, `values()`, `get()`, `has()`, and `remove()`.
+JSONData objects support the following methods:
+
+- `keys()` — Returns a list of keys.
+- `values()` — Returns a list of values.
+- `items()` — Returns key-value pairs as nested lists.
+- `get(key)` — Returns the value associated with a key, or `null` if missing.
+- `has(key)` — Checks whether a key exists.
+- `remove(key)` — Removes a key and returns its value.
+- `len()` — Returns the number of entries.
+- `merge(other)` — Returns a new JSONData object containing entries from both objects.
+
+### JSONData Merging
+
+Veyra 0.2.7 supports merging JSONData objects using `merge()` or `+`.
+
+```veyra
+add user = {"name": "Alex", "age": 20}
+add updates = {"age": 21, "active": true}
+
+add merged = user.merge(updates)
+
+say merged
+say user + updates
+```
+
+Output:
+
+```text
+{"name": "Alex", "age": 21, "active": true}
+{"name": "Alex", "age": 21, "active": true}
+```
+
+Both operations return a new object without modifying the originals.
+
+If the same key appears in both objects, the right-hand value takes precedence.
+
+Merging is shallow: nested objects are replaced rather than recursively merged.
+
+### JSONData Items
+
+The `items()` method returns a list containing key-value pairs.
+
+```veyra
+add user = {"name": "Alex", "age": 20}
+
+say user.items()
+```
+
+Output:
+
+```text
+[["name", "Alex"], ["age", 20]]
+```
 
 The built-in `json` module can also convert JSON text into Veyra values.
 
@@ -172,6 +312,26 @@ say square(5)
 ```
 
 Veyra supports recursion, default parameters, variadic parameters, and functions passed as arguments.
+
+Functional list methods can also accept functions as callbacks:
+
+```veyra
+add numbers = [1, 2, 3]
+
+add square(x)
+    return x * x
+end
+
+add squared = numbers.map(square)
+
+say squared
+```
+
+Output:
+
+```text
+[1, 4, 9]
+```
 
 See [Functions](functions.md) for details.
 
@@ -228,6 +388,7 @@ The following values are falsy:
 - `0`
 - `""` (empty text)
 - `[]` (empty list)
+- `{}` (empty JSONData object)
 
 Other values are generally truthy.
 

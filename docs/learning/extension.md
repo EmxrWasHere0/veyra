@@ -2,7 +2,9 @@
 
 The Veyra VS Code extension provides language support for writing Veyra programs in Visual Studio Code.
 
-It includes syntax highlighting, automatic indentation, code snippets, code folding, and integrated REPL support.
+Version 0.2.7 includes syntax highlighting for interpolated strings, functional list methods, and enhanced JSONData operations.
+
+The extension also provides automatic indentation, code snippets, code folding, and integrated REPL support.
 
 For a quick overview, see [VSCode Extension](../vscode-extension.md).
 
@@ -13,6 +15,8 @@ By the end of this guide, you will know how to:
 - Install the Veyra extension.
 - Open and edit Veyra source files.
 - Use code snippets.
+- Work with interpolated strings in the editor.
+- Use functional list and JSONData snippets.
 - Start the Veyra REPL from VS Code.
 - Configure basic editor behavior.
 - Troubleshoot common extension problems.
@@ -59,13 +63,13 @@ npx vsce package
 This generates a file named:
 
 ```text
-veyra-0.2.6.vsix
+veyra-0.2.7.vsix
 ```
 
 Install it:
 
 ```bash
-code --install-extension veyra-0.2.6.vsix
+code --install-extension veyra-0.2.7.vsix
 ```
 
 The generated filename depends on the version in `package.json`.
@@ -89,10 +93,13 @@ The extension highlights Veyra syntax, including:
 - Keywords and control-flow statements.
 - Variables, constants, and functions.
 - Operators and module imports.
-- Lists and JSON-like objects.
+- Lists and JSONData objects.
 - Built-in functions and modules.
 - Comments and strings.
 - Triple-quoted multiline strings.
+- Interpolated strings and embedded expressions.
+- Functional list methods.
+- JSONData methods such as `merge()` and `items()`.
 
 Example:
 
@@ -106,13 +113,59 @@ end
 add numbers = [2, 4, 6]
 
 repeat number in numbers
-    say square(number)
+    say f"Square of {number}: {square(number)}"
 end
+```
+
+Output:
+
+```text
+Square of 2: 4
+Square of 4: 16
+Square of 6: 36
 ```
 
 Comments begin with `#`.
 
 The extension uses TextMate grammar rules. It does not perform complete semantic analysis.
+
+### String Interpolation Highlighting
+
+Veyra 0.2.7 introduces string interpolation.
+
+The extension recognizes:
+
+- `f"..."` — Double-quoted interpolation.
+- `f'...'` — Single-quoted interpolation.
+- `f"""..."""` — Multiline double-quoted interpolation.
+- `f'''...'''` — Multiline single-quoted interpolation.
+- `{expression}` — Embedded Veyra expressions.
+- `{{` and `}}` — Literal braces.
+
+Example:
+
+```veyra
+add name = "Alex"
+add age = 20
+
+say f"Hello, {name}!"
+say f"Next year: {age + 1}"
+```
+
+Multiline example:
+
+```veyra
+add language = "Veyra"
+
+say f"""
+Language: {language}
+Version: 0.2.7
+"""
+```
+
+The highlighter attempts to recognize expressions inside interpolated strings.
+
+Complex nested expressions may not always be highlighted perfectly.
 
 ## 4. Automatic Editing Features
 
@@ -165,7 +218,7 @@ add greet(name)
     if name == "Veyra"
         say "Hello, Veyra!"
     else
-        say "Hello, " + name
+        say f"Hello, {name}!"
     end
 end
 ```
@@ -206,8 +259,77 @@ Type a prefix and select the corresponding suggestion.
 | `test`        | Create a test block        |
 | `assert`      | Assert a condition         |
 | `list`        | Create a list              |
-| `jsondata`    | Create a JSON-like object  |
+| `jsondata`    | Create a JSONData object   |
 | `multistr`    | Create a multiline string  |
+
+### String Interpolation Snippets
+
+| Prefix      | Description                            |
+| ----------- | -------------------------------------- |
+| `fstr`      | Create an interpolated string          |
+| `fmultistr` | Create a multiline interpolated string |
+
+Example:
+
+```veyra
+add name = "Alex"
+
+say f"Hello, {name}!"
+```
+
+### Functional List Snippets
+
+Veyra 0.2.7 introduces five functional list methods.
+
+| Prefix   | Description                          |
+| -------- | ------------------------------------ |
+| `map`    | Transform each list element          |
+| `filter` | Select matching list elements        |
+| `reduce` | Combine elements into a single value |
+| `any`    | Check whether any element matches    |
+| `all`    | Check whether every element matches  |
+
+Example:
+
+```veyra
+add numbers = [1, 2, 3, 4, 5]
+
+say numbers.map(func(x) => x * 2)
+say numbers.filter(func(x) => x % 2 == 0)
+say numbers.reduce(func(acc, x) => acc + x, 0)
+```
+
+Output:
+
+```text
+[2, 4, 6, 8, 10]
+[2, 4]
+15
+```
+
+### JSONData Snippets
+
+| Prefix  | Description                     |
+| ------- | ------------------------------- |
+| `merge` | Merge two JSONData objects      |
+| `items` | Return JSONData key-value pairs |
+
+Example:
+
+```veyra
+add user = {"name": "Alex", "age": 20}
+add updates = {"age": 21}
+
+say user.merge(updates)
+say user.items()
+```
+
+Output:
+
+```text
+{"name": "Alex", "age": 21}
+[["name", "Alex"], ["age", 20]]
+```
 
 ### Module Snippets
 
@@ -249,7 +371,7 @@ You can then replace the placeholders and write the loop body.
 
 ## 6. Integrated REPL
 
-Veyra 0.2.6 includes an interactive Read-Eval-Print Loop (REPL).
+Veyra introduced its interactive Read-Eval-Print Loop (REPL) in version 0.2.6.
 
 The extension provides a command to start it directly from VS Code.
 
@@ -275,11 +397,21 @@ Example session:
 >>> add x = 10
 >>> say x * 2
 20
+>>> say f"Double: {x * 2}"
+Double: 20
 >>> add square(n)
 ...     return n * n
 ... end
 >>> say square(5)
 25
+```
+
+You can also use functional list methods:
+
+```text
+>>> add numbers = [1, 2, 3, 4]
+>>> say numbers.map(func(x) => x * 2)
+[2, 4, 6, 8]
 ```
 
 The REPL preserves variables, functions, and imports during the session.
@@ -340,9 +472,21 @@ You can also check the VS Code setting:
 }
 ```
 
+### Interpolated Strings Are Not Highlighted
+
+Make sure version 0.2.7 or newer of the extension is installed.
+
+Check that the string uses a supported interpolation prefix:
+
+```veyra
+say f"Hello, {name}!"
+```
+
+If highlighting still does not work, reload the VS Code window.
+
 ### REPL Command Is Missing
 
-Make sure version 0.2.6 of the extension is installed.
+Make sure version 0.2.7 or newer of the extension is installed.
 
 Try reloading the VS Code window.
 
@@ -366,7 +510,9 @@ Run the script directly:
 veyra example.vey
 ```
 
-Veyra 0.2.6 reports source locations and function tracebacks for runtime errors.
+Veyra reports source locations and function tracebacks for runtime errors.
+
+These diagnostic features were introduced in version 0.2.6.
 
 ## 9. Current Limitations
 
@@ -378,6 +524,10 @@ The extension does not currently provide:
 - Go to Definition.
 - Symbol renaming.
 - Integrated debugging.
+
+Syntax highlighting uses TextMate grammar rules rather than complete semantic analysis.
+
+Complex nested expressions, particularly inside interpolated strings, may not always be highlighted perfectly.
 
 Syntax highlighting and snippets work without installing the interpreter, but running programs requires Veyra.
 

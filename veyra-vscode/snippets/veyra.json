@@ -14,7 +14,6 @@
     "body": ["mod ${1:name} [${2:member1}, ${3:member2}]", "$0"],
     "description": "Import selected members from a module"
   },
-
   "mod system": {
     "prefix": "modsys",
     "body": ["mod system", "$0"],
@@ -30,7 +29,6 @@
     "body": ["mod system [${1:get_env}, ${2:args}]", "$0"],
     "description": "Import selected members from the system module"
   },
-
   "mod io": {
     "prefix": "modio",
     "body": ["mod io", "$0"],
@@ -46,7 +44,6 @@
     "body": ["mod io [${1:read}, ${2:write}]", "$0"],
     "description": "Import selected members from the io module"
   },
-
   "mod base": {
     "prefix": "modbase",
     "body": ["mod base", "$0"],
@@ -62,7 +59,6 @@
     "body": ["mod base [${1:hostname}, ${2:pid}]", "$0"],
     "description": "Import selected members from the base module"
   },
-
   "mod json": {
     "prefix": "modjson",
     "body": ["mod json", "$0"],
@@ -98,7 +94,6 @@
     "body": ["mod random", "$0"],
     "description": "Import the random module"
   },
-
   "add variable": {
     "prefix": "add",
     "body": ["add ${1:name} = ${2:value}", "$0"],
@@ -119,7 +114,6 @@
     "body": ["get ${1:name} \"${2:Enter a value: }\"", "$0"],
     "description": "Read user input with a prompt"
   },
-
   "if": {
     "prefix": "if",
     "body": ["if ${1:condition}", "    $0", "end"],
@@ -166,7 +160,6 @@
     "body": ["fwd${1: @outer}$0"],
     "description": "Continue a loop, optionally by label"
   },
-
   "function": {
     "prefix": "func",
     "body": ["add ${1:name}(${2:params})", "    $0", "end"],
@@ -182,7 +175,6 @@
     "body": ["return ${1:value}$0"],
     "description": "Return a value from a function"
   },
-
   "try catch": {
     "prefix": "try",
     "body": ["try", "    ${1:statement}", "catch ${2:error}", "    $0", "end"],
@@ -203,7 +195,6 @@
     "body": ["assert ${1:condition}$0"],
     "description": "Assert that a condition is true"
   },
-
   "list": {
     "prefix": "list",
     "body": ["add ${1:items} = [${2:1, 2, 3}]$0"],
@@ -218,5 +209,56 @@
     "prefix": "multistr",
     "body": ["add ${1:text} = \"\"\"", "${2:Text goes here}", "\"\"\"$0"],
     "description": "Create a multiline string"
+  },
+  "interpolated string": {
+    "prefix": "fstr",
+    "body": ["f\"${1:Hello, }{${2:name}}${3:!}\"$0"],
+    "description": "Create an interpolated string"
+  },
+  "interpolated multiline string": {
+    "prefix": "fmultistr",
+    "body": [
+      "add ${1:message} = f\"\"\"",
+      "${2:Hello, }{${3:name}}",
+      "\"\"\"$0"
+    ],
+    "description": "Create a multiline interpolated string"
+  },
+  "list map": {
+    "prefix": "map",
+    "body": ["${1:items}.map(func(${2:item}) => ${3:item * 2})$0"],
+    "description": "Transform list elements using a callback"
+  },
+  "list filter": {
+    "prefix": "filter",
+    "body": ["${1:items}.filter(func(${2:item}) => ${3:item > 0})$0"],
+    "description": "Filter list elements using a callback"
+  },
+  "list reduce": {
+    "prefix": "reduce",
+    "body": [
+      "${1:items}.reduce(func(${2:acc}, ${3:item}) => ${4:acc + item}, ${5:0})$0"
+    ],
+    "description": "Reduce a list to a single value"
+  },
+  "list any": {
+    "prefix": "any",
+    "body": ["${1:items}.any(func(${2:item}) => ${3:item > 0})$0"],
+    "description": "Check whether any list element matches a condition"
+  },
+  "list all": {
+    "prefix": "all",
+    "body": ["${1:items}.all(func(${2:item}) => ${3:item > 0})$0"],
+    "description": "Check whether all list elements match a condition"
+  },
+  "jsondata merge": {
+    "prefix": "merge",
+    "body": ["${1:data}.merge(${2:other})$0"],
+    "description": "Merge two JSONData objects"
+  },
+  "jsondata items": {
+    "prefix": "items",
+    "body": ["${1:data}.items()$0"],
+    "description": "Get JSONData key-value pairs as a list"
   }
 }

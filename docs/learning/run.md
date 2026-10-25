@@ -22,7 +22,7 @@ Create a file named `hello.vey`:
 say "Hello, World!"
 
 add greet(name)
-    say "Hello, " + name + "!"
+    say f"Hello, {name}!"
 end
 
 greet("Veyra")
@@ -108,7 +108,7 @@ On Windows PowerShell:
 
 ## 4. Interactive REPL
 
-Veyra 0.2.6 includes an interactive Read-Eval-Print Loop (REPL).
+Veyra introduced its interactive Read-Eval-Print Loop (REPL) in version 0.2.6.
 
 Start it by running Veyra without arguments:
 
@@ -128,6 +128,8 @@ You can enter statements directly:
 >>> add x = 10
 >>> say x * 2
 20
+>>> say f"Double: {x * 2}"
+Double: 20
 ```
 
 ### Persistent State
@@ -138,9 +140,9 @@ Variables, functions, and imports remain available throughout the REPL session.
 >>> add name = "Veyra"
 >>> say name
 Veyra
->>> name = "Veyra 0.2.6"
+>>> name = "Veyra 0.2.7"
 >>> say name
-Veyra 0.2.6
+Veyra 0.2.7
 ```
 
 ### Multiline Blocks
@@ -156,6 +158,22 @@ The REPL supports multiline functions, loops, and other blocks.
 ```
 
 The `...` prompt indicates that Veyra is waiting for more input.
+
+### Functional List Methods in the REPL
+
+Veyra 0.2.7 introduces functional list methods.
+
+You can experiment with them interactively:
+
+```text
+>>> add numbers = [1, 2, 3, 4, 5]
+>>> say numbers.map(func(x) => x * 2)
+[2, 4, 6, 8, 10]
+>>> say numbers.filter(func(x) => x % 2 == 0)
+[2, 4]
+>>> say numbers.reduce(func(acc, x) => acc + x, 0)
+15
+```
 
 ### Leaving the REPL
 
@@ -194,7 +212,9 @@ Veyra provides several command-line options.
 veyra --version
 ```
 
-The version is determined by the interpreter's Cargo package version.
+For Veyra 0.2.7, the version command reports the interpreter's current package version.
+
+The version is determined by `Cargo.toml` at build time.
 
 ### Displaying Help
 
@@ -229,6 +249,43 @@ veyra -t tests.vey
 ```
 
 Test mode executes the file's Veyra tests and reports their results.
+
+### Testing Veyra 0.2.7 Features
+
+You can use assertions to test string interpolation and functional list methods.
+
+Example file `features.vey`:
+
+```veyra
+test interpolation
+    add name = "Alex"
+
+    assert f"Hello, {name}!" == "Hello, Alex!"
+end
+
+test functional_lists
+    add numbers = [1, 2, 3, 4]
+
+    assert numbers.map(func(x) => x * 2) == [2, 4, 6, 8]
+    assert numbers.filter(func(x) => x % 2 == 0) == [2, 4]
+    assert numbers.reduce(func(acc, x) => acc + x, 0) == 10
+end
+
+test jsondata_merge
+    add left = {"name": "Alex", "age": 20}
+    add right = {"age": 21}
+
+    add merged = left.merge(right)
+
+    assert merged["age"] == 21
+end
+```
+
+Run:
+
+```bash
+veyra --test features.vey
+```
 
 ### Interpreter Regression Tests
 
@@ -290,9 +347,31 @@ The `system.args()` function returns the script arguments exposed by the runtime
 
 The interpreter and script paths are excluded from the returned argument list.
 
+### Using Arguments with String Interpolation
+
+You can also display arguments using interpolated strings.
+
+```veyra
+mod system
+
+add arguments = system.args()
+
+say f"Arguments: {arguments}"
+say f"Argument count: {len(arguments)}"
+```
+
+For example, when two arguments are provided:
+
+```text
+Arguments: ["first", "second"]
+Argument count: 2
+```
+
 ## 9. Running Programs in VSCode
 
 The Veyra VSCode extension supports syntax highlighting, snippets, and REPL integration.
+
+Version 0.2.7 also includes highlighting and snippets for string interpolation, functional list methods, and JSONData enhancements.
 
 To start the REPL:
 
@@ -310,7 +389,7 @@ For installation and usage instructions, see [VSCode Extension](extension.md).
 
 ## 10. Runtime Errors
 
-Veyra 0.2.6 provides detailed runtime error messages.
+Veyra introduced source locations and function tracebacks in version 0.2.6.
 
 For example:
 
@@ -334,6 +413,8 @@ The error includes the source file, line number, and relevant source line.
 
 Errors inside functions can also include a traceback showing the function call chain.
 
+In Veyra 0.2.7, error markers identify the relevant line rather than the exact character column.
+
 For more information, see [Error Handling](error-handling.md).
 
 ## 11. Troubleshooting
@@ -346,7 +427,7 @@ Make sure Cargo is available in your system's `PATH`.
 
 ### Veyra Is Not Recognized
 
-Check whether Veyra is installed:
+If you have built Veyra from source, install the interpreter:
 
 ```bash
 cargo install --path .

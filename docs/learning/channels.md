@@ -6,6 +6,8 @@ They allow constants to preserve their original values while storing separate ru
 
 Channel values can also be carried through function arguments.
 
+Channels are available in Veyra 0.2.7 and work alongside regular variables, functions, and string interpolation.
+
 ## What You Will Learn
 
 By the end of this lesson, you will know how to:
@@ -15,6 +17,8 @@ By the end of this lesson, you will know how to:
 - Read channels using `?`.
 - Provide fallback values.
 - Pass channel information through function arguments.
+- Use channels for runtime configuration.
+- Combine channels with string interpolation.
 - Understand the differences between `?`, `?=`, and `??`.
 
 ## 1. Declaring Constants
@@ -189,8 +193,8 @@ server_port = 8080
 add host = "localhost" ? server_host
 add port = 80 ? server_port
 
-say "Host: " + host
-say "Port: " + port
+say f"Host: {host}"
+say f"Port: {port}"
 ```
 
 Output:
@@ -203,6 +207,32 @@ Port: 8080
 The original constants remain unchanged.
 
 This can be useful for runtime configuration and explicit fallback behavior.
+
+### Reading Configuration Inside Functions
+
+Channels can also be passed into functions.
+
+```veyra
+set default_port = 80
+
+default_port = 8080
+
+add show_configuration(port)
+    say f"Default port: {port}"
+    say f"Active port: {0 ? port}"
+end
+
+show_configuration(default_port)
+```
+
+Output:
+
+```text
+Default port: 80
+Active port: 8080
+```
+
+The original constant value and its associated channel override remain separate.
 
 ## 6. Channels vs. Mutable Variables
 
@@ -246,7 +276,7 @@ The original constant is preserved, and the channel stores the override.
 
 ## 7. Channel Operator vs. Conditional Assignment
 
-The `?` and `?=` operators serve different purposes.
+The `?`, `?=`, and `??` operators serve different purposes.
 
 | Operator | Description                    |
 | -------- | ------------------------------ |
@@ -304,7 +334,54 @@ guest
 
 Unlike `?`, null coalescing does not access channels.
 
-## 8. Common Mistakes
+In Veyra 0.2.7, both operands of `??` are evaluated. The operator does not currently provide short-circuit evaluation.
+
+## 8. Channels and String Interpolation
+
+Veyra 0.2.7 supports string interpolation.
+
+You can use interpolated strings to display channel-related values.
+
+```veyra
+set app_version = "0.2.7"
+
+app_version = "development"
+
+add original = app_version
+add current = "" ? app_version
+
+say f"Original version: {original}"
+say f"Channel value: {current}"
+```
+
+Output:
+
+```text
+Original version: 0.2.7
+Channel value: development
+```
+
+Interpolation is useful when formatting configuration values or debugging channel behavior.
+
+You can also place expressions inside interpolated strings:
+
+```veyra
+set port = 80
+
+port = 8080
+
+say f"Default: {port}"
+say f"Active: {0 ? port}"
+```
+
+Output:
+
+```text
+Default: 80
+Active: 8080
+```
+
+## 9. Common Mistakes
 
 ### Expecting a Constant to Change
 
@@ -356,7 +433,29 @@ Ordinary values do not necessarily carry channel information.
 
 When no override is available, the fallback is returned.
 
-## 9. Practice Exercises
+### Using Channels Like Mutable Variables
+
+A `set` constant cannot be updated in the same way as an `add` variable.
+
+```veyra
+set value = 10
+
+value = 20
+
+say value
+say 0 ? value
+```
+
+Output:
+
+```text
+10
+20
+```
+
+Use `add` when you want regular mutable assignment behavior.
+
+## 10. Practice Exercises
 
 ### Exercise 1: Application Name
 
@@ -382,6 +481,8 @@ Create constants for a server host and port.
 
 Assign runtime overrides and read them using channel expressions.
 
+Use string interpolation to display the configuration.
+
 ### Exercise 5: Operator Differences
 
 Write examples demonstrating:
@@ -391,6 +492,14 @@ Write examples demonstrating:
 - `??`
 
 Explain the difference between their results.
+
+### Exercise 6: Interpolated Channel Values
+
+Create a constant named `language`.
+
+Assign a channel override.
+
+Use interpolated strings to display the original value and the channel value.
 
 ## What's Next?
 

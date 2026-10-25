@@ -88,7 +88,7 @@ Read user input using `get`:
 ```veyra
 get name "Enter your name: "
 
-say "Hello, " + name
+say f"Hello, {name}!"
 ```
 
 Convert values using built-in functions:
@@ -97,24 +97,24 @@ Convert values using built-in functions:
 get age "Enter your age: "
 
 add next_age = num(age) + 1
-say next_age
+say f"Next year: {next_age}"
 ```
 
 ## Operators
 
 Veyra supports arithmetic, comparison, logical, and assignment operators.
 
-| Category               | Operators                         |
-| ---------------------- | --------------------------------- |
-| Arithmetic             | `+`, `-`, `*`, `/`, `%`           |
-| Comparison             | `==`, `!=`, `<`, `>`, `<=`, `>=`  |
-| Logical                | `and`, `or`, `not`, `!`           |
-| Assignment             | `=`, `+=`, `-=`, `*=`, `/=`, `%=` |
-| Membership             | `in`, `not in`                    |
-| Channels               | `?`                               |
-| Conditional assignment | `?=`                              |
-| Null coalescing        | `??`                              |
-| Lambda                 | `=>`                              |
+| Category               | Operators                        |
+| ---------------------- | -------------------------------- |
+| Arithmetic             | `+`, `-`, `*`, `/`, `%`          |
+| Comparison             | `==`, `!=`, `<`, `>`, `<=`, `>=` |
+| Logical                | `and`, `or`, `not`, `!`          |
+| Assignment             | `=`                              |
+| Membership             | `in`, `not in`                   |
+| Channels               | `?`                              |
+| Conditional assignment | `?=`                             |
+| Null coalescing        | `??`                             |
+| Lambda                 | `=>`                             |
 
 Example:
 
@@ -161,7 +161,7 @@ add i = 0
 
 while i < 3
     say i
-    i += 1
+    i = i + 1
 end
 ```
 
@@ -207,28 +207,101 @@ say numbers.len()
 
 Available list methods include `append`, `pop`, `insert`, `remove`, `clear`, `sort`, and `reverse`.
 
+### Functional List Methods
+
+Veyra 0.2.7 introduces functional list operations using callbacks.
+
+```veyra
+add numbers = [1, 2, 3, 4, 5]
+
+add doubled = numbers.map(func(x) => x * 2)
+add evens = numbers.filter(func(x) => x % 2 == 0)
+add total = numbers.reduce(func(acc, x) => acc + x, 0)
+
+say doubled
+say evens
+say total
+```
+
+Output:
+
+```text
+[2, 4, 6, 8, 10]
+[2, 4]
+15
+```
+
+Use `any()` and `all()` to test conditions across a list:
+
+```veyra
+say numbers.any(func(x) => x > 3)
+say numbers.all(func(x) => x > 0)
+```
+
+Output:
+
+```text
+true
+true
+```
+
+These operations return new values without modifying the original list.
+
 For details, see [Lists](learning/lists.md).
 
-## JSON-like Objects
+## JSONData Objects
 
 Veyra provides the `jsondata` type for key-value collections.
 
 ```veyra
 add user = {
     "name": "Veyra",
-    "version": "0.2.6",
+    "version": "0.2.7",
     "active": true
 }
 
 say user["name"]
 
-user["version"] = "0.2.7"
+user["version"] = "0.2.8"
 
 say user.keys()
 say user.has("active")
 ```
 
 Objects support nested indexing, assignment, and iteration over keys.
+
+### JSONData Merging
+
+Veyra 0.2.7 adds `merge()`, `items()`, and object merging with `+`.
+
+```veyra
+add user = {"name": "Alex", "age": 20}
+add updates = {"age": 21, "active": true}
+
+add merged = user.merge(updates)
+
+say merged
+say user + updates
+say user.items()
+```
+
+Both `merge()` and `+` create new JSONData objects. If a key exists in both objects, the right-hand value takes precedence.
+
+Merging is shallow: nested objects are replaced rather than recursively merged.
+
+The `items()` method returns a list of key-value pairs:
+
+```veyra
+add user = {"name": "Alex", "age": 20}
+
+say user.items()
+```
+
+Output:
+
+```text
+[["name", "Alex"], ["age", 20]]
+```
 
 ## Strings
 
@@ -254,13 +327,59 @@ This is a multiline string.
 say message
 ```
 
+### String Interpolation
+
+Veyra 0.2.7 supports interpolated strings using the `f` prefix.
+
+```veyra
+add name = "Alex"
+add age = 20
+
+say f"Hello, {name}!"
+say f"Next year: {age + 1}"
+say f"Adult: {age >= 18}"
+```
+
+Output:
+
+```text
+Hello, Alex!
+Next year: 21
+Adult: true
+```
+
+Interpolation supports Veyra expressions, including arithmetic, comparisons, function calls, and indexing.
+
+Use `{{` and `}}` to insert literal braces:
+
+```veyra
+say f"{{name}} = {name}"
+```
+
+Output:
+
+```text
+{name} = Alex
+```
+
+Single-quoted and multiline interpolated strings are also supported:
+
+```veyra
+add report = f"""
+Name: {name}
+Age: {age}
+"""
+
+say report
+```
+
 ## Functions
 
 Functions are declared using `add`:
 
 ```veyra
 add greet(name, greeting = "Hello")
-    return greeting + ", " + name
+    return f"{greeting}, {name}!"
 end
 
 say greet("Veyra")
@@ -343,8 +462,8 @@ The REPL supports persistent variables, functions, imports, and multiline blocks
 
 ```text
 >>> add x = 10
->>> say x * 2
-20
+>>> say f"Double: {x * 2}"
+Double: 20
 ```
 
 Type `exit` or `quit` to leave the REPL.

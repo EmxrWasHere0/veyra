@@ -14,7 +14,8 @@ By the end of this lesson, you will know how to:
 - Define default and variadic parameters.
 - Return multiple values.
 - Create lambda expressions.
-- Pass functions as arguments.
+- Pass functions as arguments and callbacks.
+- Use functional list methods.
 - Write recursive functions.
 - Understand closed function scopes.
 - Read function tracebacks.
@@ -47,7 +48,7 @@ Parameters receive values from function calls.
 
 ```veyra
 add greet(name)
-    say "Hello, " + name + "!"
+    say f"Hello, {name}!"
 end
 
 greet("Alex")
@@ -65,8 +66,8 @@ Functions can accept multiple parameters.
 
 ```veyra
 add introduce(name, age)
-    say "Name: " + name
-    say "Age: " + age
+    say f"Name: {name}"
+    say f"Age: {age}"
 end
 
 introduce("Alex", 20)
@@ -78,6 +79,8 @@ Output:
 Name: Alex
 Age: 20
 ```
+
+String interpolation makes it possible to include values of different types without manually converting them to text.
 
 ## 3. Returning Values
 
@@ -191,7 +194,7 @@ Default parameters provide values when arguments are omitted.
 
 ```veyra
 add greet(name = "Guest")
-    say "Hello, " + name + "!"
+    say f"Hello, {name}!"
 end
 
 greet()
@@ -244,7 +247,7 @@ add sum_numbers(...numbers)
     add total = 0
 
     repeat number in numbers
-        total += number
+        total = total + number
     end
 
     return total
@@ -305,7 +308,21 @@ Output:
 10
 ```
 
-They can also be passed directly as arguments.
+They can also be passed directly as arguments:
+
+```veyra
+add numbers = [1, 2, 3]
+
+add doubled = numbers.map(func(x) => x * 2)
+
+say doubled
+```
+
+Output:
+
+```text
+[2, 4, 6]
+```
 
 ## 8. First-Class Functions
 
@@ -329,7 +346,97 @@ Output:
 
 This allows functions to be used as reusable operations.
 
-## 9. Recursive Functions
+## 9. Functions as List Callbacks
+
+Veyra 0.2.7 introduces functional list methods that accept callback functions.
+
+Supported methods include:
+
+- `map(callback)` — Transform each element.
+- `filter(callback)` — Select elements matching a condition.
+- `reduce(callback, initial)` — Combine elements into a single value.
+- `any(callback)` — Check whether at least one element matches.
+- `all(callback)` — Check whether every element matches.
+
+### Using a Named Function
+
+```veyra
+add square(x)
+    return x * x
+end
+
+add numbers = [1, 2, 3, 4]
+
+add squared = numbers.map(square)
+
+say squared
+```
+
+Output:
+
+```text
+[1, 4, 9, 16]
+```
+
+### Using a Lambda
+
+```veyra
+add numbers = [1, 2, 3, 4, 5]
+
+add evens = numbers.filter(func(x) => x % 2 == 0)
+
+say evens
+```
+
+Output:
+
+```text
+[2, 4]
+```
+
+### Reducing a List
+
+The callback passed to `reduce()` receives the accumulator and current element.
+
+```veyra
+add numbers = [5, 10, 15]
+
+add total = numbers.reduce(func(acc, x) => acc + x, 0)
+
+say total
+```
+
+Output:
+
+```text
+30
+```
+
+### Testing List Elements
+
+```veyra
+add numbers = [2, 4, 6, 8]
+
+say numbers.any(func(x) => x > 5)
+say numbers.all(func(x) => x % 2 == 0)
+```
+
+Output:
+
+```text
+true
+true
+```
+
+The callback runs using Veyra's normal function scope rules.
+
+Functions do not implicitly capture surrounding local variables.
+
+For example, instead of relying on a callback to capture an external variable, pass required values through function parameters or other explicitly available inputs.
+
+See [Lists](lists.md) for more examples.
+
+## 10. Recursive Functions
 
 A recursive function calls itself.
 
@@ -355,7 +462,7 @@ Every recursive function should have a termination condition.
 
 Veyra limits function call depth to **1,000** to prevent unbounded recursion.
 
-## 10. Nested Functions
+## 11. Nested Functions
 
 Functions can be defined inside other functions.
 
@@ -381,7 +488,7 @@ Nested functions follow Veyra's closed-scope rules.
 
 They do not automatically capture variables from the surrounding function.
 
-## 11. Closed Function Scopes
+## 12. Closed Function Scopes
 
 Veyra functions use closed scopes.
 
@@ -427,9 +534,9 @@ Output:
 
 Closed scopes make function dependencies explicit.
 
-## 12. Function Tracebacks
+## 13. Function Tracebacks
 
-Veyra 0.2.6 provides function tracebacks when runtime errors occur.
+Veyra 0.2.6 introduced function tracebacks when runtime errors occur.
 
 Consider:
 
@@ -463,7 +570,7 @@ Tracebacks help identify how execution reached the failing function.
 
 Error formatting may vary slightly depending on the execution context.
 
-## 13. Common Mistakes
+## 14. Common Mistakes
 
 ### Defining a Function Without Calling It
 
@@ -503,6 +610,8 @@ Nested functions do not automatically inherit surrounding local variables.
 
 Use parameters to provide the values they need.
 
+The same rule applies to callbacks.
+
 ### Confusing Explicit and Implicit Returns
 
 Both of these are valid:
@@ -519,11 +628,26 @@ end
 
 Use explicit returns when the function has multiple branches or needs an early exit.
 
-## 14. Practice Exercises
+### Incorrect Callback Parameters
+
+Most functional list methods pass one element to their callback.
+
+`reduce()` passes two values: the accumulator and the current element.
+
+```veyra
+add numbers = [1, 2, 3]
+
+add doubled = numbers.map(func(x) => x * 2)
+add total = numbers.reduce(func(acc, x) => acc + x, 0)
+```
+
+Ensure that callback parameters match the operation.
+
+## 15. Practice Exercises
 
 ### Exercise 1: Greeting Function
 
-Create a function that accepts a name and prints a greeting.
+Create a function that accepts a name and prints a greeting using string interpolation.
 
 ### Exercise 2: Calculator
 
@@ -556,6 +680,20 @@ Create two nested functions and pass a value from the outer function to the inne
 ### Exercise 9: Traceback
 
 Create a function that divides by zero, call it through another function, and inspect the resulting traceback.
+
+### Exercise 10: Map Callback
+
+Create a named function that doubles a number.
+
+Pass it to `map()` to transform a list.
+
+### Exercise 11: Filter Callback
+
+Use a lambda with `filter()` to select numbers greater than ten.
+
+### Exercise 12: Reduce Callback
+
+Use `reduce()` to calculate the product of all numbers in a list.
 
 ## What's Next?
 

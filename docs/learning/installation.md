@@ -6,6 +6,8 @@ This guide will help you install the Veyra interpreter, configure your developme
 
 Veyra is an interpreted programming language written in Rust. You do not need to compile individual `.vey` files before running them.
 
+This guide covers installation and setup for **Veyra 0.2.7**.
+
 ## What You Need
 
 To build or install Veyra from source, you need:
@@ -16,6 +18,8 @@ To build or install Veyra from source, you need:
 - **A terminal** — PowerShell, Windows Terminal, macOS Terminal, or a Linux shell.
 
 Cargo is included with standard Rust installations.
+
+If you use a prebuilt Veyra installer, Rust and Cargo may not be required.
 
 ## 1. Install Rust and Cargo
 
@@ -50,9 +54,25 @@ git --version
 
 If Git is already installed, continue to the next step.
 
-## P.S.
+## Alternative: Use the Veyra Installer
 
-After these 2 steps, you can go to our [latest release](https://github.com/EmxrWasHere0/veyra/releases/latest) and use Veyra Installer.
+If you do not want to build Veyra from source, check the official releases page:
+
+[Latest Veyra Release](https://github.com/EmxrWasHere0/veyra/releases/latest)
+
+Prebuilt executables or installers may be available for your operating system.
+
+Choose the appropriate package and follow its installation instructions.
+
+After installation, open a terminal and verify Veyra:
+
+```bash
+veyra --version
+```
+
+The available installers may vary depending on the release and platform.
+
+If you use a prebuilt installer, you can skip the source installation steps and continue to [Start the Interactive REPL](#7-start-the-interactive-repl).
 
 ## 3. Download Veyra
 
@@ -86,6 +106,8 @@ Display the interpreter version:
 cargo run -- --version
 ```
 
+For Veyra 0.2.7, the version command should report `0.2.7` when the corresponding source version is checked out.
+
 The first build may take some time because Cargo needs to compile the interpreter and its dependencies.
 
 ### Run a Source File
@@ -93,7 +115,9 @@ The first build may take some time because Cargo needs to compile the interprete
 Create a file named `hello.vey`:
 
 ```veyra
-say "Hello, World!"
+add name = "World"
+
+say f"Hello, {name}!"
 ```
 
 Run it:
@@ -166,7 +190,12 @@ Run a program:
 veyra hello.vey
 ```
 
-Cargo usually installs executables into its binary directory, such as `~/.cargo/bin/` on Linux and macOS.
+Cargo usually installs executables into its binary directory.
+
+Common locations:
+
+- Linux/macOS: `~/.cargo/bin/`
+- Windows: `%USERPROFILE%\.cargo\bin`
 
 Make sure this directory is available in your system's `PATH`.
 
@@ -185,9 +214,15 @@ For a Git-based installation:
 cargo install --git https://github.com/EmxrWasHere0/veyra.git --force
 ```
 
+Verify the installed version:
+
+```bash
+veyra --version
+```
+
 ## 7. Start the Interactive REPL
 
-Veyra 0.2.6 includes an interactive REPL.
+Veyra introduced its interactive REPL in version 0.2.6.
 
 Start it by running:
 
@@ -201,9 +236,11 @@ You can enter Veyra statements directly:
 >>> add x = 10
 >>> say x * 2
 20
+>>> say f"Double: {x * 2}"
+Double: 20
 ```
 
-Variables and functions remain available during the session.
+Variables, functions, and imports remain available during the session.
 
 The REPL also supports multiline blocks:
 
@@ -213,6 +250,18 @@ The REPL also supports multiline blocks:
 ... end
 >>> say square(5)
 25
+```
+
+### Trying Veyra 0.2.7 Features
+
+You can experiment with functional list methods directly in the REPL.
+
+```text
+>>> add numbers = [1, 2, 3, 4]
+>>> say numbers.map(func(x) => x * 2)
+[2, 4, 6, 8]
+>>> say numbers.filter(func(x) => x % 2 == 0)
+[2, 4]
 ```
 
 Type `exit` or `quit` to leave the REPL.
@@ -227,6 +276,12 @@ Run a Veyra test file:
 veyra --test tests.vey
 ```
 
+You can also use:
+
+```bash
+veyra -t tests.vey
+```
+
 If you are developing the interpreter, run its Rust regression tests:
 
 ```bash
@@ -237,9 +292,16 @@ The regression tests help verify that existing language features continue workin
 
 ## 9. Optional: Install the VSCode Extension
 
-Veyra provides a Visual Studio Code extension with syntax highlighting, snippets, and REPL integration.
+Veyra provides a Visual Studio Code extension with:
 
-To build it:
+- Syntax highlighting.
+- String interpolation highlighting.
+- Functional list and JSONData method highlighting.
+- Code snippets.
+- Automatic indentation and code folding.
+- Integrated REPL support.
+
+To build it, navigate to the extension directory from the repository root:
 
 ```bash
 cd veyra-vscode
@@ -250,7 +312,7 @@ npx vsce package
 Install the generated VSIX package:
 
 ```bash
-code --install-extension veyra-0.2.6.vsix
+code --install-extension veyra-0.2.7.vsix
 ```
 
 The package filename depends on the extension version.
@@ -317,6 +379,8 @@ Veyra reports source locations and function tracebacks for runtime errors.
 
 Read the error message and check the indicated source line.
 
+The error marker currently highlights the relevant line rather than the exact character column.
+
 For more information, see [Error Handling](error-handling.md).
 
 ## What's Next?
@@ -331,5 +395,6 @@ Continue learning Veyra:
 ## Useful Links
 
 - [Veyra GitHub Repository](https://github.com/EmxrWasHere0/veyra)
+- [Latest Release](https://github.com/EmxrWasHere0/veyra/releases/latest)
 - [Rust Installation](https://rustup.rs/)
 - [Git Downloads](https://git-scm.com/downloads)

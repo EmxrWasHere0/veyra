@@ -13,6 +13,7 @@ By the end of this lesson, you will know how to:
 - Extract portions of lists using slicing.
 - Work with nested lists.
 - Use list methods.
+- Process lists with `map()`, `filter()`, `reduce()`, `any()`, and `all()`.
 - Combine lists.
 - Destructure lists using `...rest`.
 - Iterate over lists using loops.
@@ -120,10 +121,22 @@ say colors
 Output:
 
 ```text
-[red, yellow, blue]
+["red", "yellow", "blue"]
 ```
 
-Negative indexes can also be used when accessing elements.
+Negative indexes can also be used when updating elements.
+
+```veyra
+colors[-1] = "purple"
+
+say colors
+```
+
+Output:
+
+```text
+["red", "yellow", "purple"]
+```
 
 ### Nested Assignment
 
@@ -252,20 +265,38 @@ Output:
 
 ### Pop
 
-Remove an element from a list.
+Remove an element from a list and return the removed value.
 
 ```veyra
 add numbers = [10, 20, 30]
 
-numbers.pop()
+add removed = numbers.pop()
 
+say removed
 say numbers
 ```
 
 Output:
 
 ```text
+30
 [10, 20]
+```
+
+You can also provide an index:
+
+```veyra
+add numbers = [10, 20, 30]
+
+say numbers.pop(0)
+say numbers
+```
+
+Output:
+
+```text
+10
+[20, 30]
 ```
 
 ### Insert
@@ -288,7 +319,7 @@ Output:
 
 ### Remove
 
-Remove an element using the list's `remove()` method.
+Remove the first element equal to the given value.
 
 ```veyra
 add numbers = [10, 20, 30]
@@ -303,6 +334,8 @@ Output:
 ```text
 [10, 30]
 ```
+
+Unlike `pop()`, `remove()` searches for a value rather than accepting an index.
 
 ### Clear
 
@@ -344,6 +377,8 @@ Output:
 
 `sort()` returns a new list without changing the original.
 
+Sorting supports lists containing numbers or text values of the same type.
+
 ### Reverse
 
 Return a reversed list.
@@ -374,29 +409,227 @@ Find the index of an element.
 add colors = ["red", "green", "blue"]
 
 say colors.index("green")
+say colors.index("purple")
 ```
 
 Output:
 
 ```text
 1
+-1
 ```
 
-### Method Summary
+If the value is not found, `index()` returns `-1`.
 
-| Method                 | Description             | Changes Original |
-| ---------------------- | ----------------------- | ---------------- |
-| `append(value)`        | Add an element          | Yes              |
-| `pop()`                | Remove an element       | Yes              |
-| `insert(index, value)` | Insert an element       | Yes              |
-| `remove(value)`        | Remove an element       | Yes              |
-| `clear()`              | Remove all elements     | Yes              |
-| `sort()`               | Return a sorted list    | No               |
-| `reverse()`            | Return a reversed list  | No               |
-| `index(value)`         | Find an element's index | No               |
-| `len()`                | Return the list length  | No               |
+## 7. Functional List Methods
 
-## 7. Combining Lists
+Veyra 0.2.7 introduces functional list methods.
+
+These methods accept callback functions, allowing you to transform, filter, and analyze lists without manually writing loops.
+
+You can use named functions, lambdas, and compatible native functions as callbacks.
+
+### Map
+
+`map(callback)` applies a function to every element and returns a new list.
+
+```veyra
+add numbers = [1, 2, 3, 4, 5]
+
+add doubled = numbers.map(func(x) => x * 2)
+
+say doubled
+say numbers
+```
+
+Output:
+
+```text
+[2, 4, 6, 8, 10]
+[1, 2, 3, 4, 5]
+```
+
+The original list remains unchanged.
+
+You can also use a native function:
+
+```veyra
+add words = ["hello", "veyra"]
+
+add lengths = words.map(len)
+
+say lengths
+```
+
+Output:
+
+```text
+[5, 5]
+```
+
+### Filter
+
+`filter(callback)` returns a new list containing only elements for which the callback produces a truthy value.
+
+```veyra
+add numbers = [1, 2, 3, 4, 5, 6]
+
+add evens = numbers.filter(func(x) => x % 2 == 0)
+
+say evens
+```
+
+Output:
+
+```text
+[2, 4, 6]
+```
+
+The callback receives one element at a time.
+
+### Reduce
+
+`reduce(callback, initial)` combines all list elements into a single value.
+
+The callback receives two arguments:
+
+- The current accumulator.
+- The current list element.
+
+```veyra
+add numbers = [5, 10, 15]
+
+add total = numbers.reduce(func(acc, x) => acc + x, 0)
+
+say total
+```
+
+Output:
+
+```text
+30
+```
+
+The second argument to `reduce()` is the initial accumulator value.
+
+You can also multiply all elements:
+
+```veyra
+add numbers = [2, 3, 4]
+
+add product = numbers.reduce(func(acc, x) => acc * x, 1)
+
+say product
+```
+
+Output:
+
+```text
+24
+```
+
+### Any
+
+`any(callback)` returns `true` if at least one element satisfies the condition.
+
+```veyra
+add numbers = [1, 3, 5, 8]
+
+say numbers.any(func(x) => x % 2 == 0)
+say numbers.any(func(x) => x > 10)
+```
+
+Output:
+
+```text
+true
+false
+```
+
+Evaluation stops once a truthy result is found.
+
+### All
+
+`all(callback)` returns `true` if every element satisfies the condition.
+
+```veyra
+add numbers = [2, 4, 6, 8]
+
+say numbers.all(func(x) => x % 2 == 0)
+say numbers.all(func(x) => x > 5)
+```
+
+Output:
+
+```text
+true
+false
+```
+
+Evaluation stops once a falsy result is found.
+
+### Empty Lists
+
+Functional methods also work with empty lists.
+
+```veyra
+add empty = []
+
+say empty.map(func(x) => x * 2)
+say empty.filter(func(x) => true)
+
+say empty.reduce(func(acc, x) => acc + x, 100)
+
+say empty.any(func(x) => true)
+say empty.all(func(x) => false)
+```
+
+Output:
+
+```text
+[]
+[]
+100
+false
+true
+```
+
+For an empty list, `reduce()` returns its initial value.
+
+`any()` returns `false`, while `all()` returns `true`.
+
+### Functional Method Summary
+
+| Method                      | Description                       | Changes Original |
+| --------------------------- | --------------------------------- | ---------------- |
+| `map(callback)`             | Transform every element           | No               |
+| `filter(callback)`          | Select matching elements          | No               |
+| `reduce(callback, initial)` | Combine elements into one value   | No               |
+| `any(callback)`             | Check whether any element matches | No               |
+| `all(callback)`             | Check whether all elements match  | No               |
+
+## 8. Method Summary
+
+| Method                      | Description                  | Changes Original |
+| --------------------------- | ---------------------------- | ---------------- |
+| `append(value)`             | Add an element               | Yes              |
+| `pop(index)`                | Remove and return an element | Yes              |
+| `insert(index, value)`      | Insert an element            | Yes              |
+| `remove(value)`             | Remove an element by value   | Yes              |
+| `clear()`                   | Remove all elements          | Yes              |
+| `sort()`                    | Return a sorted list         | No               |
+| `reverse()`                 | Return a reversed list       | No               |
+| `index(value)`              | Find an element's index      | No               |
+| `len()`                     | Return the list length       | No               |
+| `map(callback)`             | Transform elements           | No               |
+| `filter(callback)`          | Filter elements              | No               |
+| `reduce(callback, initial)` | Reduce elements to one value | No               |
+| `any(callback)`             | Test whether any match       | No               |
+| `all(callback)`             | Test whether all match       | No               |
+
+`pop()` accepts an optional index. Without an argument, it removes the last element.
+
+## 9. Combining Lists
 
 The `+` operator concatenates lists.
 
@@ -417,7 +650,7 @@ Output:
 
 The original lists are not modified.
 
-## 8. List Destructuring
+## 10. List Destructuring
 
 Destructuring assigns elements to multiple variables.
 
@@ -457,7 +690,7 @@ Output:
 
 Rest elements are useful when processing lists of varying lengths.
 
-## 9. Iterating Over Lists
+## 11. Iterating Over Lists
 
 The simplest way to iterate over a list is `repeat item in collection`.
 
@@ -487,7 +720,7 @@ add index = 0
 
 while index < len(numbers)
     say numbers[index]
-    index += 1
+    index = index + 1
 end
 ```
 
@@ -498,7 +731,7 @@ add numbers = [5, 10, 15]
 add total = 0
 
 repeat number in numbers
-    total += number
+    total = total + number
 end
 
 say total
@@ -510,7 +743,23 @@ Output:
 30
 ```
 
-## 10. Nested Lists
+You can also calculate the same result using `reduce()`:
+
+```veyra
+add numbers = [5, 10, 15]
+
+add total = numbers.reduce(func(acc, x) => acc + x, 0)
+
+say total
+```
+
+Output:
+
+```text
+30
+```
+
+## 12. Nested Lists
 
 Lists can contain other lists.
 
@@ -548,7 +797,7 @@ Output:
 [4, 99, 6]
 ```
 
-## 11. Value-Based Lists
+## 13. Value-Based Lists
 
 Veyra lists use value-based semantics.
 
@@ -571,7 +820,7 @@ Output:
 
 Updating `copy` does not modify `original`.
 
-## 12. Common Mistakes
+## 14. Common Mistakes
 
 ### Starting at Index 1
 
@@ -641,7 +890,23 @@ say numbers[::0]
 
 This causes a runtime error.
 
-## 13. Practice Exercises
+### Using the Wrong Callback Argument Count
+
+`map()`, `filter()`, `any()`, and `all()` pass one argument to their callbacks.
+
+`reduce()` passes two arguments.
+
+```veyra
+add numbers = [1, 2, 3]
+
+add doubled = numbers.map(func(x) => x * 2)
+
+add total = numbers.reduce(func(acc, x) => acc + x, 0)
+```
+
+Make sure your callback accepts the appropriate arguments.
+
+## 15. Practice Exercises
 
 ### Exercise 1: Favorite Foods
 
@@ -674,6 +939,8 @@ Use `sort()` to produce a sorted copy without modifying the original.
 
 Use `repeat item in collection` to calculate the sum of a list.
 
+Then calculate the same result using `reduce()`.
+
 ### Exercise 7: Nested Assignment
 
 Create a nested list and update one of its inner elements.
@@ -681,6 +948,18 @@ Create a nested list and update one of its inner elements.
 ### Exercise 8: Destructuring
 
 Destructure a list into two variables and a `...rest` variable.
+
+### Exercise 9: Map
+
+Create a list of numbers and use `map()` to multiply every element by three.
+
+### Exercise 10: Filter
+
+Create a list of numbers and use `filter()` to select values greater than ten.
+
+### Exercise 11: Any and All
+
+Create a list of numbers and use `any()` and `all()` to check different conditions.
 
 ## What's Next?
 

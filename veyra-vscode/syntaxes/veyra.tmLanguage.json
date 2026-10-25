@@ -32,50 +32,131 @@
     },
     "strings": {
       "patterns": [
+        { "include": "#interpolated-strings" },
         {
           "name": "string.quoted.triple.double.veyra",
           "begin": "\"\"\"",
           "end": "\"\"\"",
-          "patterns": [
-            {
-              "name": "constant.character.escape.veyra",
-              "match": "\\\\(n|t|r|\\\\|\"|')"
-            }
-          ]
+          "patterns": [{ "include": "#string-escapes" }]
         },
         {
           "name": "string.quoted.triple.single.veyra",
           "begin": "'''",
           "end": "'''",
-          "patterns": [
-            {
-              "name": "constant.character.escape.veyra",
-              "match": "\\\\(n|t|r|\\\\|\"|')"
-            }
-          ]
+          "patterns": [{ "include": "#string-escapes" }]
         },
         {
           "name": "string.quoted.double.veyra",
           "begin": "\"",
           "end": "\"",
-          "patterns": [
-            {
-              "name": "constant.character.escape.veyra",
-              "match": "\\\\(n|t|r|\\\\|\"|')"
-            }
-          ]
+          "patterns": [{ "include": "#string-escapes" }]
         },
         {
           "name": "string.quoted.single.veyra",
           "begin": "'",
           "end": "'",
-          "patterns": [
-            {
-              "name": "constant.character.escape.veyra",
-              "match": "\\\\(n|t|r|\\\\|\"|')"
-            }
-          ]
+          "patterns": [{ "include": "#string-escapes" }]
         }
+      ]
+    },
+    "string-escapes": {
+      "patterns": [
+        {
+          "name": "constant.character.escape.veyra",
+          "match": "\\\\(n|t|r|\\\\|\"|')"
+        }
+      ]
+    },
+    "interpolated-strings": {
+      "patterns": [
+        {
+          "name": "string.quoted.triple.double.interpolated.veyra",
+          "begin": "(f)(\"\"\")",
+          "beginCaptures": {
+            "1": { "name": "storage.type.string.interpolated.veyra" },
+            "2": { "name": "punctuation.definition.string.begin.veyra" }
+          },
+          "end": "\"\"\"",
+          "endCaptures": {
+            "0": { "name": "punctuation.definition.string.end.veyra" }
+          },
+          "patterns": [{ "include": "#interpolation-content" }]
+        },
+        {
+          "name": "string.quoted.triple.single.interpolated.veyra",
+          "begin": "(f)(''')",
+          "beginCaptures": {
+            "1": { "name": "storage.type.string.interpolated.veyra" },
+            "2": { "name": "punctuation.definition.string.begin.veyra" }
+          },
+          "end": "'''",
+          "endCaptures": {
+            "0": { "name": "punctuation.definition.string.end.veyra" }
+          },
+          "patterns": [{ "include": "#interpolation-content" }]
+        },
+        {
+          "name": "string.quoted.double.interpolated.veyra",
+          "begin": "(f)(\")",
+          "beginCaptures": {
+            "1": { "name": "storage.type.string.interpolated.veyra" },
+            "2": { "name": "punctuation.definition.string.begin.veyra" }
+          },
+          "end": "\"",
+          "endCaptures": {
+            "0": { "name": "punctuation.definition.string.end.veyra" }
+          },
+          "patterns": [{ "include": "#interpolation-content" }]
+        },
+        {
+          "name": "string.quoted.single.interpolated.veyra",
+          "begin": "(f)(')",
+          "beginCaptures": {
+            "1": { "name": "storage.type.string.interpolated.veyra" },
+            "2": { "name": "punctuation.definition.string.begin.veyra" }
+          },
+          "end": "'",
+          "endCaptures": {
+            "0": { "name": "punctuation.definition.string.end.veyra" }
+          },
+          "patterns": [{ "include": "#interpolation-content" }]
+        }
+      ]
+    },
+    "interpolation-content": {
+      "patterns": [
+        { "include": "#string-escapes" },
+        {
+          "name": "constant.character.escape.brace.veyra",
+          "match": "\\{\\{|\\}\\}"
+        },
+        {
+          "name": "meta.interpolation.veyra",
+          "begin": "\\{(?!\\{)",
+          "beginCaptures": {
+            "0": { "name": "punctuation.section.interpolation.begin.veyra" }
+          },
+          "end": "\\}(?!\\})",
+          "endCaptures": {
+            "0": { "name": "punctuation.section.interpolation.end.veyra" }
+          },
+          "patterns": [{ "include": "#expression" }]
+        }
+      ]
+    },
+    "expression": {
+      "patterns": [
+        { "include": "#strings" },
+        { "include": "#numbers" },
+        { "include": "#constants" },
+        { "include": "#lambda" },
+        { "include": "#builtins" },
+        { "include": "#module-access" },
+        { "include": "#function-call" },
+        { "include": "#keywords" },
+        { "include": "#operators" },
+        { "include": "#punctuation" },
+        { "include": "#identifiers" }
       ]
     },
     "numbers": {
@@ -243,7 +324,7 @@
           }
         },
         {
-          "match": "\\b([a-zA-Z_][a-zA-Z0-9_]*)(\\.)(append|pop|len|index|insert|remove|clear|reverse|sort|upper|lower|trim|trim_start|trim_end|contains|starts_with|ends_with|replace|split|join|keys|values|has|get)(?=\\s*\\()",
+          "match": "\\b([a-zA-Z_][a-zA-Z0-9_]*)(\\.)(append|pop|len|index|insert|remove|clear|reverse|sort|map|filter|reduce|any|all|upper|lower|trim|trim_start|trim_end|contains|starts_with|ends_with|replace|split|join|keys|values|has|get|merge|items)(?=\\s*\\()",
           "captures": {
             "1": { "name": "variable.other.veyra" },
             "2": { "name": "punctuation.accessor.dot.veyra" },

@@ -9,6 +9,7 @@ Veyra provides `say` for displaying output, `get` for reading user input, and bu
 By the end of this lesson, you will know how to:
 
 - Display values using `say`.
+- Format output with string interpolation.
 - Read user input using `get`.
 - Display prompts while requesting input.
 - Convert input into numbers.
@@ -41,7 +42,7 @@ null
 
 ```veyra
 add name = "Veyra"
-add version = "0.2.6"
+add version = "0.2.7"
 
 say name
 say version
@@ -51,19 +52,36 @@ Output:
 
 ```text
 Veyra
-0.2.6
+0.2.7
 ```
 
 ### Combining Text and Values
 
-The `+` operator can concatenate text with other values.
+The `+` operator concatenates two text values:
+
+```veyra
+add name = "Alex"
+
+say "Player: " + name
+```
+
+Output:
+
+```text
+Player: Alex
+```
+
+To include numbers or other values in text, use string interpolation.
+
+Veyra 0.2.7 introduces interpolated strings using the `f` prefix:
 
 ```veyra
 add name = "Alex"
 add score = 100
 
-say "Player: " + name
-say "Score: " + score
+say f"Player: {name}"
+say f"Score: {score}"
+say f"Next score: {score + 10}"
 ```
 
 Output:
@@ -71,7 +89,24 @@ Output:
 ```text
 Player: Alex
 Score: 100
+Next score: 110
 ```
+
+Expressions inside `{}` are evaluated using Veyra's normal expression rules.
+
+You can also use multiline interpolation:
+
+```veyra
+add report = f"""
+Player: {name}
+Score: {score}
+Passed: {score >= 50}
+"""
+
+say report
+```
+
+Use `{{` and `}}` to include literal braces in interpolated strings.
 
 ## 2. Reading User Input
 
@@ -88,7 +123,7 @@ get variable "Optional prompt"
 ```veyra
 get name
 
-say "Hello, " + name
+say f"Hello, {name}!"
 ```
 
 Veyra waits for the user to enter a value and stores the result in `name`.
@@ -98,7 +133,7 @@ Veyra waits for the user to enter a value and stores the result in `name`.
 ```veyra
 get name "What is your name? "
 
-say "Hello, " + name + "!"
+say f"Hello, {name}!"
 ```
 
 Example interaction:
@@ -117,7 +152,7 @@ The prompt can also be an expression.
 ```veyra
 add field = "username"
 
-get value "Enter " + field + ": "
+get value f"Enter {field}: "
 
 say value
 ```
@@ -135,7 +170,7 @@ get age "Enter your age: "
 
 add next_age = num(age) + 1
 
-say "Next year, you will be " + next_age
+say f"Next year, you will be {next_age}"
 ```
 
 Example:
@@ -157,7 +192,7 @@ get second "Second number: "
 
 add total = num(first) + num(second)
 
-say "Sum: " + total
+say f"Sum: {total}"
 ```
 
 Example:
@@ -199,7 +234,9 @@ Use `io.write(path, content)` to write text to a file.
 ```veyra
 mod io
 
-io.write("hello.txt", "Hello from Veyra!")
+add name = "Alex"
+
+io.write("hello.txt", f"Hello, {name}!")
 
 say "File written."
 ```
@@ -221,7 +258,7 @@ say content
 Output:
 
 ```text
-Hello from Veyra!
+Hello, Alex!
 ```
 
 The operation may fail if the file does not exist or cannot be read.
@@ -431,7 +468,7 @@ try
     add content = io.read("missing.txt")
     say content
 catch err
-    say "Unable to read file: " + err
+    say f"Unable to read file: {err}"
 end
 ```
 
@@ -441,7 +478,7 @@ This allows your program to respond to the failure instead of terminating immedi
 
 ### Exercise 1: Greeting Program
 
-Ask the user for their name using `get` and display a personalized greeting.
+Ask the user for their name using `get` and display a personalized greeting using string interpolation.
 
 ### Exercise 2: Calculator
 
@@ -462,6 +499,10 @@ Display the current working directory and list its contents.
 ### Exercise 6: Error Handling
 
 Attempt to read a missing file and handle the error with `try/catch`.
+
+### Exercise 7: Dynamic Output
+
+Ask the user for their name and age, then display both values in a multiline interpolated string.
 
 ## What's Next?
 

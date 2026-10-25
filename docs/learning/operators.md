@@ -11,12 +11,13 @@ By the end of this lesson, you will know how to:
 - Perform arithmetic operations.
 - Compare values.
 - Combine and negate conditions.
-- Update variables using assignment operators.
+- Update variables using assignment.
 - Check collection membership with `in` and `not in`.
 - Use `?`, `?=`, and `??`.
-- Combine lists.
+- Combine lists and JSONData objects.
 - Access and slice collections.
 - Create lambdas and variadic parameters.
+- Use operators inside interpolated strings.
 
 ## 1. Arithmetic Operators
 
@@ -55,11 +56,11 @@ Output:
 
 ### Text Concatenation
 
-The `+` operator also concatenates text.
+The `+` operator also concatenates two text values.
 
 ```veyra
 add name = "Veyra"
-add version = "0.2.6"
+add version = "0.2.7"
 
 say "Language: " + name
 say "Version: " + version
@@ -69,10 +70,32 @@ Output:
 
 ```text
 Language: Veyra
-Version: 0.2.6
+Version: 0.2.7
 ```
 
-Veyra can combine text with other values using `+`.
+Both operands must be text.
+
+To combine text with numbers or other values, use string interpolation:
+
+```veyra
+add age = 20
+
+say f"Age: {age}"
+say f"Next year: {age + 1}"
+```
+
+Output:
+
+```text
+Age: 20
+Next year: 21
+```
+
+Alternatively, convert the value explicitly:
+
+```veyra
+say "Age: " + text(age)
+```
 
 ### List Concatenation
 
@@ -92,6 +115,37 @@ Output:
 ```
 
 The operation returns a new list.
+
+### JSONData Merging
+
+Veyra 0.2.7 extends the `+` operator to JSONData objects.
+
+```veyra
+add user = {"name": "Alex", "age": 20}
+add updates = {"age": 21, "active": true}
+
+add merged = user + updates
+
+say merged
+```
+
+Output:
+
+```text
+{"name": "Alex", "age": 21, "active": true}
+```
+
+When both objects contain the same key, the value from the right-hand object takes precedence.
+
+The operation creates a new object without modifying either original.
+
+JSONData merging is shallow. Nested objects are replaced rather than recursively combined.
+
+The equivalent method is:
+
+```veyra
+add merged = user.merge(updates)
+```
 
 ## 2. Comparison Operators
 
@@ -139,6 +193,22 @@ else
     say "Try again."
 end
 ```
+
+Equality operators also support lists and JSONData objects.
+
+```veyra
+say [1, 2] == [1, 2]
+say {"x": 1} == {"x": 1}
+```
+
+Output:
+
+```text
+true
+true
+```
+
+Ordering comparisons such as `<` and `>` support numbers and text.
 
 ## 3. Logical Operators
 
@@ -191,7 +261,11 @@ true
 
 Logical operations use Veyra's truthiness rules.
 
-Falsy values include `false`, `null`, `0`, `""`, and `[]`.
+Falsy values include `false`, `null`, `0`, `""`, `[]`, and `{}`.
+
+The `and` and `or` operators return Boolean values.
+
+**Note:** Both operands are currently evaluated. These operators do not provide short-circuit evaluation.
 
 ## 4. Membership Operators
 
@@ -254,31 +328,20 @@ true
 true
 ```
 
-## 5. Assignment Operators
+## 5. Assignment Operator
 
-Assignment operators update variables.
-
-| Operator | Description          |
-| -------- | -------------------- |
-| `=`      | Assign               |
-| `+=`     | Add and assign       |
-| `-=`     | Subtract and assign  |
-| `*=`     | Multiply and assign  |
-| `/=`     | Divide and assign    |
-| `%=`     | Remainder and assign |
-
-Example:
+Use `=` to update an existing mutable variable.
 
 ```veyra
 add x = 10
 
-x += 5
+x = x + 5
 say x
 
-x -= 3
+x = x - 3
 say x
 
-x *= 2
+x = x * 2
 say x
 ```
 
@@ -290,7 +353,31 @@ Output:
 24
 ```
 
-Use `add` to declare a mutable variable and assignment operators to update it.
+Use `add` to declare a mutable variable and `=` to update it.
+
+Compound assignment operators such as `+=` and `-=` are not currently supported.
+
+### Assignment to Constants
+
+Assigning to a constant declared using `set` does not modify its original value.
+
+Instead, the assignment updates its channel.
+
+```veyra
+set port = 80
+
+port = 8080
+
+say port
+say 0 ? port
+```
+
+Output:
+
+```text
+80
+8080
+```
 
 ## 6. Conditional Assignment: `?=`
 
@@ -359,6 +446,8 @@ Alex
 ```
 
 Unlike `?=`, this operator does not assign a new value to a variable.
+
+Both operands are currently evaluated, even when the left operand is not `null`.
 
 ## 8. Channel Operator: `?`
 
@@ -474,7 +563,50 @@ The ending index is exclusive.
 
 For more examples, see [Lists](lists.md).
 
-## 10. Lambda Operator: `=>`
+## 10. Operators in String Interpolation
+
+Veyra 0.2.7 supports expressions inside interpolated strings.
+
+Use the `f` prefix and place expressions inside `{}`.
+
+```veyra
+add a = 10
+add b = 20
+
+say f"Sum: {a + b}"
+say f"Product: {a * b}"
+say f"Equal: {a == b}"
+```
+
+Output:
+
+```text
+Sum: 30
+Product: 200
+Equal: false
+```
+
+You can also use indexing and function calls:
+
+```veyra
+add numbers = [10, 20, 30]
+
+say f"First: {numbers[0]}"
+say f"Length: {len(numbers)}"
+```
+
+Output:
+
+```text
+First: 10
+Length: 3
+```
+
+Interpolation converts evaluated values into their text representations.
+
+Normal strings without the `f` prefix do not evaluate expressions inside braces.
+
+## 11. Lambda Operator: `=>`
 
 The `=>` operator creates a lambda expression together with `func`.
 
@@ -504,7 +636,21 @@ Output:
 7
 ```
 
-## 11. Variadic and Rest Operator: `...`
+Lambdas can be passed to functional list methods:
+
+```veyra
+add numbers = [1, 2, 3]
+
+say numbers.map(func(x) => x * 2)
+```
+
+Output:
+
+```text
+[2, 4, 6]
+```
+
+## 12. Variadic and Rest Operator: `...`
 
 The `...` syntax is used with variadic parameters and list destructuring.
 
@@ -536,24 +682,26 @@ Output:
 [20, 30, 40]
 ```
 
-## 12. Operator Reference
+## 13. Operator Reference
 
-| Category               | Operators                         |
-| ---------------------- | --------------------------------- |
-| Arithmetic             | `+`, `-`, `*`, `/`, `%`           |
-| Comparison             | `==`, `!=`, `<`, `>`, `<=`, `>=`  |
-| Logical                | `and`, `or`, `not`, `!`           |
-| Membership             | `in`, `not in`                    |
-| Assignment             | `=`, `+=`, `-=`, `*=`, `/=`, `%=` |
-| Conditional assignment | `?=`                              |
-| Null coalescing        | `??`                              |
-| Channel access         | `?`                               |
-| Indexing               | `[]`                              |
-| Slicing                | `[start:end:step]`                |
-| Lambda                 | `=>`                              |
-| Variadic/rest          | `...`                             |
+| Category               | Operators                        |
+| ---------------------- | -------------------------------- |
+| Arithmetic             | `+`, `-`, `*`, `/`, `%`          |
+| Comparison             | `==`, `!=`, `<`, `>`, `<=`, `>=` |
+| Logical                | `and`, `or`, `not`, `!`          |
+| Membership             | `in`, `not in`                   |
+| Assignment             | `=`                              |
+| Conditional assignment | `?=`                             |
+| Null coalescing        | `??`                             |
+| Channel access         | `?`                              |
+| Indexing               | `[]`                             |
+| Slicing                | `[start:end:step]`               |
+| Lambda                 | `=>`                             |
+| Variadic/rest          | `...`                            |
 
-## 13. Common Mistakes
+The `+` operator supports number addition, text concatenation, list concatenation, and JSONData merging.
+
+## 14. Common Mistakes
 
 ### Assignment vs. Comparison
 
@@ -575,6 +723,24 @@ The three operators have different purposes:
 - `?=` conditionally assigns a value.
 - `??` provides a fallback for `null`.
 
+### Combining Text and Numbers with `+`
+
+The `+` operator does not automatically convert numbers to text.
+
+This expression is invalid:
+
+```veyra
+add age = 20
+
+say "Age: " + age
+```
+
+Use interpolation instead:
+
+```veyra
+say f"Age: {age}"
+```
+
 ### Expecting List Concatenation to Modify the Original
 
 ```veyra
@@ -592,6 +758,8 @@ Use assignment to keep the result:
 first = first + second
 ```
 
+The same rule applies to JSONData merging.
+
 ### Invalid Slice Step
 
 A slice step cannot be zero.
@@ -604,7 +772,7 @@ say numbers[::0]
 
 This causes a runtime error.
 
-## 14. Practice Exercises
+## 15. Practice Exercises
 
 ### Exercise 1: Arithmetic
 
@@ -645,6 +813,16 @@ Create a lambda that squares a number.
 ### Exercise 10: Channels
 
 Declare a constant with `set`, update its channel, and read the channel using `?`.
+
+### Exercise 11: JSONData Merging
+
+Create two JSONData objects containing one overlapping key.
+
+Merge them using `+` and inspect the result.
+
+### Exercise 12: String Interpolation
+
+Create two numeric variables and display their sum, product, and comparison results using interpolated strings.
 
 ## What's Next?
 

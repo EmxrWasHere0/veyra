@@ -30,7 +30,7 @@ def get_veyra_version():
             if version_match:
                 return version_match.group(1)
 
-    return "0.2.6"
+    return "0.2.7"
 
 
 release = get_veyra_version()

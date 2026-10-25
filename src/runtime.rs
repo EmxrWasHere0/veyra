@@ -2885,6 +2885,20 @@ impl Runtime {
 
         let body = lines[start + 1..end].to_vec();
 
+        // Easter egg: detect functions that simply wrap 'say'.
+        if params.len() == 1
+            && body.len() == 1
+            && body[0].tokens.len() == 2
+            && body[0].tokens[0].text == "say"
+            && body[0].tokens[1].kind == Tok::Id
+            && body[0].tokens[1].text == params[0].name
+        {
+            return Err(
+                "We invented 'say' for a reason. Writing your own printing function? What a shame..."
+                    .into(),
+            );
+        }
+
         let func = Rc::new(Function {
             name: name.clone(),
             params,

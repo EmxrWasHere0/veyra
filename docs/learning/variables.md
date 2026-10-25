@@ -2,17 +2,18 @@
 
 Veyra is a dynamically typed language. Variables can store different kinds of values without requiring explicit type declarations.
 
-In this lesson, you will learn how to declare variables, update their values, inspect types, and work with constants.
+In this lesson, you will learn how to declare variables, update their values, inspect types, work with constants, and format values using string interpolation.
 
 ## What You Will Learn
 
 By the end of this guide, you will know how to:
 
 - Declare mutable variables using `add`.
-- Update variables using assignment operators.
+- Update variables using `=`.
 - Understand Veyra's seven value types.
 - Convert values using `num()` and `text()`.
 - Inspect values using `type()`.
+- Use string interpolation to format values.
 - Declare constants using `set`.
 - Use conditional assignment with `?=`.
 - Understand the difference between constants and channels.
@@ -73,30 +74,33 @@ value = [1, 2, 3]
 say value
 ```
 
-### Compound Assignment
+Output:
 
-Veyra supports compound assignment operators:
+```text
+[1, 2, 3]
+```
+
+### Updating Values with Expressions
+
+You can use expressions when updating variables.
 
 ```veyra
 add score = 10
 
-score += 5
-score -= 3
-score *= 2
-score /= 4
-score %= 3
+score = score + 5
+score = score - 3
+score = score * 2
 
 say score
 ```
 
-| Operator | Description                        |
-| -------- | ---------------------------------- |
-| `=`      | Assign a value                     |
-| `+=`     | Add and assign                     |
-| `-=`     | Subtract and assign                |
-| `*=`     | Multiply and assign                |
-| `/=`     | Divide and assign                  |
-| `%=`     | Calculate the remainder and assign |
+Output:
+
+```text
+24
+```
+
+Compound assignment operators such as `+=`, `-=`, `*=`, `/=`, and `%=` are planned for Veyra 0.2.8 and are not available in 0.2.7.
 
 ## 2. Understanding Data Types
 
@@ -120,6 +124,7 @@ say type("Hello")
 say type(true)
 say type([1, 2, 3])
 say type({"name": "Alex"})
+say type(func(x) => x + 1)
 say type(null)
 ```
 
@@ -131,6 +136,7 @@ text
 bool
 list
 jsondata
+function
 null
 ```
 
@@ -227,18 +233,73 @@ Output:
 Alex Morgan
 ```
 
-Veyra supports combining text with other values:
+Text values can be combined with other text values using `+`.
+
+To include numbers or other types in text, use string interpolation or `text()`.
+
+### String Interpolation
+
+Veyra 0.2.7 supports interpolated strings.
+
+Prefix a string with `f` and place expressions inside `{}`.
 
 ```veyra
+add name = "Alex"
 add age = 20
 
-say "Age: " + age
+say f"Name: {name}"
+say f"Age: {age}"
+say f"Next year: {age + 1}"
 ```
 
 Output:
 
 ```text
+Name: Alex
 Age: 20
+Next year: 21
+```
+
+Interpolation can evaluate expressions:
+
+```veyra
+add price = 25
+add quantity = 4
+
+say f"Total: {price * quantity}"
+```
+
+Output:
+
+```text
+Total: 100
+```
+
+You can also use single-quoted and multiline interpolated strings.
+
+```veyra
+add language = "Veyra"
+
+say f'Welcome to {language}!'
+
+say f"""
+Language: {language}
+Version: 0.2.7
+"""
+```
+
+To include literal braces, use `{{` and `}}`.
+
+```veyra
+add value = 42
+
+say f"Result: {{ {value} }}"
+```
+
+Output:
+
+```text
+Result: { 42 }
 ```
 
 ### Converting Values to Text
@@ -296,7 +357,7 @@ Use `set` to declare a constant.
 
 ```veyra
 set app_name = "Veyra"
-set version = "0.2.6"
+set version = "0.2.7"
 
 say app_name
 say version
@@ -306,7 +367,7 @@ Output:
 
 ```text
 Veyra
-0.2.6
+0.2.7
 ```
 
 Unlike mutable variables, constants preserve their original values.
@@ -453,6 +514,30 @@ number
 
 `num()` is a conversion function, while `"number"` is the type name.
 
+### Combining Text and Numbers Directly
+
+The `+` operator does not automatically convert numbers into text.
+
+```veyra
+add age = 20
+
+say "Age: " + age
+```
+
+This causes a runtime error.
+
+Use interpolation instead:
+
+```veyra
+say f"Age: {age}"
+```
+
+Or convert the number explicitly:
+
+```veyra
+say "Age: " + text(age)
+```
+
 ### Converting Invalid Text
 
 ```veyra
@@ -503,14 +588,7 @@ Print their values.
 
 ### Exercise 2: Type Detection
 
-Create one variable for each of these types:
-
-- Number
-- Text
-- Boolean
-- List
-- JSONData
-- Null
+Create one variable for each of Veyra's seven value types.
 
 Use `type()` to display their types.
 
@@ -530,13 +608,21 @@ Print the result.
 
 Create a numeric variable, convert it to text using `text()`, and inspect the result with `type()`.
 
-### Exercise 5: Default Values
+### Exercise 5: String Interpolation
+
+Create variables for a person's name, age, and favorite programming language.
+
+Display a formatted message using an interpolated string.
+
+Include at least one arithmetic expression.
+
+### Exercise 6: Default Values
 
 Use `?=` to assign a default username.
 
 Then repeat the exercise with an already initialized variable.
 
-### Exercise 6: Constants and Channels
+### Exercise 7: Constants and Channels
 
 Declare a constant using `set`.
 

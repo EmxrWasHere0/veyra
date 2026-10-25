@@ -50,17 +50,20 @@ Veyra started as a learning project and continues to evolve as an experiment in 
 
 ## Features
 
-- **Dynamic typing** — Numbers, strings, booleans, lists, objects, functions, and null.
+- **Dynamic typing** — Numbers, text, booleans, lists, JSONData, functions, and null.
 - **Channels** — Explicit runtime overrides without changing constant values.
 - **Functions** — Recursion, lambdas, default arguments, variadic parameters, and multiple return values.
 - **Closed scopes** — Functions do not implicitly capture surrounding local variables.
 - **Control flow** — Conditionals, loops, collection iteration, and labeled loops.
-- **Collections** — Lists, slicing, indexing, and JSON-like objects.
+- **String interpolation** — Embed expressions in strings using `f"Hello, {name}!"`.
+- **Collections** — Lists, slicing, indexing, and JSONData objects.
+- **Functional lists** — `map()`, `filter()`, `reduce()`, `any()`, and `all()`.
+- **JSONData operations** — Object merging, key-value iteration, and the `+` operator.
 - **Error handling** — `try`, `catch`, and `throw`.
 - **Modules** — Built-in Rust modules and user-defined `.veymod` modules.
 - **Testing** — Test blocks, assertions, and automated regression tests.
 - **REPL** — Interactive execution with persistent variables and functions.
-- **Developer tools** — Detailed runtime errors, function tracebacks, and VSCode support.
+- **Developer tools** — Source-aware runtime errors, function tracebacks, and VSCode support.
 
 ## Installation
 
@@ -103,13 +106,16 @@ veyra --version
 Create a file named `hello.vey`:
 
 ```veyra
-say "Hello, World!"
+add name = "Veyra"
 
-add greet(name)
-    return "Hello, " + name + "!"
+say "Hello, World!"
+say f"Hello, {name}!"
+
+add greet(person)
+    return f"Welcome to Veyra, {person}!"
 end
 
-say greet("Veyra")
+say greet("Alex")
 ```
 
 Run it:
@@ -123,6 +129,7 @@ Expected output:
 ```text
 Hello, World!
 Hello, Veyra!
+Welcome to Veyra, Alex!
 ```
 
 ### Interactive REPL
@@ -137,8 +144,8 @@ Example:
 
 ```text
 >>> add x = 10
->>> say x * 2
-20
+>>> say f"Double: {x * 2}"
+Double: 20
 >>> add square(n)
 ...     return n * n
 ... end
@@ -183,7 +190,7 @@ Detailed language documentation is maintained separately from this README.
 - [Code Examples](examples/)
 - [VSCode Extension](veyra-vscode/)
 
-The documentation covers syntax, functions, channels, collections, modules, error handling, and other language features.
+The documentation covers syntax, functions, channels, string interpolation, collections, modules, error handling, and other language features.
 
 ## VSCode Extension
 
@@ -201,7 +208,7 @@ Build and install the extension:
 cd veyra-vscode
 npm install
 npx vsce package
-code --install-extension veyra-0.2.6.vsix
+code --install-extension veyra-0.2.7.vsix
 ```
 
 You can then open the Command Palette and run:

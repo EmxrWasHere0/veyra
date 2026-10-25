@@ -6,6 +6,8 @@ Veyra provides `try`, `catch`, and `throw` for handling runtime errors.
 
 Since version 0.2.6, runtime errors also include source locations and function tracebacks to make debugging easier.
 
+Veyra 0.2.7 additionally supports string interpolation, making it easier to construct descriptive error messages.
+
 ## What You Will Learn
 
 By the end of this guide, you will know how to:
@@ -15,6 +17,7 @@ By the end of this guide, you will know how to:
 - Raise errors explicitly using `throw`.
 - Use optional catch variables.
 - Handle errors in nested blocks.
+- Construct error messages using string interpolation.
 - Read source locations and function tracebacks.
 - Avoid hiding important failures.
 
@@ -54,7 +57,7 @@ try
     add result = 10 / 0
     say result
 catch err
-    say "An error occurred: " + err
+    say f"An error occurred: {err}"
 end
 ```
 
@@ -102,7 +105,7 @@ Handle the error with `try/catch`:
 try
     say divide(10, 0)
 catch err
-    say "Calculation failed: " + err
+    say f"Calculation failed: {err}"
 end
 ```
 
@@ -113,10 +116,35 @@ end
 ```veyra
 add name = "example.txt"
 
-throw "Unable to open file: " + name
+throw f"Unable to open file: {name}"
 ```
 
 This is useful for producing descriptive error messages.
+
+### Throwing Interpolated Strings
+
+Veyra 0.2.7 supports evaluating expressions inside interpolated strings.
+
+```veyra
+add expected = 10
+add received = 5
+
+if received != expected
+    throw f"Expected {expected}, but received {received}"
+end
+```
+
+You can also include function calls and calculations in error messages.
+
+```veyra
+add validate_age(age)
+    if age < 0
+        throw f"Invalid age: {age}"
+    end
+
+    return age
+end
+```
 
 ## 4. Handling File Errors
 
@@ -131,7 +159,7 @@ try
     add content = io.read("notes.txt")
     say content
 catch err
-    say "Could not read the file: " + err
+    say f"Could not read the file: {err}"
 end
 ```
 
@@ -144,7 +172,7 @@ try
     io.write("output.txt", "Hello from Veyra!")
     say "File written successfully."
 catch err
-    say "Could not write the file: " + err
+    say f"Could not write the file: {err}"
 end
 ```
 
@@ -161,12 +189,12 @@ try
     try
         throw "Inner error"
     catch inner_error
-        say "Handled inner error: " + inner_error
+        say f"Handled inner error: {inner_error}"
     end
 
     say "Continuing operation"
 catch outer_error
-    say "Outer error: " + outer_error
+    say f"Outer error: {outer_error}"
 end
 ```
 
@@ -176,7 +204,7 @@ Nested handlers are useful when different operations require different recovery 
 
 ## 6. Runtime Error Locations
 
-Veyra 0.2.6 includes source information in runtime errors.
+Veyra 0.2.6 introduced source information in runtime errors.
 
 Consider a file named `example.vey`:
 
@@ -205,6 +233,8 @@ The error report includes:
 - A marker identifying the relevant line.
 
 The marker currently highlights the line rather than the exact expression.
+
+Character-column diagnostics are not yet available in Veyra 0.2.7.
 
 ## 7. Function Tracebacks
 
@@ -260,6 +290,38 @@ Use conditions for situations that can be checked in advance.
 
 Use `try/catch` for operations that may still fail during execution.
 
+### Logical Operators and Error Prevention
+
+In Veyra 0.2.7, `and` and `or` evaluate both operands.
+
+They do not currently use short-circuit evaluation.
+
+For example, avoid relying on a logical operator to prevent an unsafe calculation:
+
+```veyra
+add denominator = 0
+
+if denominator != 0 and 10 / denominator > 2
+    say "Valid result"
+end
+```
+
+The division expression is still evaluated and may raise an error.
+
+Instead, use nested conditions:
+
+```veyra
+add denominator = 0
+
+if denominator != 0
+    if 10 / denominator > 2
+        say "Valid result"
+    end
+end
+```
+
+This ensures that division occurs only when the denominator is nonzero.
+
 ## 9. Avoiding Silent Failures
 
 Avoid catching errors without handling them meaningfully.
@@ -280,7 +342,7 @@ Better:
 try
     throw "Operation failed"
 catch err
-    say "Operation failed: " + err
+    say f"Operation failed: {err}"
 end
 ```
 
@@ -290,7 +352,7 @@ When appropriate, you can raise another error from inside a handler.
 try
     throw "Connection failed"
 catch err
-    throw "Unable to continue: " + err
+    throw f"Unable to continue: {err}"
 end
 ```
 
@@ -337,9 +399,21 @@ During development, include the original error message when possible.
 try
     throw "Invalid configuration"
 catch err
-    say "Configuration error: " + err
+    say f"Configuration error: {err}"
 end
 ```
+
+### Combining Text and Error Values
+
+String interpolation is the recommended way to construct messages containing runtime values.
+
+```veyra
+add code = 404
+
+say f"Request failed with status {code}"
+```
+
+The `+` operator does not automatically convert numbers into text.
 
 ## 11. Complete Example
 
@@ -356,8 +430,8 @@ try
     say "Message loaded:"
     say message
 catch err
-    say "Unable to load " + filename
-    say "Reason: " + err
+    say f"Unable to load {filename}"
+    say f"Reason: {err}"
 end
 ```
 
@@ -392,6 +466,12 @@ Trigger an error in the deepest function and inspect the traceback.
 ### Exercise 6: Error Propagation
 
 Catch an error and throw a new error containing the original message.
+
+### Exercise 7: Interpolated Error Messages
+
+Create a function that validates a number.
+
+If the number is outside an allowed range, throw an interpolated error message containing the invalid value.
 
 ## What's Next?
 

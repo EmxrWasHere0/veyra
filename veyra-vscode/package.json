@@ -2,7 +2,7 @@
   "name": "veyra",
   "displayName": "Veyra",
   "description": "Syntax highlighting and language support for the Veyra programming language.",
-  "version": "0.2.6",
+  "version": "0.2.7",
   "publisher": "veyra-lang",
   "license": "GPL-3.0-only",
   "engines": {
@@ -17,7 +17,8 @@
     "vey",
     "syntax-highlighting",
     "language-support",
-    "repl"
+    "repl",
+    "string-interpolation"
   ],
   "repository": {
     "type": "git",

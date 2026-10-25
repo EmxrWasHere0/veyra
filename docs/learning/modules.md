@@ -107,6 +107,12 @@ mod math
 say math.sqrt(144)
 ```
 
+Output:
+
+```text
+12
+```
+
 ### JSON
 
 ```veyra
@@ -115,6 +121,12 @@ mod json
 add data = json.parse("{\"name\":\"Veyra\"}")
 
 say data["name"]
+```
+
+Output:
+
+```text
+Veyra
 ```
 
 JSON objects are represented as Veyra `jsondata` values.
@@ -255,6 +267,12 @@ mod settings
 say settings.APP_NAME
 ```
 
+Output:
+
+```text
+Veyra
+```
+
 The constant is exported, but `internal_value` is not.
 
 ### Functions and Module Context
@@ -378,13 +396,49 @@ try
     add content = io.read("missing.txt")
     say content
 catch err
-    say "Operation failed: " + err
+    say f"Operation failed: {err}"
 end
 ```
 
-Veyra 0.2.6 also provides source locations and function tracebacks for debugging runtime errors.
+Veyra provides source locations and function tracebacks for debugging runtime errors.
 
-## 11. Built-in vs. User-Defined Modules
+These diagnostic features were introduced in version 0.2.6.
+
+## 11. Using String Interpolation with Modules
+
+Veyra 0.2.7 supports string interpolation, which can simplify formatted output involving module values.
+
+```veyra
+mod system
+
+say f"Operating system: {system.os}"
+say f"Architecture: {system.arch}"
+```
+
+You can also interpolate the results of module function calls.
+
+```veyra
+mod math
+
+add number = 81
+
+say f"Square root of {number}: {math.sqrt(number)}"
+```
+
+Output:
+
+```text
+Square root of 81: 9
+```
+
+String interpolation uses the normal Veyra expression evaluator.
+
+Module access rules remain unchanged:
+
+- Constants are accessed without parentheses.
+- Functions are called with parentheses.
+
+## 12. Built-in vs. User-Defined Modules
 
 | Feature                | Built-in Modules          | User-Defined Modules  |
 | ---------------------- | ------------------------- | --------------------- |
@@ -398,7 +452,7 @@ Veyra 0.2.6 also provides source locations and function tracebacks for debugging
 
 Both types of modules use the same import syntax.
 
-## 12. Practice Exercises
+## 13. Practice Exercises
 
 ### Exercise 1: Import a Built-in Module
 
@@ -412,7 +466,7 @@ Import `get_env` from `system` and read an environment variable.
 
 Create a file named `greetings.veymod`.
 
-Export a function that accepts a name and returns a greeting.
+Export a function that accepts a name and returns a greeting using string interpolation.
 
 ### Exercise 4: Private Functions
 
@@ -435,6 +489,12 @@ Verify that Veyra can import a module from that directory.
 ### Exercise 7: Module Errors
 
 Attempt to import a nonexistent module and inspect the resulting error message.
+
+### Exercise 8: Module Interpolation
+
+Import `system` or `math`.
+
+Use an interpolated string to display a module constant or function result.
 
 ## What's Next?
 

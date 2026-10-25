@@ -144,6 +144,14 @@ if not is_ready
 end
 ```
 
+### Logical Evaluation
+
+The `and` and `or` operators evaluate logical expressions.
+
+In Veyra 0.2.7, both operands are evaluated. These operators do not currently use short-circuit evaluation.
+
+Avoid relying on `and` or `or` to prevent the execution of expressions with side effects.
+
 ### Truthy and Falsy Values
 
 The following values are falsy:
@@ -153,8 +161,11 @@ The following values are falsy:
 - `0`
 - `""`
 - `[]`
+- `{}`
 
 Other values are generally truthy.
+
+An empty JSONData object (`{}`) is falsy, just like an empty list.
 
 ## 4. Membership Operators
 
@@ -242,7 +253,7 @@ add counter = 1
 
 repeat 5
     say counter
-    counter += 1
+    counter = counter + 1
 end
 ```
 
@@ -267,7 +278,7 @@ add counter = 1
 
 while counter <= 5
     say counter
-    counter += 1
+    counter = counter + 1
 end
 ```
 
@@ -294,7 +305,7 @@ add counter = 1
 
 repeat while counter <= 3
     say counter
-    counter += 1
+    counter = counter + 1
 end
 ```
 
@@ -317,7 +328,7 @@ add counter = 0
 
 while counter < 3
     say counter
-    counter += 1
+    counter = counter + 1
 end
 ```
 
@@ -375,7 +386,16 @@ repeat key in user
 end
 ```
 
-This allows you to process the object's keys and values.
+Output:
+
+```text
+name
+Alex
+age
+20
+```
+
+JSONData objects preserve key insertion order.
 
 ## 8. Stopping Loops
 
@@ -390,7 +410,7 @@ while counter <= 10
     end
 
     say counter
-    counter += 1
+    counter = counter + 1
 end
 ```
 
@@ -412,7 +432,7 @@ Use `fwd` to skip the remainder of the current iteration.
 add counter = 0
 
 while counter < 5
-    counter += 1
+    counter = counter + 1
 
     if counter == 3
         fwd
@@ -499,6 +519,28 @@ The labeled `fwd` skips the rest of the outer loop's current iteration.
 
 A label must refer to an active labeled loop.
 
+### Label Restrictions
+
+Labels can only be attached to `repeat` loops.
+
+Valid:
+
+```veyra
+@outer repeat 5
+    stop @outer
+end
+```
+
+Invalid:
+
+```veyra
+@outer while true
+    stop @outer
+end
+```
+
+Use an unlabeled `stop` or `fwd` to control the nearest active loop.
+
 ## 12. Loop Safety Limits
 
 Veyra enforces a maximum of **1,000,000 iterations per loop**.
@@ -538,6 +580,28 @@ if score == 100
 end
 ```
 
+### Using Unsupported Compound Assignment
+
+Compound assignment operators such as `+=` are not supported in Veyra 0.2.7.
+
+Incorrect:
+
+```veyra
+add counter = 0
+
+counter += 1
+```
+
+Correct:
+
+```veyra
+add counter = 0
+
+counter = counter + 1
+```
+
+Compound assignment operators are planned for Veyra 0.2.8.
+
 ### Forgetting to Update a Loop Variable
 
 Incorrect:
@@ -559,7 +623,7 @@ add counter = 0
 
 while counter < 5
     say counter
-    counter += 1
+    counter = counter + 1
 end
 ```
 
