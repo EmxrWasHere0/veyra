@@ -188,83 +188,144 @@ fn run_repl() {
 
 fn repl_input_complete(source: &str) -> bool {
     let mut block_depth = 0usize;
-    let mut delimiters = 0i64;
+    let mut delimiters: Vec<char> = Vec::new();
+
     let mut triple_quote: Option<char> = None;
 
     for raw_line in source.lines() {
-        let line = raw_line.trim();
+        let chars: Vec<char> = raw_line.chars().collect();
 
-        if line.is_empty() || line.starts_with('#') {
-            continue;
-        }
+        let mut position = 0usize;
+        let mut normal_quote: Option<char> = None;
+        let mut visible = String::new();
 
-        // Track triple-quoted strings.
-        for quote in ['"', '\''] {
-            let marker = format!("{0}{0}{0}", quote);
+        while position < chars.len() {
+            let character = chars[position];
 
-            let count = raw_line.matches(&marker).count();
+            // Handle an active multiline string.
+            if let Some(quote) = triple_quote {
+                if character == '\\' && position + 1 < chars.len() {
+                    position += 2;
+                    continue;
+                }
 
-            if count % 2 != 0 {
-                if triple_quote == Some(quote) {
+                if position + 2 < chars.len()
+                    && chars[position] == quote
+                    && chars[position + 1] == quote
+                    && chars[position + 2] == quote
+                {
                     triple_quote = None;
-                } else if triple_quote.is_none() {
-                    triple_quote = Some(quote);
+                    position += 3;
+                    continue;
                 }
-            }
-        }
 
-        if triple_quote.is_some() {
-            continue;
-        }
-
-        // Ignore strings when checking delimiters.
-        let mut in_string: Option<char> = None;
-        let mut escaped = false;
-
-        for character in raw_line.chars() {
-            if escaped {
-                escaped = false;
+                position += 1;
                 continue;
             }
 
-            if character == '\\' && in_string.is_some() {
-                escaped = true;
-                continue;
-            }
+            // Handle a regular quoted string.
+            if let Some(quote) = normal_quote {
+                if character == '\\' && position + 1 < chars.len() {
+                    position += 2;
+                    continue;
+                }
 
-            if let Some(quote) = in_string {
                 if character == quote {
-                    in_string = None;
+                    normal_quote = None;
                 }
+
+                position += 1;
                 continue;
             }
 
+            // Ignore comments outside strings.
+            if character == '#' {
+                break;
+            }
+
+            // Detect quoted strings.
+            if character == '"' || character == '\'' {
+                if position + 2 < chars.len()
+                    && chars[position + 1] == character
+                    && chars[position + 2] == character
+                {
+                    triple_quote = Some(character);
+                    position += 3;
+                } else {
+                    normal_quote = Some(character);
+                    position += 1;
+                }
+
+                visible.push(' ');
+                continue;
+            }
+
+            // Track expression delimiters.
             match character {
-                '"' | '\'' => in_string = Some(character),
+                '(' | '[' | '{' => delimiters.push(character),
 
-                '(' | '[' | '{' => delimiters += 1,
+                ')' => {
+                    if delimiters.last() == Some(&'(') {
+                        delimiters.pop();
+                    } else {
+                        return true;
+                    }
+                }
 
-                ')' | ']' | '}' => delimiters -= 1,
+                ']' => {
+                    if delimiters.last() == Some(&'[') {
+                        delimiters.pop();
+                    } else {
+                        return true;
+                    }
+                }
 
-                '#' => break,
+                '}' => {
+                    if delimiters.last() == Some(&'{') {
+                        delimiters.pop();
+                    } else {
+                        return true;
+                    }
+                }
 
                 _ => {}
             }
+
+            visible.push(character);
+            position += 1;
         }
 
-        // Track block statements.
-        let first = line.split_whitespace().next().unwrap_or("");
+        // Lines inside multiline strings do not affect block depth.
+        let line = visible.trim();
 
-        if matches!(first, "if" | "while" | "repeat" | "try" | "test" | "func") {
+        if line.is_empty() {
+            continue;
+        }
+
+        let words: Vec<&str> = line.split_whitespace().collect();
+
+        let first = words.first().copied().unwrap_or("");
+
+        // Support labeled repeat loops.
+        let keyword = if first.starts_with('@') {
+            words.get(1).copied().unwrap_or("")
+        } else {
+            first
+        };
+
+        if matches!(keyword, "if" | "while" | "repeat" | "try" | "test" | "func") {
             block_depth += 1;
-        } else if first == "add" && line.contains('(') && !line.contains('=') {
+        } else if keyword == "add"
+            && line.contains('(')
+            && !line.contains("=>")
+        {
             block_depth += 1;
-        } else if first == "end" {
+        } else if keyword == "end" {
             block_depth = block_depth.saturating_sub(1);
         }
     }
 
-    triple_quote.is_none() && delimiters <= 0 && block_depth == 0
+    triple_quote.is_none() && delimiters.is_empty() && block_depth == 0
 }
 
 fn print_help() {
