@@ -4,6 +4,8 @@ mod runtime;
 
 use std::io::{self, Write};
 
+const CODENAME: &str = env!("VEYRA_CODENAME");
+
 fn main() {
     let args: Vec<String> = std::env::args().collect();
 
@@ -30,7 +32,7 @@ fn main() {
             }
 
             "-v" | "--version" => {
-                println!("Veyra {}", env!("CARGO_PKG_VERSION"));
+                println!("Veyra {} (v{})", CODENAME, env!("CARGO_PKG_VERSION"));
                 return;
             }
 
@@ -118,7 +120,7 @@ fn main() {
 }
 
 fn run_repl() {
-    println!("Veyra {}", env!("CARGO_PKG_VERSION"));
+    println!("Veyra {} (v{})", CODENAME, env!("CARGO_PKG_VERSION"));
     println!("Type 'exit' or 'quit' to leave.");
     println!();
 
@@ -330,7 +332,8 @@ fn repl_input_complete(source: &str) -> bool {
 
 fn print_help() {
     println!(
-        "Veyra {} - a programming language made for fun",
+        "Veyra {} (v{}) - a programming language made for fun",
+        CODENAME,
         env!("CARGO_PKG_VERSION")
     );
 

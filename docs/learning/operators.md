@@ -4,6 +4,8 @@ Operators are symbols or keywords that perform operations on values.
 
 Veyra supports arithmetic, comparison, logical, assignment, membership, and special operators for channels, null handling, and functions.
 
+Veyra 0.2.8 introduces compound assignment operators and short-circuit evaluation for logical and null-coalescing expressions.
+
 ## What You Will Learn
 
 By the end of this lesson, you will know how to:
@@ -11,7 +13,8 @@ By the end of this lesson, you will know how to:
 - Perform arithmetic operations.
 - Compare values.
 - Combine and negate conditions.
-- Update variables using assignment.
+- Understand short-circuit evaluation.
+- Update variables using regular and compound assignment.
 - Check collection membership with `in` and `not in`.
 - Use `?`, `?=`, and `??`.
 - Combine lists and JSONData objects.
@@ -60,7 +63,7 @@ The `+` operator also concatenates two text values.
 
 ```veyra
 add name = "Veyra"
-add version = "0.2.7"
+add version = "0.2.8"
 
 say "Language: " + name
 say "Version: " + version
@@ -70,7 +73,7 @@ Output:
 
 ```text
 Language: Veyra
-Version: 0.2.7
+Version: 0.2.8
 ```
 
 Both operands must be text.
@@ -118,7 +121,7 @@ The operation returns a new list.
 
 ### JSONData Merging
 
-Veyra 0.2.7 extends the `+` operator to JSONData objects.
+Veyra 0.2.7 introduced JSONData merging with `+`.
 
 ```veyra
 add user = {"name": "Alex", "age": 20}
@@ -265,7 +268,69 @@ Falsy values include `false`, `null`, `0`, `""`, `[]`, and `{}`.
 
 The `and` and `or` operators return Boolean values.
 
-**Note:** Both operands are currently evaluated. These operators do not provide short-circuit evaluation.
+### Short-Circuit Evaluation
+
+**New in Veyra 0.2.8**
+
+The `and` and `or` operators support short-circuit evaluation.
+
+This means the right operand is evaluated only when necessary.
+
+For `and`, if the left operand is falsy, the right operand is skipped.
+
+```veyra
+say false and (10 / 0)
+```
+
+Output:
+
+```text
+false
+```
+
+For `or`, if the left operand is truthy, the right operand is skipped.
+
+```veyra
+say true or (10 / 0)
+```
+
+Output:
+
+```text
+true
+```
+
+Neither expression produces a division-by-zero error because the right operand is not evaluated.
+
+Short-circuit evaluation also prevents unnecessary function calls.
+
+```veyra
+add dangerous()
+    throw "This function should not run"
+end
+
+say true or dangerous()
+say false and dangerous()
+```
+
+Output:
+
+```text
+true
+false
+```
+
+The skipped expression must still be syntactically valid.
+
+For example:
+
+```veyra
+say true or (10 + )
+```
+
+This produces a syntax error even though the right operand would not be evaluated.
+
+Short-circuit evaluation skips execution, not syntax validation.
 
 ## 4. Membership Operators
 
@@ -328,7 +393,7 @@ true
 true
 ```
 
-## 5. Assignment Operator
+## 5. Assignment Operators
 
 Use `=` to update an existing mutable variable.
 
@@ -355,7 +420,106 @@ Output:
 
 Use `add` to declare a mutable variable and `=` to update it.
 
-Compound assignment operators such as `+=` and `-=` are not currently supported.
+### Compound Assignment Operators
+
+**New in Veyra 0.2.8**
+
+Compound assignment combines an arithmetic operation with assignment.
+
+| Operator | Equivalent operation |
+| -------- | -------------------- |
+| `+=`     | `x = x + value`      |
+| `-=`     | `x = x - value`      |
+| `*=`     | `x = x * value`      |
+| `/=`     | `x = x / value`      |
+| `%=`     | `x = x % value`      |
+
+Example:
+
+```veyra
+add score = 10
+
+score += 5
+say score
+
+score -= 3
+say score
+
+score *= 2
+say score
+
+score /= 4
+say score
+
+score %= 4
+say score
+```
+
+Output:
+
+```text
+15
+12
+24
+6
+2
+```
+
+Compound assignment follows the same type rules as the corresponding arithmetic operator.
+
+For example, `+=` supports numbers, text, lists, and JSONData objects.
+
+### Text Compound Assignment
+
+```veyra
+add message = "Hello"
+
+message += ", Veyra!"
+
+say message
+```
+
+Output:
+
+```text
+Hello, Veyra!
+```
+
+### List Compound Assignment
+
+```veyra
+add numbers = [1, 2]
+
+numbers += [3, 4]
+
+say numbers
+```
+
+Output:
+
+```text
+[1, 2, 3, 4]
+```
+
+The variable receives the resulting list.
+
+### JSONData Compound Assignment
+
+```veyra
+add user = {"name": "Alex"}
+
+user += {"active": true}
+
+say user
+```
+
+Output:
+
+```text
+{"name": "Alex", "active": true}
+```
+
+The merge is shallow, and values from the right-hand object take precedence.
 
 ### Assignment to Constants
 
@@ -378,6 +542,67 @@ Output:
 80
 8080
 ```
+
+### Compound Assignment to Constants
+
+Compound assignment also respects channel semantics.
+
+When the target is a constant, the operation uses its current channel value and writes the result back to the channel.
+
+```veyra
+set score = 10
+
+score += 5
+
+say score
+say 0 ? score
+```
+
+Output:
+
+```text
+10
+15
+```
+
+The original constant remains unchanged.
+
+Repeated compound assignments use the latest channel value.
+
+```veyra
+set counter = 10
+
+counter += 5
+counter += 3
+
+say counter
+say 0 ? counter
+```
+
+Output:
+
+```text
+10
+18
+```
+
+For mutable variables and regular function parameters, compound assignment updates the variable itself.
+
+Passing a constant to a function does not automatically make a mutable parameter's compound assignment modify the original channel.
+
+### Compound Assignment Limitations
+
+Compound assignment currently supports direct variable names.
+
+For example:
+
+```veyra
+add numbers = [10, 20]
+
+numbers[0] = 15
+```
+
+Indexed regular assignment is supported, but indexed compound assignment such as `numbers[0] += 5` is not currently supported.
 
 ## 6. Conditional Assignment: `?=`
 
@@ -447,7 +672,39 @@ Alex
 
 Unlike `?=`, this operator does not assign a new value to a variable.
 
-Both operands are currently evaluated, even when the left operand is not `null`.
+### Short-Circuit Null Coalescing
+
+**New in Veyra 0.2.8**
+
+The `??` operator now evaluates its right operand only when the left operand is `null`.
+
+```veyra
+say 42 ?? (10 / 0)
+```
+
+Output:
+
+```text
+42
+```
+
+The division is skipped because `42` is not `null`.
+
+When the left operand is `null`, the fallback expression is evaluated.
+
+```veyra
+say null ?? (10 + 20)
+```
+
+Output:
+
+```text
+30
+```
+
+This is useful when a fallback expression is expensive or may have side effects.
+
+As with logical short-circuiting, skipped expressions must still be syntactically valid.
 
 ## 8. Channel Operator: `?`
 
@@ -565,7 +822,7 @@ For more examples, see [Lists](lists.md).
 
 ## 10. Operators in String Interpolation
 
-Veyra 0.2.7 supports expressions inside interpolated strings.
+Veyra 0.2.7 introduced expressions inside interpolated strings.
 
 Use the `f` prefix and place expressions inside `{}`.
 
@@ -691,6 +948,7 @@ Output:
 | Logical                | `and`, `or`, `not`, `!`          |
 | Membership             | `in`, `not in`                   |
 | Assignment             | `=`                              |
+| Compound assignment    | `+=`, `-=`, `*=`, `/=`, `%=`     |
 | Conditional assignment | `?=`                             |
 | Null coalescing        | `??`                             |
 | Channel access         | `?`                              |
@@ -700,6 +958,8 @@ Output:
 | Variadic/rest          | `...`                            |
 
 The `+` operator supports number addition, text concatenation, list concatenation, and JSONData merging.
+
+The `and`, `or`, and `??` operators support short-circuit evaluation.
 
 ## 14. Common Mistakes
 
@@ -722,6 +982,34 @@ The three operators have different purposes:
 - `?` reads a channel.
 - `?=` conditionally assigns a value.
 - `??` provides a fallback for `null`.
+
+### Expecting Compound Assignment to Modify Constants
+
+```veyra
+set score = 10
+
+score += 5
+
+say score
+```
+
+Output:
+
+```text
+10
+```
+
+The original constant is unchanged. The updated channel value is available through:
+
+```veyra
+say 0 ? score
+```
+
+Output:
+
+```text
+15
+```
 
 ### Combining Text and Numbers with `+`
 
@@ -771,6 +1059,18 @@ say numbers[::0]
 ```
 
 This causes a runtime error.
+
+### Assuming Short-Circuiting Ignores Syntax Errors
+
+Short-circuit evaluation skips execution, not syntax validation.
+
+This expression is invalid:
+
+```veyra
+say true or (10 + )
+```
+
+Even though the left operand is truthy, the right operand must be syntactically correct.
 
 ## 15. Practice Exercises
 
@@ -823,6 +1123,18 @@ Merge them using `+` and inspect the result.
 ### Exercise 12: String Interpolation
 
 Create two numeric variables and display their sum, product, and comparison results using interpolated strings.
+
+### Exercise 13: Compound Assignment
+
+Create a mutable numeric variable and update it using all five compound assignment operators.
+
+### Exercise 14: Short-Circuit Evaluation
+
+Write expressions using `and`, `or`, and `??` that safely skip a division-by-zero operation.
+
+### Exercise 15: Constant Channels
+
+Declare a constant, update its channel using `+=`, and compare the original value with the channel value.
 
 ## What's Next?
 

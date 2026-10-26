@@ -7,7 +7,11 @@
 - **Variables and constants** declared using `add` and `set`.
 - **Channels** — Runtime value overrides using the `?` operator without modifying the original constant.
 - **Conditional assignment** with `?=`.
+- **Compound assignment operators** — `+=`, `-=`, `*=`, `/=`, and `%=` for updating mutable variables or constant channels.
+- **Constant-aware compound assignment** — Compound operations on `set` constants update their channel values while preserving the original constants.
 - **Null coalescing** with `??`.
+- **Short-circuit evaluation** — `and`, `or`, and `??` skip unnecessary right-hand expressions.
+- **Syntax validation of skipped expressions** — Short-circuiting prevents evaluation without accepting invalid expression syntax.
 - **Membership operators** — `in` and `not in`.
 - **Multiple return values** and list destructuring, including rest elements.
 - **String interpolation** — Embed variables and expressions using `f"Hello, {name}!"`.
@@ -55,9 +59,11 @@
 ### Developer Experience
 
 - **Interactive REPL** with persistent variables, functions, and imports.
-- **Multiline REPL input** for functions, loops, and other blocks.
-- **Detailed runtime errors** with source filenames, line numbers, and source context.
-- **Function tracebacks** showing the call chain when an error occurs.
+- **Improved multiline REPL input** — Reliable handling of nested blocks, labeled loops, default-parameter functions, lambdas, multiline strings, lists, and JSONData.
+- **REPL delimiter validation** — Mismatched closing delimiters are reported instead of leaving the REPL waiting for additional input.
+- **Column-based runtime errors** — Error messages include source filenames, line numbers, column numbers, and source context.
+- **Precise token highlighting** — Error markers identify problematic identifiers, operators, indexes, and other expression tokens when available.
+- **Function and lambda tracebacks** — Show the call chain and preserve source locations when errors occur.
 - **Automated regression tests** using Cargo.
 - **CLI commands** for running scripts, executing tests, and displaying version information.
 - **VSCode extension** with syntax highlighting, snippets, automatic indentation, code folding, and REPL integration.

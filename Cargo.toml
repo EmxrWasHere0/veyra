@@ -1,7 +1,11 @@
 [package]
 name = "veyra"
-version = "0.2.7"
+version = "0.2.8"
 edition = "2021"
+
+[package.metadata.veyra]
+codename = "Jay"
+devname = "J1"
 
 [dependencies]
 serde_json = "1"

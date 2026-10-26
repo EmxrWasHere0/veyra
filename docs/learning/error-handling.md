@@ -4,9 +4,11 @@ Errors can occur while a Veyra program is running. A calculation may fail, a fil
 
 Veyra provides `try`, `catch`, and `throw` for handling runtime errors.
 
-Since version 0.2.6, runtime errors also include source locations and function tracebacks to make debugging easier.
+Since version 0.2.6, runtime errors include source locations and function tracebacks to make debugging easier.
 
-Veyra 0.2.7 additionally supports string interpolation, making it easier to construct descriptive error messages.
+Veyra 0.2.7 introduced string interpolation, making it easier to construct descriptive error messages.
+
+**Veyra 0.2.8 improves error reporting with column-based source locations and more precise token highlighting.** It also introduces short-circuit evaluation for `and`, `or`, and `??`.
 
 ## What You Will Learn
 
@@ -18,7 +20,9 @@ By the end of this guide, you will know how to:
 - Use optional catch variables.
 - Handle errors in nested blocks.
 - Construct error messages using string interpolation.
-- Read source locations and function tracebacks.
+- Read file, line, and column information.
+- Understand function and lambda tracebacks.
+- Prevent unnecessary runtime errors with short-circuit evaluation.
 - Avoid hiding important failures.
 
 ## 1. Understanding Runtime Errors
@@ -123,7 +127,7 @@ This is useful for producing descriptive error messages.
 
 ### Throwing Interpolated Strings
 
-Veyra 0.2.7 supports evaluating expressions inside interpolated strings.
+Veyra 0.2.7 introduced evaluating expressions inside interpolated strings.
 
 ```veyra
 add expected = 10
@@ -204,37 +208,122 @@ Nested handlers are useful when different operations require different recovery 
 
 ## 6. Runtime Error Locations
 
-Veyra 0.2.6 introduced source information in runtime errors.
+Veyra 0.2.6 introduced source locations in runtime errors.
+
+**Veyra 0.2.8 extends this system with column-based diagnostics.**
+
+Errors can now include:
+
+- The source filename.
+- The line number.
+- The column number.
+- The error description.
+- The relevant source line.
+- A marker highlighting the problematic token or operator.
+
+### Column-Based Error Messages
 
 Consider a file named `example.vey`:
 
 ```veyra
-add x = 10
-add y = 0
-
-say x / y
+say 10 / 0
 ```
 
 Running the file produces an error similar to:
 
 ```text
-Runtime Error: example.vey:4: Division by zero
+Runtime Error: example.vey:1:8: Division by zero
 
-  4 | say x / y
-    | ^^^^^^^^^
+  1 | say 10 / 0
+    |        ^
 ```
 
-The error report includes:
+The location uses the following format:
 
-- The source filename.
-- The line number.
-- The error description.
-- The source line.
-- A marker identifying the relevant line.
+```text
+filename:line:column
+```
 
-The marker currently highlights the line rather than the exact expression.
+In this example:
 
-Character-column diagnostics are not yet available in Veyra 0.2.7.
+- `example.vey` is the source file.
+- `1` is the line number.
+- `8` is the column containing the `/` operator.
+
+The `^` marker points to the operator responsible for the error.
+
+### Undefined Variables
+
+Veyra can also highlight undefined identifiers.
+
+```veyra
+say 10 + unknown
+```
+
+Example error:
+
+```text
+Runtime Error: example.vey:1:10: Undefined 'unknown'
+
+  1 | say 10 + unknown
+    |          ^^^^^^^
+```
+
+The marker covers the identifier rather than the entire line.
+
+### Multiline Expressions
+
+Source locations also work with multiline expressions.
+
+```veyra
+add numbers = [
+    10,
+    20,
+    unknown
+]
+```
+
+Example error:
+
+```text
+Runtime Error: example.vey:4:5: Undefined 'unknown'
+
+  4 |     unknown
+    |     ^^^^^^^
+```
+
+The error points to the original physical source line, even when Veyra processes the expression as a single logical statement.
+
+### Indexing Errors
+
+Veyra can identify invalid indexes.
+
+```veyra
+add numbers = [10, 20, 30]
+
+say numbers[999]
+```
+
+Example error:
+
+```text
+Runtime Error: example.vey:3:13: Index out of bounds
+
+  3 | say numbers[999]
+    |             ^^^
+```
+
+Column-based diagnostics also improve errors involving JSONData keys, invalid slicing arguments, and unsupported indexing operations.
+
+### Diagnostic Limitations
+
+Column-based diagnostics cover many common runtime and expression errors.
+
+However, not every error can be associated with an exact token.
+
+Some errors may still point to the beginning of a statement or expression.
+
+Error messages originating from external modules may also have less precise locations.
 
 ## 7. Function Tracebacks
 
@@ -257,20 +346,75 @@ calculate()
 Example error:
 
 ```text
-Runtime Error: example.vey:2: Division by zero
+Runtime Error: example.vey:2:14: Division by zero
 
   2 |     return a / b
-    | ^^^^^^^^^^^^^^^^
-
+    |              ^
   at example.vey:6 in divide()
   at example.vey:9 in calculate()
 ```
 
 The traceback shows where the functions were called.
 
+The primary error location identifies the operation that failed, while traceback entries identify the calls that led to the failure.
+
 This is especially useful when debugging nested function calls or module callbacks.
 
-## 8. Preventing Errors with Conditions
+### Function Argument Errors
+
+Function call errors can also identify the call site.
+
+```veyra
+add multiply(a, b)
+    return a * b
+end
+
+multiply(10)
+```
+
+Example error:
+
+```text
+Runtime Error: example.vey:5:1: Missing parameter 'b' for function 'multiply'
+
+  5 | multiply(10)
+    | ^^^^^^^^
+  at example.vey:5 in multiply()
+```
+
+This helps distinguish errors in function arguments from errors that occur inside the function body.
+
+## 8. Lambda Error Locations
+
+**Improved in Veyra 0.2.8**
+
+Lambda expressions preserve their original source locations when reporting runtime errors.
+
+Example:
+
+```veyra
+add divide = func(x) => 10 / x
+
+say divide(0)
+```
+
+Example error:
+
+```text
+Runtime Error: example.vey:1:28: Division by zero
+
+  1 | add divide = func(x) => 10 / x
+    |                            ^
+  at example.vey:3 in <lambda>()
+```
+
+The error points to the `/` operator inside the lambda expression.
+
+The traceback identifies the lambda invocation.
+
+This also works with lambdas passed as callbacks to supported functions and list methods.
+
+## 9. Preventing Errors with Conditions
 
 Not every invalid situation needs to become a runtime error.
 
@@ -290,13 +434,15 @@ Use conditions for situations that can be checked in advance.
 
 Use `try/catch` for operations that may still fail during execution.
 
-### Logical Operators and Error Prevention
+### Short-Circuit Evaluation
 
-In Veyra 0.2.7, `and` and `or` evaluate both operands.
+**New in Veyra 0.2.8**
 
-They do not currently use short-circuit evaluation.
+The `and`, `or`, and `??` operators support short-circuit evaluation.
 
-For example, avoid relying on a logical operator to prevent an unsafe calculation:
+This means the right operand is evaluated only when necessary.
+
+For example:
 
 ```veyra
 add denominator = 0
@@ -306,23 +452,69 @@ if denominator != 0 and 10 / denominator > 2
 end
 ```
 
-The division expression is still evaluated and may raise an error.
+The division is not evaluated because `denominator != 0` is false.
 
-Instead, use nested conditions:
+Short-circuit evaluation can therefore prevent unnecessary runtime errors.
+
+### Logical AND
 
 ```veyra
-add denominator = 0
-
-if denominator != 0
-    if 10 / denominator > 2
-        say "Valid result"
-    end
-end
+say false and (10 / 0)
 ```
 
-This ensures that division occurs only when the denominator is nonzero.
+Output:
 
-## 9. Avoiding Silent Failures
+```text
+false
+```
+
+The right operand is skipped when the left operand is falsy.
+
+### Logical OR
+
+```veyra
+say true or (10 / 0)
+```
+
+Output:
+
+```text
+true
+```
+
+The right operand is skipped when the left operand is truthy.
+
+### Null Coalescing
+
+```veyra
+say 42 ?? (10 / 0)
+```
+
+Output:
+
+```text
+42
+```
+
+The right operand is skipped when the left operand is not `null`.
+
+### Syntax Validation
+
+Short-circuit evaluation skips execution, but it does not ignore syntax errors.
+
+For example:
+
+```veyra
+say true or (10 + )
+```
+
+This expression produces a syntax error.
+
+The skipped operand must still contain valid Veyra syntax.
+
+For more details, see [Operators](operators.md).
+
+## 10. Avoiding Silent Failures
 
 Avoid catching errors without handling them meaningfully.
 
@@ -358,7 +550,7 @@ end
 
 This allows the failure to propagate to another handler or terminate execution.
 
-## 10. Common Mistakes
+## 11. Common Mistakes
 
 ### Forgetting End
 
@@ -403,6 +595,16 @@ catch err
 end
 ```
 
+### Assuming Short-Circuiting Ignores Syntax Errors
+
+This expression is invalid:
+
+```veyra
+say true or (10 + )
+```
+
+Although the right operand is not evaluated, its syntax must still be valid.
+
 ### Combining Text and Error Values
 
 String interpolation is the recommended way to construct messages containing runtime values.
@@ -415,7 +617,7 @@ say f"Request failed with status {code}"
 
 The `+` operator does not automatically convert numbers into text.
 
-## 11. Complete Example
+## 12. Complete Example
 
 The following program attempts to read a file and handles failures.
 
@@ -439,7 +641,7 @@ If the file exists and is readable, its contents are displayed.
 
 Otherwise, the error is reported.
 
-## 12. Practice Exercises
+## 13. Practice Exercises
 
 ### Exercise 1: Division
 
@@ -472,6 +674,22 @@ Catch an error and throw a new error containing the original message.
 Create a function that validates a number.
 
 If the number is outside an allowed range, throw an interpolated error message containing the invalid value.
+
+### Exercise 8: Column-Based Diagnostics
+
+Write a program that attempts to access an invalid list index.
+
+Inspect the line, column, and source marker in the resulting error.
+
+### Exercise 9: Lambda Traceback
+
+Create a lambda that divides a number by its argument.
+
+Call it with zero and inspect the error location and traceback.
+
+### Exercise 10: Short-Circuit Error Prevention
+
+Use `and`, `or`, and `??` to safely skip expressions that would otherwise produce division-by-zero errors.
 
 ## What's Next?
 

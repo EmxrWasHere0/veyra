@@ -2,49 +2,11 @@
 
 Veyra is an experimental programming language that continues to evolve.
 
-With version 0.2.7, the language includes string interpolation, functional list methods, enhanced JSONData operations, an interactive REPL, user-defined modules, expanded built-in libraries, automated tests, and improved developer tools.
+Version 0.2.8 expands the language with compound assignment operators, short-circuit evaluation, improved REPL stability, and column-based error diagnostics.
+
+Veyra also supports string interpolation, functional list methods, JSONData operations, user-defined modules, built-in libraries, and automated regression tests.
 
 The following ideas are being considered for future development.
-
-## Planned for Veyra 0.2.8
-
-### Compound Assignment Operators
-
-Veyra 0.2.8 is planned to introduce compound assignment operators.
-
-These operators will provide shorter syntax for updating variables.
-
-```veyra
-add x = 10
-
-x += 5
-x -= 3
-x *= 2
-x /= 4
-x %= 3
-
-say x
-```
-
-Planned operators:
-
-- `+=` — Addition assignment
-- `-=` — Subtraction assignment
-- `*=` — Multiplication assignment
-- `/=` — Division assignment
-- `%=` — Modulo assignment
-
-These operators are **not available in Veyra 0.2.7**.
-
-Until they are implemented, use regular assignments:
-
-```veyra
-add counter = 0
-
-counter = counter + 1
-```
-
-Compound assignments are intended to follow Veyra's existing assignment rules, including its channel semantics.
 
 ## Language Improvements
 
@@ -69,59 +31,79 @@ end
 
 This syntax is conceptual and is not currently supported.
 
+Pattern matching is not part of the Veyra 0.2.8 feature set. No release version has been assigned to it.
+
 ### Additional Built-in Utilities
 
 Continue expanding existing modules where useful.
 
-Potential improvements include additional text utilities, collection operations, and standard library functions.
+Potential improvements include:
+
+- Additional text processing utilities.
+- More collection operations.
+- Expanded standard library functions.
+- Improvements to existing module APIs.
+
+New utilities should remain consistent with Veyra's existing value types and language semantics.
 
 ## Developer Experience
 
 ### Improved Diagnostics
 
-Improve error reporting with:
+Veyra 0.2.8 introduces column-based runtime error locations and more precise token highlighting.
 
-- More precise source locations, including character columns
-- Clearer syntax error messages
-- More helpful suggestions for common mistakes
-- Better traceback presentation
+Future diagnostic improvements may include:
 
-Veyra already provides source-line information and function tracebacks.
+- Clearer syntax error messages.
+- Suggestions for common programming mistakes.
+- More consistent error locations across built-in modules.
+- Better error reporting for complex nested expressions.
+- Improved traceback presentation.
+
+Veyra already provides source filenames, line and column information, source context, and function tracebacks.
 
 ### Editor Integration
 
 Explore additional features for the Visual Studio Code extension:
 
-- Intelligent autocomplete
-- Real-time diagnostics
-- Symbol navigation
-- Improved syntax highlighting
-- Integrated debugging tools
+- Intelligent autocomplete.
+- Real-time diagnostics.
+- Symbol navigation.
+- Improved syntax highlighting.
+- Integrated debugging tools.
 
-The current extension provides syntax highlighting, snippets, indentation, folding, and an integrated REPL.
+The current extension provides syntax highlighting, snippets, indentation, folding, and REPL integration.
 
 ### Documentation Improvements
 
 Continue maintaining and expanding:
 
-- Language references
-- Beginner tutorials
-- Built-in module documentation
-- Practical examples
-- Migration notes between versions
+- Language references.
+- Beginner tutorials.
+- Built-in module documentation.
+- Practical examples.
+- Migration notes between versions.
+
+Documentation should reflect the behavior of the current interpreter rather than planned or experimental syntax.
 
 ### Testing Improvements
 
-Expand automated regression coverage, particularly for:
+Veyra includes automated regression tests using Cargo.
 
-- Nested expressions
-- String interpolation edge cases
-- Functional callbacks
-- Module interactions
-- Channel behavior
-- Error handling
+Version 0.2.8 expands coverage for compound assignment, short-circuit evaluation, interpolation edge cases, and error diagnostics.
 
-Improve test reporting and cross-platform compatibility.
+Future testing improvements may focus on:
+
+- Complex nested expressions.
+- String interpolation edge cases.
+- Functional callbacks.
+- Module interactions.
+- Channel behavior.
+- Error handling and tracebacks.
+- REPL input completion.
+- Cross-platform compatibility.
+
+Additional automated REPL tests and parser consistency checks may also be explored.
 
 ## Performance
 
@@ -131,13 +113,13 @@ Investigate improvements to execution speed and memory efficiency.
 
 Potential areas include:
 
-- Expression evaluation
-- Function calls
-- Collection operations
-- Module loading
-- Memory allocation
+- Expression evaluation.
+- Function calls.
+- Collection operations.
+- Module loading.
+- Memory allocation.
 
-Any optimizations should preserve Veyra's existing language semantics.
+Any optimizations should preserve Veyra's existing language semantics, including channels, closed scopes, and callback behavior.
 
 ## Long-Term Possibilities
 
@@ -145,9 +127,13 @@ Any optimizations should preserve Veyra's existing language semantics.
 
 Explore compiling Veyra programs into native executables.
 
+This could allow applications written in Veyra to run without requiring a separately installed interpreter.
+
 ### Hybrid Execution
 
 Investigate supporting both interpreted and compiled execution.
+
+Possible approaches could include ahead-of-time compilation or other execution strategies.
 
 These are potential directions rather than confirmed features or release commitments.
 

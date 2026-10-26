@@ -6,6 +6,8 @@ The interpreter executes Veyra source files directly, without requiring each pro
 
 This guide explains how to run scripts, use the interactive REPL, execute tests, and work with Veyra's command-line interface.
 
+Veyra 0.2.8 improves REPL stability, introduces compound assignment operators, adds short-circuit evaluation, and provides more precise runtime error locations.
+
 ## Requirements
 
 To run Veyra programs, you need the Veyra interpreter.
@@ -110,7 +112,9 @@ On Windows PowerShell:
 
 Veyra introduced its interactive Read-Eval-Print Loop (REPL) in version 0.2.6.
 
-Start it by running Veyra without arguments:
+**Veyra 0.2.8 improves multiline input detection, nested block handling, and expression completion.**
+
+Start the REPL by running Veyra without arguments:
 
 ```bash
 veyra
@@ -140,9 +144,9 @@ Variables, functions, and imports remain available throughout the REPL session.
 >>> add name = "Veyra"
 >>> say name
 Veyra
->>> name = "Veyra 0.2.7"
+>>> name = "Veyra 0.2.8"
 >>> say name
-Veyra 0.2.7
+Veyra 0.2.8
 ```
 
 ### Multiline Blocks
@@ -159,9 +163,222 @@ The REPL supports multiline functions, loops, and other blocks.
 
 The `...` prompt indicates that Veyra is waiting for more input.
 
+The `>>>` prompt returns when the input is complete.
+
+### Nested Blocks
+
+**Improved in Veyra 0.2.8**
+
+The REPL handles nested control-flow blocks more reliably.
+
+```text
+>>> repeat 2
+...     if true
+...         say "Nested block"
+...     end
+... end
+Nested block
+Nested block
+```
+
+The REPL waits until all required `end` statements have been entered.
+
+### Labeled Loops
+
+The REPL supports labeled `repeat` loops.
+
+```text
+>>> @outer repeat 2
+...     say "Hello"
+... end
+Hello
+Hello
+```
+
+Loop labels can be used with `stop` and `fwd`.
+
+For more information, see [Control Flow](control-flow.md).
+
+### Functions with Default Parameters
+
+The REPL recognizes function definitions containing default parameter values.
+
+```text
+>>> add greet(name = "World")
+...     say f"Hello, {name}!"
+... end
+>>> greet()
+Hello, World!
+```
+
+The `=` character inside a parameter list does not cause the REPL to treat the definition as a simple assignment.
+
+### Lambda Expressions
+
+Single-expression lambdas are recognized without requiring an `end` statement.
+
+```text
+>>> add double = func(x) => x * 2
+>>> say double(5)
+10
+```
+
+The REPL distinguishes lambda expressions from multiline function definitions.
+
+### Multiline Strings
+
+The REPL supports triple-quoted multiline strings.
+
+```text
+>>> add message = """
+... Hello
+... Veyra
+... """
+>>> say message
+
+Hello
+Veyra
+```
+
+The REPL continues accepting input until the closing triple quotes are entered.
+
+Both `"""` and `'''` are supported.
+
+### Multiline Lists
+
+Lists can span multiple lines.
+
+```text
+>>> add numbers = [
+...     10,
+...     20,
+...     30
+... ]
+>>> say numbers
+[10, 20, 30]
+```
+
+The REPL waits for the closing `]`.
+
+### Multiline JSONData
+
+JSONData objects can also span multiple lines.
+
+```text
+>>> add person = {
+...     "name": "Veyra",
+...     "active": true
+... }
+>>> say person["name"]
+Veyra
+```
+
+The REPL waits for the closing `}`.
+
+### Try/Catch Blocks
+
+The REPL supports multiline error handling.
+
+```text
+>>> try
+...     throw "Example error"
+... catch err
+...     say f"Caught: {err}"
+... end
+```
+
+The `try/catch` structure executes after its closing `end`.
+
+### If/Else Blocks
+
+Conditional blocks are also supported.
+
+```text
+>>> add score = 75
+>>> if score >= 50
+...     say "Passed"
+... else
+...     say "Failed"
+... end
+Passed
+```
+
+The REPL does not execute the incomplete conditional block when `else` is entered.
+
+### Strings and Special Characters
+
+Characters inside quoted strings do not affect REPL block detection.
+
+```text
+>>> add message = "This is # not a comment (end)"
+>>> say message
+This is # not a comment (end)
+```
+
+The REPL correctly distinguishes string contents from comments, delimiters, and block keywords.
+
+### Invalid Delimiters
+
+Veyra 0.2.8 improves handling of mismatched closing delimiters.
+
+For example:
+
+```veyra
+say (10 + 20]
+```
+
+The REPL reports an error rather than waiting indefinitely for additional input.
+
+### Compound Assignment in the REPL
+
+**New in Veyra 0.2.8**
+
+You can update mutable variables using compound assignment operators.
+
+```text
+>>> add counter = 10
+>>> counter += 5
+>>> say counter
+15
+>>> counter *= 2
+>>> say counter
+30
+```
+
+The supported operators are:
+
+- `+=`
+- `-=`
+- `*=`
+- `/=`
+- `%=`
+
+For constants declared with `set`, compound assignment updates the associated channel instead of modifying the original constant.
+
+See [Operators](operators.md) and [Channels](channels.md).
+
+### Short-Circuit Evaluation in the REPL
+
+**New in Veyra 0.2.8**
+
+The `and`, `or`, and `??` operators support short-circuit evaluation.
+
+```text
+>>> say false and (10 / 0)
+false
+>>> say true or (10 / 0)
+true
+>>> say 42 ?? (10 / 0)
+42
+```
+
+The right operand is skipped when its value is unnecessary.
+
+Skipped expressions must still be syntactically valid.
+
 ### Functional List Methods in the REPL
 
-Veyra 0.2.7 introduces functional list methods.
+Veyra 0.2.7 introduced functional list methods.
 
 You can experiment with them interactively:
 
@@ -212,9 +429,11 @@ Veyra provides several command-line options.
 veyra --version
 ```
 
-For Veyra 0.2.7, the version command reports the interpreter's current package version.
+The version command reports the interpreter's current package version.
 
-The version is determined by `Cargo.toml` at build time.
+For Veyra 0.2.8, the package version is defined in `Cargo.toml`.
+
+The version is embedded at build time.
 
 ### Displaying Help
 
@@ -250,9 +469,9 @@ veyra -t tests.vey
 
 Test mode executes the file's Veyra tests and reports their results.
 
-### Testing Veyra 0.2.7 Features
+### Testing Language Features
 
-You can use assertions to test string interpolation and functional list methods.
+You can use assertions to test string interpolation, functional list methods, JSONData, and short-circuit evaluation.
 
 Example file `features.vey`:
 
@@ -278,6 +497,22 @@ test jsondata_merge
     add merged = left.merge(right)
 
     assert merged["age"] == 21
+end
+
+test short_circuit
+    assert (true or (10 / 0)) == true
+    assert (false and (10 / 0)) == false
+    assert (42 ?? (10 / 0)) == 42
+end
+
+test compound_assignment
+    add score = 10
+
+    score += 5
+    assert score == 15
+
+    score *= 2
+    assert score == 30
 end
 ```
 
@@ -371,7 +606,9 @@ Argument count: 2
 
 The Veyra VSCode extension supports syntax highlighting, snippets, and REPL integration.
 
-Version 0.2.7 also includes highlighting and snippets for string interpolation, functional list methods, and JSONData enhancements.
+Version 0.2.7 introduced support for string interpolation, functional list methods, and JSONData enhancements.
+
+Veyra 0.2.8 adds new compound assignment operators to the language.
 
 To start the REPL:
 
@@ -391,29 +628,32 @@ For installation and usage instructions, see [VSCode Extension](extension.md).
 
 Veyra introduced source locations and function tracebacks in version 0.2.6.
 
+**Veyra 0.2.8 adds column-based error locations.**
+
 For example:
 
 ```veyra
-add x = 10
-add y = 0
-
-say x / y
+say 10 / 0
 ```
 
 An error may look like:
 
 ```text
-Runtime Error: example.vey:4: Division by zero
+Runtime Error: example.vey:1:8: Division by zero
 
-  4 | say x / y
-    | ^^^^^^^^^
+  1 | say 10 / 0
+    |        ^
 ```
 
-The error includes the source file, line number, and relevant source line.
+The error includes:
+
+- The source file.
+- The line number.
+- The column number.
+- The relevant source line.
+- A marker identifying the problematic token.
 
 Errors inside functions can also include a traceback showing the function call chain.
-
-In Veyra 0.2.7, error markers identify the relevant line rather than the exact character column.
 
 For more information, see [Error Handling](error-handling.md).
 
@@ -459,7 +699,9 @@ See [Modules](modules.md).
 
 Read the source location and traceback.
 
-Check the operation, its arguments, and any required external resources.
+In Veyra 0.2.8, check the highlighted token or operator to identify the failing expression.
+
+Verify the operation, its arguments, and any required external resources.
 
 ## What's Next?
 
