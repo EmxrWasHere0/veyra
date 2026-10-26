@@ -160,7 +160,7 @@ Type `exit` or `quit` to leave the REPL.
 
 ```veyra
 add name = "Veyra"
-set version = "0.2.7"
+set version = "0.2.8"
 
 add greet(name)
     say f"Hello, {name}!"
@@ -171,7 +171,7 @@ greet(name)
 
 ### String Interpolation
 
-Veyra 0.2.7 supports expressions inside interpolated strings:
+Veyra 0.2.8 supports expressions inside interpolated strings:
 
 ```veyra
 add name = "Alex"
@@ -196,7 +196,7 @@ say report
 
 ### Functional List Methods
 
-Veyra 0.2.7 introduces functional list operations:
+Veyra 0.2.8 introduces functional list operations:
 
 ```veyra
 add numbers = [1, 2, 3, 4, 5]
@@ -230,7 +230,7 @@ end
 ```veyra
 add user = {
     "name": "Veyra",
-    "version": "0.2.7",
+    "version": "0.2.8",
     "active": true
 }
 
@@ -281,13 +281,13 @@ say message
 Download or build the extension package:
 
 ```text
-veyra-0.2.7.vsix
+veyra-0.2.8.vsix
 ```
 
 Install it using the command line:
 
 ```bash
-code --install-extension veyra-0.2.7.vsix
+code --install-extension veyra-0.2.8.vsix
 ```
 
 Alternatively, install it through Visual Studio Code:
@@ -295,7 +295,7 @@ Alternatively, install it through Visual Studio Code:
 1. Open the Extensions view.
 2. Click the `...` menu.
 3. Select **Install from VSIX...**.
-4. Choose `veyra-0.2.7.vsix`.
+4. Choose `veyra-0.2.8.vsix`.
 
 ### Build from Source
 
@@ -321,13 +321,13 @@ npx vsce package
 This generates:
 
 ```text
-veyra-0.2.7.vsix
+veyra-0.2.8.vsix
 ```
 
 Install it:
 
 ```bash
-code --install-extension veyra-0.2.7.vsix
+code --install-extension veyra-0.2.8.vsix
 ```
 
 The generated filename depends on the version specified in `package.json`.
@@ -335,7 +335,7 @@ The generated filename depends on the version specified in `package.json`.
 ## Requirements
 
 - Visual Studio Code 1.75.0 or newer.
-- Veyra 0.2.7 or newer for all documented language features.
+- Veyra 0.2.8 or newer for all documented language features.
 - The `veyra` executable available in `PATH` to use the integrated REPL.
 
 Syntax highlighting and snippets work without installing the interpreter.

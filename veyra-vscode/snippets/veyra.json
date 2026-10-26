@@ -260,5 +260,54 @@
     "prefix": "items",
     "body": ["${1:data}.items()$0"],
     "description": "Get JSONData key-value pairs as a list"
+  },
+  "compound add": {
+    "prefix": "addassign",
+    "body": ["${1:variable} += ${2:value}$0"],
+    "description": "Add and assign a value (Veyra 0.2.8)"
+  },
+  "compound subtract": {
+    "prefix": "subassign",
+    "body": ["${1:variable} -= ${2:value}$0"],
+    "description": "Subtract and assign a value (Veyra 0.2.8)"
+  },
+  "compound multiply": {
+    "prefix": "mulassign",
+    "body": ["${1:variable} *= ${2:value}$0"],
+    "description": "Multiply and assign a value (Veyra 0.2.8)"
+  },
+  "compound divide": {
+    "prefix": "divassign",
+    "body": ["${1:variable} /= ${2:value}$0"],
+    "description": "Divide and assign a value (Veyra 0.2.8)"
+  },
+  "compound modulo": {
+    "prefix": "modassign",
+    "body": ["${1:variable} %= ${2:value}$0"],
+    "description": "Calculate remainder and assign a value (Veyra 0.2.8)"
+  },
+  "short-circuit and": {
+    "prefix": "andsc",
+    "body": ["${1:condition} and ${2:expression}$0"],
+    "description": "Logical AND with short-circuit evaluation"
+  },
+  "short-circuit or": {
+    "prefix": "orsc",
+    "body": ["${1:condition} or ${2:expression}$0"],
+    "description": "Logical OR with short-circuit evaluation"
+  },
+  "null coalescing": {
+    "prefix": "nullish",
+    "body": ["${1:value} ?? ${2:fallback}$0"],
+    "description": "Return a fallback only when the left value is null"
+  },
+  "channel compound assignment": {
+    "prefix": "channeladd",
+    "body": [
+      "set ${1:counter} = ${2:10}",
+      "${1:counter} += ${3:5}",
+      "say ${4:0} ? ${1:counter}$0"
+    ],
+    "description": "Update a constant channel using compound assignment"
   }
 }

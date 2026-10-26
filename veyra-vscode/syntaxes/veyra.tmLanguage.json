@@ -378,6 +378,10 @@
           "match": "\\?="
         },
         {
+          "name": "keyword.operator.assignment.compound.veyra",
+          "match": "\\+=|-=|\\*=|/=|%="
+        },
+        {
           "name": "keyword.operator.channel.veyra",
           "match": "\\?(?![?=])"
         },
