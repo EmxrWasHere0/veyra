@@ -30,43 +30,92 @@ pub enum Tok {
 pub struct Token {
     pub kind: Tok,
     pub text: String,
+    pub line: usize,
+    pub column: usize,
 }
 
 pub fn lex(source: &str) -> Result<Vec<Token>, String> {
     let chars: Vec<char> = source.chars().collect();
     let len = chars.len();
 
-    let mut i = 0;
+    let mut i = 0usize;
+    let mut line = 1usize;
+    let mut column = 1usize;
     let mut tokens = Vec::new();
+
+    // Advance the cursor while tracking line and column positions.
+    macro_rules! advance {
+        () => {{
+            if i < len {
+                if chars[i] == '\n' {
+                    line += 1;
+                    column = 1;
+                } else {
+                    column += 1;
+                }
+
+                i += 1;
+            }
+        }};
+    }
+
+    // Advance multiple characters.
+    macro_rules! advance_n {
+        ($count:expr) => {{
+            for _ in 0..$count {
+                advance!();
+            }
+        }};
+    }
+
+    // Create a token with its starting position.
+    macro_rules! push_token {
+        ($kind:expr, $text:expr, $line:expr, $column:expr) => {{
+            tokens.push(Token {
+                kind: $kind,
+                text: $text,
+                line: $line,
+                column: $column,
+            });
+        }};
+    }
 
     while i < len {
         let c = chars[i];
 
         // Whitespace
         if c.is_whitespace() {
-            i += 1;
+            advance!();
             continue;
         }
 
         // Comments
         if c == '#' {
             while i < len && chars[i] != '\n' {
-                i += 1;
+                advance!();
             }
+
             continue;
         }
 
+        let start_line = line;
+        let start_column = column;
+
         // Interpolated strings
-        if c == 'f' && i + 1 < len && (chars[i + 1] == '"' || chars[i + 1] == '\'') {
+        if c == 'f'
+            && i + 1 < len
+            && (chars[i + 1] == '"' || chars[i + 1] == '\'')
+        {
             let quote = chars[i + 1];
-            let start = i;
 
-            i += 2;
+            advance_n!(2);
 
-            let triple = i + 1 < len && chars[i] == quote && chars[i + 1] == quote;
+            let triple = i + 1 < len
+                && chars[i] == quote
+                && chars[i + 1] == quote;
 
             if triple {
-                i += 2;
+                advance_n!(2);
             }
 
             let mut content = String::new();
@@ -75,8 +124,11 @@ pub fn lex(source: &str) -> Result<Vec<Token>, String> {
             while i < len {
                 if chars[i] == '\\' && i + 1 < len {
                     content.push(chars[i]);
-                    content.push(chars[i + 1]);
-                    i += 2;
+                    advance!();
+
+                    content.push(chars[i]);
+                    advance!();
+
                     continue;
                 }
 
@@ -86,41 +138,46 @@ pub fn lex(source: &str) -> Result<Vec<Token>, String> {
                         && chars[i + 1] == quote
                         && chars[i + 2] == quote
                     {
-                        i += 3;
+                        advance_n!(3);
                         closed = true;
                         break;
                     }
                 } else if chars[i] == quote {
-                    i += 1;
+                    advance!();
                     closed = true;
                     break;
                 }
 
                 content.push(chars[i]);
-                i += 1;
+                advance!();
             }
 
             if !closed {
                 return Err(format!(
-                    "Unterminated interpolated string starting at column {}",
-                    start + 1
+                    "Unterminated interpolated string at line {}, column {}",
+                    start_line, start_column
                 ));
             }
 
-            tokens.push(Token {
-                kind: Tok::InterpolatedString,
-                text: content,
-            });
+            push_token!(
+                Tok::InterpolatedString,
+                content,
+                start_line,
+                start_column
+            );
 
             continue;
         }
 
         // Triple-quoted multiline strings
-        if (c == '"' || c == '\'') && i + 2 < len && chars[i + 1] == c && chars[i + 2] == c {
+        if (c == '"' || c == '\'')
+            && i + 2 < len
+            && chars[i + 1] == c
+            && chars[i + 2] == c
+        {
             let quote = c;
-            let start = i;
 
-            i += 3;
+            advance_n!(3);
 
             let mut content = String::new();
             let mut closed = false;
@@ -129,9 +186,11 @@ pub fn lex(source: &str) -> Result<Vec<Token>, String> {
                 // Preserve escaped characters.
                 if chars[i] == '\\' && i + 1 < len {
                     content.push(chars[i]);
-                    content.push(chars[i + 1]);
+                    advance!();
 
-                    i += 2;
+                    content.push(chars[i]);
+                    advance!();
+
                     continue;
                 }
 
@@ -141,24 +200,23 @@ pub fn lex(source: &str) -> Result<Vec<Token>, String> {
                     && chars[i + 1] == quote
                     && chars[i + 2] == quote
                 {
-                    i += 3;
+                    advance_n!(3);
                     closed = true;
                     break;
                 }
 
                 content.push(chars[i]);
-                i += 1;
+                advance!();
             }
 
             if !closed {
                 return Err(format!(
-                    "Unterminated multiline string starting at column {}",
-                    start + 1
+                    "Unterminated multiline string at line {}, column {}",
+                    start_line, start_column
                 ));
             }
 
-            // Convert the multiline literal into a regular string token.
-            // Escape physical newlines so the existing string parser can decode them.
+            // Encode physical newlines for the existing string parser.
             let mut encoded = String::new();
 
             for character in content.chars() {
@@ -170,20 +228,22 @@ pub fn lex(source: &str) -> Result<Vec<Token>, String> {
                 }
             }
 
-            tokens.push(Token {
-                kind: Tok::Val,
-                text: format!("\"{}\"", encoded),
-            });
+            push_token!(
+                Tok::Val,
+                format!("\"{}\"", encoded),
+                start_line,
+                start_column
+            );
 
             continue;
         }
 
-        // Strings: single and double quotes
+        // Regular strings
         if c == '"' || c == '\'' {
             let quote = c;
             let start = i;
 
-            i += 1;
+            advance!();
 
             let mut closed = false;
 
@@ -193,47 +253,51 @@ pub fn lex(source: &str) -> Result<Vec<Token>, String> {
                         break;
                     }
 
-                    i += 2;
+                    advance_n!(2);
                     continue;
                 }
 
                 if chars[i] == quote {
-                    i += 1;
+                    advance!();
                     closed = true;
                     break;
                 }
 
-                i += 1;
+                advance!();
             }
 
             if !closed {
                 return Err(format!(
-                    "Unterminated string starting at column {}",
-                    start + 1
+                    "Unterminated string at line {}, column {}",
+                    start_line, start_column
                 ));
             }
 
             let text: String = chars[start..i].iter().collect();
 
-            tokens.push(Token {
-                kind: Tok::Val,
+            push_token!(
+                Tok::Val,
                 text,
-            });
+                start_line,
+                start_column
+            );
 
             continue;
         }
 
         // Numbers
-        if c.is_ascii_digit() || (c == '.' && i + 1 < len && chars[i + 1].is_ascii_digit()) {
+        if c.is_ascii_digit()
+            || (c == '.' && i + 1 < len && chars[i + 1].is_ascii_digit())
+        {
             let start = i;
             let mut has_dot = false;
 
             while i < len {
                 if chars[i].is_ascii_digit() {
-                    i += 1;
+                    advance!();
                 } else if chars[i] == '.' && !has_dot {
                     has_dot = true;
-                    i += 1;
+                    advance!();
                 } else {
                     break;
                 }
@@ -241,10 +305,12 @@ pub fn lex(source: &str) -> Result<Vec<Token>, String> {
 
             let text: String = chars[start..i].iter().collect();
 
-            tokens.push(Token {
-                kind: Tok::Val,
+            push_token!(
+                Tok::Val,
                 text,
-            });
+                start_line,
+                start_column
+            );
 
             continue;
         }
@@ -253,8 +319,10 @@ pub fn lex(source: &str) -> Result<Vec<Token>, String> {
         if c.is_alphabetic() || c == '_' {
             let start = i;
 
-            while i < len && (chars[i].is_alphanumeric() || chars[i] == '_') {
-                i += 1;
+            while i < len
+                && (chars[i].is_alphanumeric() || chars[i] == '_')
+            {
+                advance!();
             }
 
             let text: String = chars[start..i].iter().collect();
@@ -271,19 +339,30 @@ pub fn lex(source: &str) -> Result<Vec<Token>, String> {
                 _ => Tok::Id,
             };
 
-            tokens.push(Token { kind, text });
+            push_token!(
+                kind,
+                text,
+                start_line,
+                start_column
+            );
 
             continue;
         }
 
         // Spread operator
-        if c == '.' && i + 2 < len && chars[i + 1] == '.' && chars[i + 2] == '.' {
-            tokens.push(Token {
-                kind: Tok::Spread,
-                text: "...".into(),
-            });
+        if c == '.'
+            && i + 2 < len
+            && chars[i + 1] == '.'
+            && chars[i + 2] == '.'
+        {
+            push_token!(
+                Tok::Spread,
+                "...".into(),
+                start_line,
+                start_column
+            );
 
-            i += 3;
+            advance_n!(3);
             continue;
         }
 
@@ -296,15 +375,21 @@ pub fn lex(source: &str) -> Result<Vec<Token>, String> {
                 | "+=" | "-=" | "*=" | "/=" | "%=" => Some(Tok::Op),
 
                 "?=" => Some(Tok::QuestionEq),
+
                 "=>" => Some(Tok::Arrow),
 
                 _ => None,
             };
 
             if let Some(kind) = kind {
-                tokens.push(Token { kind, text: two });
+                push_token!(
+                    kind,
+                    two,
+                    start_line,
+                    start_column
+                );
 
-                i += 2;
+                advance_n!(2);
                 continue;
             }
         }
@@ -329,29 +414,39 @@ pub fn lex(source: &str) -> Result<Vec<Token>, String> {
 
             ':' => Some(Tok::Colon),
 
-            '+' | '-' | '*' | '/' | '%' | '<' | '>' | '=' | '!' => Some(Tok::Op),
+            '+' | '-' | '*' | '/' | '%' | '<' | '>' | '=' | '!' => {
+                Some(Tok::Op)
+            }
 
             _ => None,
         };
 
         if let Some(kind) = kind {
-            tokens.push(Token {
+            push_token!(
                 kind,
-                text: c.to_string(),
-            });
+                c.to_string(),
+                start_line,
+                start_column
+            );
 
-            i += 1;
+            advance!();
             continue;
         }
 
         // Unknown characters must not be silently ignored.
-        return Err(format!("Unexpected character '{}' at column {}", c, i + 1));
+        return Err(format!(
+            "Unexpected character '{}' at line {}, column {}",
+            c, start_line, start_column
+        ));
     }
 
-    tokens.push(Token {
-        kind: Tok::Eof,
-        text: String::new(),
-    });
+    // End-of-file token
+    push_token!(
+        Tok::Eof,
+        String::new(),
+        line,
+        column
+    );
 
     Ok(tokens)
 }
@@ -462,6 +557,10 @@ pub fn parse_lines(source: &str, filename: &str) -> Result<Vec<Line>, String> {
         let meaningful: Vec<Token> = tokens
             .into_iter()
             .filter(|token| token.kind != Tok::Eof)
+            .map(|mut token| {
+                token.line += pending_line - 1;
+                token
+            })
             .collect();
 
         // Rebuild delimiter state from the accumulated tokens.

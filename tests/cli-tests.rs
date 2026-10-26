@@ -179,7 +179,7 @@ fn error_location_with_source() {
     let stderr = String::from_utf8_lossy(&output.stderr);
 
     assert!(
-        stderr.contains("error_location.vey:4: Division by zero"),
+        stderr.contains("error_location.vey:4:7: Division by zero"),
         "Error location or message is incorrect:\n{}",
         stderr
     );
@@ -367,5 +367,115 @@ fn interpolation_edge_cases() {
         stdout.contains("22 passed, 0 failed"),
         "Unexpected test results:\n{}",
         stdout
+    );
+}
+
+#[test]
+fn error_column_undefined_variable() {
+    let output = std::process::Command::new(env!("CARGO_BIN_EXE_veyra"))
+        .arg("tests/fixtures/error_columns.vey")
+        .output()
+        .expect("Failed to execute Veyra");
+
+    let combined = format!(
+        "{}{}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr)
+    );
+
+    assert!(
+        combined.contains("error_columns.vey:1:10:"),
+        "Incorrect undefined variable location:\n{}",
+        combined
+    );
+
+    assert!(
+        combined.contains("|          ^^^^^^^"),
+        "Incorrect source marker:\n{}",
+        combined
+    );
+}
+
+#[test]
+fn error_column_multiline() {
+    let output = std::process::Command::new(env!("CARGO_BIN_EXE_veyra"))
+        .arg("tests/fixtures/error_columns_multiline.vey")
+        .output()
+        .expect("Failed to execute Veyra");
+
+    let combined = format!(
+        "{}{}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr)
+    );
+
+    assert!(
+        combined.contains("error_columns_multiline.vey:4:5:"),
+        "Incorrect multiline error location:\n{}",
+        combined
+    );
+}
+
+#[test]
+fn error_column_lambda() {
+    let output = std::process::Command::new(env!("CARGO_BIN_EXE_veyra"))
+        .arg("tests/fixtures/lambda_error_location.vey")
+        .output()
+        .expect("Failed to execute Veyra");
+
+    let combined = format!(
+        "{}{}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr)
+    );
+
+    assert!(
+        combined.contains("lambda_error_location.vey:1:28:"),
+        "Incorrect lambda error location:\n{}",
+        combined
+    );
+
+    assert!(
+        combined.contains("Division by zero"),
+        "Missing division error:\n{}",
+        combined
+    );
+
+    assert!(
+        combined.contains("<lambda>()"),
+        "Missing lambda traceback:\n{}",
+        combined
+    );
+}
+
+#[test]
+fn error_column_nested_functions() {
+    let output = std::process::Command::new(env!("CARGO_BIN_EXE_veyra"))
+        .arg("tests/fixtures/nested_error_location.vey")
+        .output()
+        .expect("Failed to execute Veyra");
+
+    let combined = format!(
+        "{}{}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr)
+    );
+
+    assert!(
+        combined.contains("nested_error_location.vey:2:15:"),
+        "Incorrect nested function error location:\n{}",
+        combined
+    );
+
+    assert!(
+        combined.contains("divide()"),
+        "Missing divide traceback:\n{}",
+        combined
+    );
+
+    assert!(
+        combined.contains("calculate()"),
+        "Missing calculate traceback:\n{}",
+        combined
     );
 }

@@ -618,13 +618,20 @@ impl Runtime {
         let result = self.expr(tokens, &mut position, 0)?;
 
         if position < tokens.len() {
-            return Err(format!("Unexpected token '{}'", tokens[position].text));
+            return Err(token_error(
+                &tokens[position],
+                format!("Unexpected token '{}'", tokens[position].text),
+            ));
         }
 
         Ok(result)
     }
 
-    fn postfix(&mut self, tokens: &[Token], position: &mut usize) -> Result<Value, String> {
+    fn postfix(
+        &mut self,
+        tokens: &[Token],
+        position: &mut usize,
+    ) -> Result<Value, String> {
         let mut value = self.primary(tokens, position)?;
 
         while *position < tokens.len() {
@@ -632,7 +639,15 @@ impl Runtime {
                 break;
             }
 
+            let bracket_token = tokens[*position].clone();
+
             *position += 1;
+
+            // Remember the first index expression token.
+            let index_token = tokens
+                .get(*position)
+                .cloned()
+                .unwrap_or_else(|| bracket_token.clone());
 
             let first = if *position < tokens.len()
                 && tokens[*position].kind != Tok::Colon
@@ -666,19 +681,32 @@ impl Runtime {
                     }
                 }
 
-                expect_token(tokens, position, Tok::RBracket)?;
+                expect_token(tokens, position, Tok::RBracket)
+                    .map_err(|error| token_error(&bracket_token, error))?;
 
-                let start = first.as_ref().map(Self::slice_number).transpose()?;
-                let end = second.as_ref().map(Self::slice_number).transpose()?;
+                let start = first
+                    .as_ref()
+                    .map(Self::slice_number)
+                    .transpose()
+                    .map_err(|error| token_error(&index_token, error))?;
+
+                let end = second
+                    .as_ref()
+                    .map(Self::slice_number)
+                    .transpose()
+                    .map_err(|error| token_error(&index_token, error))?;
+
                 let step = third
                     .as_ref()
                     .map(Self::slice_number)
-                    .transpose()?
+                    .transpose()
+                    .map_err(|error| token_error(&index_token, error))?
                     .unwrap_or(1);
 
                 value = match value {
                     Value::List(items) => {
-                        let indices = Self::slice_indices(items.len(), start, end, step)?;
+                        let indices = Self::slice_indices(items.len(), start, end, step)
+                            .map_err(|error| token_error(&index_token, error))?;
 
                         Value::List(
                             indices
@@ -691,45 +719,80 @@ impl Runtime {
                     Value::Text(text) => {
                         let chars: Vec<char> = text.chars().collect();
 
-                        let indices = Self::slice_indices(chars.len(), start, end, step)?;
+                        let indices = Self::slice_indices(chars.len(), start, end, step)
+                            .map_err(|error| token_error(&index_token, error))?;
 
-                        Value::Text(indices.into_iter().map(|index| chars[index]).collect())
+                        Value::Text(
+                            indices
+                                .into_iter()
+                                .map(|index| chars[index])
+                                .collect(),
+                        )
                     }
 
-                    _ => return Err("Slicing requires a list or text".into()),
+                    _ => {
+                        return Err(token_error(
+                            &bracket_token,
+                            "Slicing requires a list or text",
+                        ));
+                    }
                 };
             } else {
                 // Normal indexing: value[index]
-                let index = first.ok_or("Empty index expression")?;
+                let index = first.ok_or_else(|| {
+                    token_error(&bracket_token, "Empty index expression")
+                })?;
 
-                expect_token(tokens, position, Tok::RBracket)?;
+                expect_token(tokens, position, Tok::RBracket)
+                    .map_err(|error| token_error(&bracket_token, error))?;
 
                 value = match value {
                     Value::List(items) => {
-                        let index = normalize_index(&index, items.len())?;
+                        let index = normalize_index(&index, items.len())
+                            .map_err(|error| token_error(&index_token, error))?;
+
                         items[index].clone()
                     }
 
                     Value::Text(text) => {
                         let chars: Vec<char> = text.chars().collect();
-                        let index = normalize_index(&index, chars.len())?;
+
+                        let index = normalize_index(&index, chars.len())
+                            .map_err(|error| token_error(&index_token, error))?;
+
                         Value::Text(chars[index].to_string())
                     }
 
                     Value::Object(entries) => {
                         let key = match index {
                             Value::Text(key) => key,
-                            _ => return Err("Jsondata index must be text".into()),
+
+                            _ => {
+                                return Err(token_error(
+                                    &index_token,
+                                    "Jsondata index must be text",
+                                ));
+                            }
                         };
 
                         entries
                             .iter()
                             .find(|(name, _)| name == &key)
                             .map(|(_, value)| value.clone())
-                            .ok_or_else(|| format!("Jsondata key '{}' not found", key))?
+                            .ok_or_else(|| {
+                                token_error(
+                                    &index_token,
+                                    format!("Jsondata key '{}' not found", key),
+                                )
+                            })?
                     }
 
-                    _ => return Err("Indexing requires a list, text or jsondata".into()),
+                    _ => {
+                        return Err(token_error(
+                            &bracket_token,
+                            "Indexing requires a list, text or jsondata",
+                        ));
+                    }
                 };
             }
         }
@@ -866,7 +929,10 @@ impl Runtime {
                 *position += 1;
 
                 if *position >= tokens.len() || tokens[*position].kind != Tok::Id {
-                    return Err("Expected channel name after '?'".into());
+                    return Err(token_error(
+                        token,
+                        "Expected channel name after '?'",
+                    ));
                 }
 
                 let name = tokens[*position].text.clone();
@@ -929,14 +995,20 @@ impl Runtime {
                     left = right;
                 }
             } else {
-                left = self.binop(left, op, right)?;
+                left = self
+                    .binop(left, op, right)
+                    .map_err(|error| token_error(token, error))?;
             }
         }
 
         Ok(left)
     }
 
-    fn unary(&mut self, tokens: &[Token], position: &mut usize) -> Result<Value, String> {
+    fn unary(
+        &mut self,
+        tokens: &[Token],
+        position: &mut usize,
+    ) -> Result<Value, String> {
         if *position >= tokens.len() {
             return Err("Expected expression".into());
         }
@@ -952,7 +1024,10 @@ impl Runtime {
             return match (op.as_str(), value) {
                 ("-", Value::Num(n)) => Ok(Value::Num(-n)),
                 ("+", Value::Num(n)) => Ok(Value::Num(n)),
-                _ => Err("Unary operator requires num".into()),
+                _ => Err(token_error(
+                    token,
+                    "Unary operator requires num",
+                )),
             };
         }
 
@@ -1428,7 +1503,7 @@ impl Runtime {
             Tok::Id => {
                 *position += 1;
 
-                let name = token.text;
+                let name = token.text.clone();
 
                 // Module member access or list method.
                 if *position < tokens.len() && tokens[*position].kind == Tok::Dot {
@@ -1480,10 +1555,14 @@ impl Runtime {
 
                         let (values, tags): (Vec<_>, Vec<_>) = arguments.into_iter().unzip();
 
-                        return self.module_call(&name, &member, values, tags);
+                        return self
+                            .module_call(&name, &member, values, tags)
+                            .map_err(|error| token_error(&token, error));
                     }
 
-                    return self.module_constant(&name, &member);
+                    return self
+                        .module_constant(&name, &member)
+                        .map_err(|error| token_error(&token, error));
                 }
 
                 // Function call.
@@ -1493,31 +1572,44 @@ impl Runtime {
                     let arguments = self.parse_call_args(tokens, position)?;
 
                     if let Some((module_name, member)) = self.resolve_import(&name) {
-                        return self.module_call(
-                            &module_name,
-                            &member,
-                            arguments.iter().map(|a| a.0.clone()).collect(),
-                            arguments.iter().map(|a| a.1.clone()).collect(),
-                        );
+                        return self
+                            .module_call(
+                                &module_name,
+                                &member,
+                                arguments.iter().map(|a| a.0.clone()).collect(),
+                                arguments.iter().map(|a| a.1.clone()).collect(),
+                            )
+                            .map_err(|error| token_error(&token, error));
                     }
 
-                    match self.get(&name) {
+                    return match self.get(&name) {
                         Some(Value::Func(func)) => {
-                            return self.call_tagged(&func, arguments);
+                            self.call_tagged(&func, arguments)
+                                .map_err(|error| token_error(&token, error))
                         }
 
                         Some(Value::Native(native)) => {
-                            let values = arguments.into_iter().map(|argument| argument.0).collect();
+                            let values = arguments
+                                .into_iter()
+                                .map(|argument| argument.0)
+                                .collect();
 
-                            return self.call_native(native, values);
+                            self.call_native(native, values)
+                                .map_err(|error| token_error(&token, error))
                         }
 
                         Some(_) => {
-                            return Err(format!("'{}' is not a function", name));
+                            Err(token_error(
+                                &token,
+                                format!("'{}' is not a function", name),
+                            ))
                         }
 
                         None => {
-                            return Err(format!("Undefined function '{}'", name));
+                            Err(token_error(
+                                &token,
+                                format!("Undefined function '{}'", name),
+                            ))
                         }
                     }
                 }
@@ -1564,6 +1656,9 @@ impl Runtime {
             }
 
             Tok::FuncKw => {
+                let func_line = tokens[*position].line;
+                let func_column = tokens[*position].column;
+
                 *position += 1;
 
                 expect_token(tokens, position, Tok::LParen)?;
@@ -1608,18 +1703,27 @@ impl Runtime {
 
                 let mut return_tokens = vec![Token {
                     kind: Tok::Id,
-                    text: "return".into(),
+                    text: "return".to_string(),
+                    line: func_line,
+                    column: func_column,
                 }];
 
                 return_tokens.extend(expression);
+
+                // Preserve the original source location for lambda errors.
+                let source_name = self
+                    .current_line
+                    .as_ref()
+                    .map(|(source, _)| source.clone())
+                    .unwrap_or_else(|| "<lambda>".to_string());
 
                 Ok(Value::Func(Rc::new(Function {
                     name: "<lambda>".into(),
                     params,
                     body: vec![Line {
                         tokens: return_tokens,
-                        source: Rc::new("<lambda>".to_string()),
-                        number: 1,
+                        source: Rc::new(source_name),
+                        number: func_line,
                     }],
                     is_closure: true,
                     owner_module: self.active_module.clone(),
@@ -3757,42 +3861,140 @@ fn unescape_string(text: &str) -> String {
 
     result
 }
-fn format_error(line: &Line, error: String) -> String {
-    // Preserve errors that already contain source locations.
-    if error.contains(".vey:") || error.contains(".veymod:") {
-        return error;
+
+fn token_error(token: &Token, message: impl AsRef<str>) -> String {
+    let message = message.as_ref();
+
+    // Preserve errors that already carry a source position.
+    if message.starts_with("[position:")
+        || message.contains(".vey:")
+        || message.contains(".veymod:")
+    {
+        return message.to_string();
     }
 
-    let location = format!("{}:{}", line.source, line.number);
+    format!(
+        "[position:{}:{}] {}",
+        token.line,
+        token.column,
+        message
+    )
+}
+
+fn format_error(line: &Line, error: String) -> String {
+    // Preserve errors that already start with a formatted source location.
+    if !error.starts_with("[position:") {
+        let first_line = error.lines().next().unwrap_or("");
+
+        if first_line.contains(".vey:") || first_line.contains(".veymod:") {
+            return error;
+        }
+    }
+
+    // Extract an explicit token position when available.
+    let explicit_position = error
+        .strip_prefix("[position:")
+        .and_then(|value| {
+            let (location, _) = value.split_once(']')?;
+            let (line, column) = location.split_once(':')?;
+
+            Some((
+                line.parse::<usize>().ok()?,
+                column.parse::<usize>().ok()?,
+            ))
+        });
+
+    // Remove the internal position marker from the error message.
+    let message = if explicit_position.is_some() {
+        error
+            .split_once("] ")
+            .map(|(_, message)| message.to_string())
+            .unwrap_or_else(|| error.clone())
+    } else {
+        error.clone()
+    };
+
+    // Locate identifiers mentioned in common runtime errors.
+    let identifier = [
+        "Undefined '",
+        "Undefined variable '",
+        "Undefined function '",
+        "Unknown function '",
+    ]
+    .iter()
+    .find_map(|prefix| {
+        message
+            .strip_prefix(prefix)
+            .and_then(|text| text.split('\'').next())
+    });
+
+    let error_token = identifier.and_then(|name| {
+        line.tokens
+            .iter()
+            .find(|token| token.kind == Tok::Id && token.text == name)
+    });
+
+    // Prefer explicit positions over inferred token locations.
+    let token = if let Some((token_line, token_column)) = explicit_position {
+        line.tokens.iter().find(|token| {
+            token.line == token_line && token.column == token_column
+        })
+    } else {
+        error_token.or_else(|| line.tokens.first())
+    };
+
+    let error_line = explicit_position
+        .map(|(line, _)| line)
+        .or_else(|| token.map(|token| token.line))
+        .unwrap_or(line.number);
+
+    let error_column = explicit_position
+        .map(|(_, column)| column)
+        .or_else(|| token.map(|token| token.column))
+        .unwrap_or(1);
+
+    // Use the actual token length when its position is known.
+    let marker_length = token
+        .map(|token| token.text.chars().count())
+        .unwrap_or(1)
+        .max(1);
+
+    let location = format!(
+        "{}:{}:{}",
+        line.source,
+        error_line,
+        error_column
+    );
 
     let source_line = std::fs::read_to_string(line.source.as_str())
         .ok()
         .and_then(|source| {
             source
                 .lines()
-                .nth(line.number.saturating_sub(1))
+                .nth(error_line.saturating_sub(1))
                 .map(str::to_string)
         });
 
     match source_line {
         Some(source) => {
-            let trimmed = source.trim_end();
+            let source = source.trim_end();
+            let line_width = error_line.to_string().len();
 
-            let line_width = line.number.to_string().len();
-
-            let marker_length = trimmed.chars().count().max(1);
+            let indentation = " ".repeat(error_column.saturating_sub(1));
+            let marker = "^".repeat(marker_length);
 
             format!(
-                "{}: {}\n\n  {} | {}\n  {} | {}",
+                "{}: {}\n\n  {} | {}\n  {} | {}{}",
                 location,
-                error,
-                line.number,
-                trimmed,
+                message,
+                error_line,
+                source,
                 " ".repeat(line_width),
-                "^".repeat(marker_length)
+                indentation,
+                marker
             )
         }
 
-        None => format!("{}: {}", location, error),
+        None => format!("{}: {}", location, message),
     }
 }

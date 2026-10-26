@@ -1,0 +1,3 @@
+add divide = func(x) => 10 / x
+
+say divide(0)

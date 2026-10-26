@@ -1,0 +1,9 @@
+add divide(x)
+    return 10 / x
+end
+
+add calculate(value)
+    return divide(value)
+end
+
+calculate(0)
