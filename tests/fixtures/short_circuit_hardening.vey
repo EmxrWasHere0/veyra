@@ -1,0 +1,15 @@
+test "Short-circuit parser hardening"
+    assert (true or missing_function(10)) == true
+    assert (false and [1, 2, 3].map(func(x) => x / 0)) == false
+    assert (42 ?? (10 / 0)) == 42
+
+    assert (true or func(x) => x * 2) == true
+    assert (true or func(x = 10) => x * 2) == true
+    assert (true or func(a, b) => a + b) == true
+    assert (true or func(...args) => args) == true
+
+    assert (false and [1, 2, 3][0:2]) == false
+    assert (42 ?? (0 ? missing_channel)) == 42
+    assert (true or {"name": "Veyra", "active": true}) == true
+    assert (false and (10 not in [1, 2, 3])) == false
+end

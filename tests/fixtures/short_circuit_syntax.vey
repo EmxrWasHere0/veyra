@@ -1,0 +1,6 @@
+test "Short-circuit syntax"
+    assert true or (10 / 0)
+    assert not (false and (10 / 0))
+    assert (42 ?? (10 / 0)) == 42
+    assert (false and [1, 2, 3].map(func(x) => x / 0)) == false
+end

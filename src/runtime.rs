@@ -505,104 +505,356 @@ impl Runtime {
         self.assign(name, result)
     }
 
+    fn syntax_expr(
+        tokens: &[Token],
+        position: &mut usize,
+        min_precedence: u8,
+    ) -> Result<(), String> {
+        Self::syntax_unary(tokens, position)?;
+
+        while *position < tokens.len() {
+            let token = &tokens[*position];
+
+            // Channel lookup operator.
+            if token.kind == Tok::Question {
+                if 1 < min_precedence {
+                    break;
+                }
+
+                *position += 1;
+
+                if *position >= tokens.len() || tokens[*position].kind != Tok::Id {
+                    return Err(token_error(
+                        token,
+                        "Expected channel name after '?'",
+                    ));
+                }
+
+                *position += 1;
+                continue;
+            }
+
+            let is_not_in = token.text == "not"
+                && *position + 1 < tokens.len()
+                && tokens[*position + 1].text == "in";
+
+            let op = if is_not_in {
+                "not in"
+            } else {
+                token.text.as_str()
+            };
+
+            let priority = precedence(op);
+
+            if priority == 0 || priority < min_precedence {
+                break;
+            }
+
+            *position += if is_not_in { 2 } else { 1 };
+
+            Self::syntax_expr(tokens, position, priority + 1)?;
+        }
+
+        Ok(())
+    }
+
+    fn syntax_unary(
+        tokens: &[Token],
+        position: &mut usize,
+    ) -> Result<(), String> {
+        if *position >= tokens.len() {
+            return Err("Expected expression".into());
+        }
+
+        let token = &tokens[*position];
+
+        if matches!(token.text.as_str(), "-" | "+" | "not" | "!") {
+            *position += 1;
+            return Self::syntax_unary(tokens, position);
+        }
+
+        Self::syntax_postfix(tokens, position)
+    }
+
+    fn syntax_postfix(
+        tokens: &[Token],
+        position: &mut usize,
+    ) -> Result<(), String> {
+        Self::syntax_primary(tokens, position)?;
+
+        while *position < tokens.len() {
+            match tokens[*position].kind {
+                Tok::LBracket => {
+                    *position += 1;
+
+                    if *position < tokens.len()
+                        && tokens[*position].kind != Tok::Colon
+                        && tokens[*position].kind != Tok::RBracket
+                    {
+                        Self::syntax_expr(tokens, position, 0)?;
+                    }
+
+                    if *position < tokens.len()
+                        && tokens[*position].kind == Tok::Colon
+                    {
+                        *position += 1;
+
+                        if *position < tokens.len()
+                            && tokens[*position].kind != Tok::Colon
+                            && tokens[*position].kind != Tok::RBracket
+                        {
+                            Self::syntax_expr(tokens, position, 0)?;
+                        }
+
+                        if *position < tokens.len()
+                            && tokens[*position].kind == Tok::Colon
+                        {
+                            *position += 1;
+
+                            if *position < tokens.len()
+                                && tokens[*position].kind != Tok::RBracket
+                            {
+                                Self::syntax_expr(tokens, position, 0)?;
+                            }
+                        }
+                    }
+
+                    Self::syntax_expect(tokens, position, Tok::RBracket)?;
+                }
+
+                Tok::Dot => {
+                    *position += 1;
+
+                    Self::syntax_expect(tokens, position, Tok::Id)?;
+
+                    if *position < tokens.len()
+                        && tokens[*position].kind == Tok::LParen
+                    {
+                        Self::syntax_arguments(tokens, position)?;
+                    }
+                }
+
+                _ => break,
+            }
+        }
+
+        Ok(())
+    }
+
+    fn syntax_primary(
+        tokens: &[Token],
+        position: &mut usize,
+    ) -> Result<(), String> {
+        if *position >= tokens.len() {
+            return Err("Expected expression".into());
+        }
+
+        let token = &tokens[*position];
+
+        match token.kind {
+            Tok::Val | Tok::InterpolatedString => {
+                *position += 1;
+            }
+
+            Tok::Id => {
+                *position += 1;
+
+                if *position < tokens.len()
+                    && tokens[*position].kind == Tok::Dot
+                {
+                    *position += 1;
+
+                    Self::syntax_expect(tokens, position, Tok::Id)?;
+                }
+
+                if *position < tokens.len()
+                    && tokens[*position].kind == Tok::LParen
+                {
+                    Self::syntax_arguments(tokens, position)?;
+                }
+            }
+
+            Tok::LParen => {
+                *position += 1;
+
+                Self::syntax_expr(tokens, position, 0)?;
+
+                Self::syntax_expect(tokens, position, Tok::RParen)?;
+            }
+
+            Tok::LBracket => {
+                *position += 1;
+
+                while *position < tokens.len()
+                    && tokens[*position].kind != Tok::RBracket
+                {
+                    Self::syntax_expr(tokens, position, 0)?;
+
+                    if *position < tokens.len()
+                        && tokens[*position].kind == Tok::Comma
+                    {
+                        *position += 1;
+                    } else {
+                        break;
+                    }
+                }
+
+                Self::syntax_expect(tokens, position, Tok::RBracket)?;
+            }
+
+            Tok::LBrace => {
+                *position += 1;
+
+                while *position < tokens.len()
+                    && tokens[*position].kind != Tok::RBrace
+                {
+                    Self::syntax_expr(tokens, position, 0)?;
+
+                    Self::syntax_expect(tokens, position, Tok::Colon)?;
+
+                    Self::syntax_expr(tokens, position, 0)?;
+
+                    if *position < tokens.len()
+                        && tokens[*position].kind == Tok::Comma
+                    {
+                        *position += 1;
+                    } else {
+                        break;
+                    }
+                }
+
+                Self::syntax_expect(tokens, position, Tok::RBrace)?;
+            }
+
+            Tok::FuncKw => {
+                *position += 1;
+
+                Self::syntax_expect(tokens, position, Tok::LParen)?;
+
+                // Validate lambda parameters without evaluating default values.
+                while *position < tokens.len()
+                    && tokens[*position].kind != Tok::RParen
+                {
+                    // Variadic parameter.
+                    let variadic = if tokens[*position].kind == Tok::Spread {
+                        *position += 1;
+                        true
+                    } else {
+                        false
+                    };
+
+                    // Parameter name.
+                    Self::syntax_expect(tokens, position, Tok::Id)?;
+
+                    // Optional default value.
+                    if *position < tokens.len()
+                        && tokens[*position].text == "="
+                    {
+                        if variadic {
+                            return Err(token_error(
+                                &tokens[*position],
+                                "Variadic parameters cannot have default values",
+                            ));
+                        }
+
+                        *position += 1;
+
+                        Self::syntax_expr(tokens, position, 0)?;
+                    }
+
+                    // Parameter separator.
+                    if *position < tokens.len()
+                        && tokens[*position].kind == Tok::Comma
+                    {
+                        *position += 1;
+
+                        // Variadic parameters must be last.
+                        if variadic
+                            && *position < tokens.len()
+                            && tokens[*position].kind != Tok::RParen
+                        {
+                            return Err(token_error(
+                                &tokens[*position],
+                                "Variadic parameter must be last",
+                            ));
+                        }
+                    } else {
+                        break;
+                    }
+                }
+
+                Self::syntax_expect(tokens, position, Tok::RParen)?;
+
+                Self::syntax_expect(tokens, position, Tok::Arrow)?;
+
+                Self::syntax_expr(tokens, position, 0)?;
+            }
+
+            _ => {
+                return Err(token_error(
+                    token,
+                    format!("Unexpected token '{}'", token.text),
+                ));
+            }
+        }
+
+        Ok(())
+    }
+
+    fn syntax_arguments(
+        tokens: &[Token],
+        position: &mut usize,
+    ) -> Result<(), String> {
+        Self::syntax_expect(tokens, position, Tok::LParen)?;
+
+        while *position < tokens.len()
+            && tokens[*position].kind != Tok::RParen
+        {
+            Self::syntax_expr(tokens, position, 0)?;
+
+            if *position < tokens.len()
+                && tokens[*position].kind == Tok::Comma
+            {
+                *position += 1;
+            } else {
+                break;
+            }
+        }
+
+        Self::syntax_expect(tokens, position, Tok::RParen)
+    }
+
+    fn syntax_expect(
+        tokens: &[Token],
+        position: &mut usize,
+        expected: Tok,
+    ) -> Result<(), String> {
+        if *position >= tokens.len() {
+            return Err(format!("Expected {:?}", expected));
+        }
+
+        if tokens[*position].kind != expected {
+            return Err(token_error(
+                &tokens[*position],
+                format!(
+                    "Expected {:?}, found '{}'",
+                    expected,
+                    tokens[*position].text
+                ),
+            ));
+        }
+
+        *position += 1;
+
+        Ok(())
+    }
+
     fn skip_expression(
         tokens: &[Token],
         position: &mut usize,
         min_precedence: u8,
     ) -> Result<(), String> {
-        let mut paren_depth = 0usize;
-        let mut bracket_depth = 0usize;
-        let mut brace_depth = 0usize;
-
-        let start = *position;
-
-        while *position < tokens.len() {
-            let token = &tokens[*position];
-
-            let at_top_level =
-                paren_depth == 0 && bracket_depth == 0 && brace_depth == 0;
-
-            if at_top_level {
-                // Stop at expression delimiters.
-                if matches!(
-                    token.kind,
-                    Tok::RParen
-                        | Tok::RBracket
-                        | Tok::RBrace
-                        | Tok::Comma
-                        | Tok::Colon
-                ) {
-                    break;
-                }
-
-                // Handle combined membership operators.
-                let is_not_in = token.text == "not"
-                    && *position + 1 < tokens.len()
-                    && tokens[*position + 1].text == "in";
-
-                let op = if is_not_in {
-                    "not in"
-                } else {
-                    token.text.as_str()
-                };
-
-                let op_precedence = precedence(op);
-
-                // A lower-precedence operator belongs to the outer expression.
-                if op_precedence > 0 && op_precedence < min_precedence {
-                    break;
-                }
-
-                if is_not_in {
-                    *position += 2;
-                    continue;
-                }
-            }
-
-            match token.kind {
-                Tok::LParen => paren_depth += 1,
-                Tok::LBracket => bracket_depth += 1,
-                Tok::LBrace => brace_depth += 1,
-
-                Tok::RParen => {
-                    if paren_depth == 0 {
-                        break;
-                    }
-
-                    paren_depth -= 1;
-                }
-
-                Tok::RBracket => {
-                    if bracket_depth == 0 {
-                        break;
-                    }
-
-                    bracket_depth -= 1;
-                }
-
-                Tok::RBrace => {
-                    if brace_depth == 0 {
-                        break;
-                    }
-
-                    brace_depth -= 1;
-                }
-
-                _ => {}
-            }
-
-            *position += 1;
-        }
-
-        if *position == start {
-            return Err("Expected expression".into());
-        }
-
-        if paren_depth != 0 || bracket_depth != 0 || brace_depth != 0 {
-            return Err("Unclosed delimiter in expression".into());
-        }
-
-        Ok(())
+        Self::syntax_expr(tokens, position, min_precedence)
     }
 
     // ========================================================

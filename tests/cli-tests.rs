@@ -479,3 +479,63 @@ fn error_column_nested_functions() {
         combined
     );
 }
+
+#[test]
+fn short_circuit_parser_hardening() {
+    let output = std::process::Command::new(env!("CARGO_BIN_EXE_veyra"))
+        .arg("--test")
+        .arg("tests/fixtures/short_circuit_hardening.vey")
+        .output()
+        .expect("Failed to execute Veyra");
+
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    let stderr = String::from_utf8_lossy(&output.stderr);
+
+    assert!(
+        output.status.success(),
+        "Veyra exited with an error:\n{}\n{}",
+        stdout,
+        stderr
+    );
+
+    assert!(
+        stdout.contains("11 passed, 0 failed"),
+        "Unexpected test results:\n{}",
+        stdout
+    );
+}
+
+#[test]
+fn short_circuit_invalid_syntax() {
+    let cases = [
+        ("short_circuit_invalid_operator.vey", "Unexpected token"),
+        ("short_circuit_invalid_arguments.vey", "Unexpected token"),
+        ("short_circuit_invalid_group.vey", "Unexpected token"),
+        ("short_circuit_invalid_lambda.vey", "Expected Id"),
+        ("short_circuit_invalid_jsondata.vey", "Unexpected token"),
+        ("short_circuit_invalid_slice.vey", "Expected RBracket"),
+    ];
+
+    for (filename, expected_error) in cases {
+        let path = format!("tests/fixtures/{}", filename);
+
+        let output = std::process::Command::new(env!("CARGO_BIN_EXE_veyra"))
+            .arg(&path)
+            .output()
+            .expect("Failed to execute Veyra");
+
+        let combined = format!(
+            "{}{}",
+            String::from_utf8_lossy(&output.stdout),
+            String::from_utf8_lossy(&output.stderr)
+        );
+
+        assert!(
+            combined.contains(expected_error),
+            "Expected '{}' for '{}', got:\n{}",
+            expected_error,
+            filename,
+            combined
+        );
+    }
+}
