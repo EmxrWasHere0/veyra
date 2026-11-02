@@ -102,17 +102,12 @@ pub fn lex(source: &str) -> Result<Vec<Token>, String> {
         let start_column = column;
 
         // Interpolated strings
-        if c == 'f'
-            && i + 1 < len
-            && (chars[i + 1] == '"' || chars[i + 1] == '\'')
-        {
+        if c == 'f' && i + 1 < len && (chars[i + 1] == '"' || chars[i + 1] == '\'') {
             let quote = chars[i + 1];
 
             advance_n!(2);
 
-            let triple = i + 1 < len
-                && chars[i] == quote
-                && chars[i + 1] == quote;
+            let triple = i + 1 < len && chars[i] == quote && chars[i + 1] == quote;
 
             if triple {
                 advance_n!(2);
@@ -159,22 +154,13 @@ pub fn lex(source: &str) -> Result<Vec<Token>, String> {
                 ));
             }
 
-            push_token!(
-                Tok::InterpolatedString,
-                content,
-                start_line,
-                start_column
-            );
+            push_token!(Tok::InterpolatedString, content, start_line, start_column);
 
             continue;
         }
 
         // Triple-quoted multiline strings
-        if (c == '"' || c == '\'')
-            && i + 2 < len
-            && chars[i + 1] == c
-            && chars[i + 2] == c
-        {
+        if (c == '"' || c == '\'') && i + 2 < len && chars[i + 1] == c && chars[i + 2] == c {
             let quote = c;
 
             advance_n!(3);
@@ -275,20 +261,13 @@ pub fn lex(source: &str) -> Result<Vec<Token>, String> {
 
             let text: String = chars[start..i].iter().collect();
 
-            push_token!(
-                Tok::Val,
-                text,
-                start_line,
-                start_column
-            );
+            push_token!(Tok::Val, text, start_line, start_column);
 
             continue;
         }
 
         // Numbers
-        if c.is_ascii_digit()
-            || (c == '.' && i + 1 < len && chars[i + 1].is_ascii_digit())
-        {
+        if c.is_ascii_digit() || (c == '.' && i + 1 < len && chars[i + 1].is_ascii_digit()) {
             let start = i;
             let mut has_dot = false;
 
@@ -305,12 +284,7 @@ pub fn lex(source: &str) -> Result<Vec<Token>, String> {
 
             let text: String = chars[start..i].iter().collect();
 
-            push_token!(
-                Tok::Val,
-                text,
-                start_line,
-                start_column
-            );
+            push_token!(Tok::Val, text, start_line, start_column);
 
             continue;
         }
@@ -319,9 +293,7 @@ pub fn lex(source: &str) -> Result<Vec<Token>, String> {
         if c.is_alphabetic() || c == '_' {
             let start = i;
 
-            while i < len
-                && (chars[i].is_alphanumeric() || chars[i] == '_')
-            {
+            while i < len && (chars[i].is_alphanumeric() || chars[i] == '_') {
                 advance!();
             }
 
@@ -339,28 +311,14 @@ pub fn lex(source: &str) -> Result<Vec<Token>, String> {
                 _ => Tok::Id,
             };
 
-            push_token!(
-                kind,
-                text,
-                start_line,
-                start_column
-            );
+            push_token!(kind, text, start_line, start_column);
 
             continue;
         }
 
         // Spread operator
-        if c == '.'
-            && i + 2 < len
-            && chars[i + 1] == '.'
-            && chars[i + 2] == '.'
-        {
-            push_token!(
-                Tok::Spread,
-                "...".into(),
-                start_line,
-                start_column
-            );
+        if c == '.' && i + 2 < len && chars[i + 1] == '.' && chars[i + 2] == '.' {
+            push_token!(Tok::Spread, "...".into(), start_line, start_column);
 
             advance_n!(3);
             continue;
@@ -371,8 +329,9 @@ pub fn lex(source: &str) -> Result<Vec<Token>, String> {
             let two: String = chars[i..i + 2].iter().collect();
 
             let kind = match two.as_str() {
-                "??" | "==" | "!=" | "<=" | ">="
-                | "+=" | "-=" | "*=" | "/=" | "%=" => Some(Tok::Op),
+                "??" | "==" | "!=" | "<=" | ">=" | "+=" | "-=" | "*=" | "/=" | "%=" => {
+                    Some(Tok::Op)
+                }
 
                 "?=" => Some(Tok::QuestionEq),
 
@@ -382,12 +341,7 @@ pub fn lex(source: &str) -> Result<Vec<Token>, String> {
             };
 
             if let Some(kind) = kind {
-                push_token!(
-                    kind,
-                    two,
-                    start_line,
-                    start_column
-                );
+                push_token!(kind, two, start_line, start_column);
 
                 advance_n!(2);
                 continue;
@@ -414,20 +368,13 @@ pub fn lex(source: &str) -> Result<Vec<Token>, String> {
 
             ':' => Some(Tok::Colon),
 
-            '+' | '-' | '*' | '/' | '%' | '<' | '>' | '=' | '!' => {
-                Some(Tok::Op)
-            }
+            '+' | '-' | '*' | '/' | '%' | '<' | '>' | '=' | '!' => Some(Tok::Op),
 
             _ => None,
         };
 
         if let Some(kind) = kind {
-            push_token!(
-                kind,
-                c.to_string(),
-                start_line,
-                start_column
-            );
+            push_token!(kind, c.to_string(), start_line, start_column);
 
             advance!();
             continue;
@@ -441,12 +388,7 @@ pub fn lex(source: &str) -> Result<Vec<Token>, String> {
     }
 
     // End-of-file token
-    push_token!(
-        Tok::Eof,
-        String::new(),
-        line,
-        column
-    );
+    push_token!(Tok::Eof, String::new(), line, column);
 
     Ok(tokens)
 }

@@ -1,4 +1,5 @@
-use std::path::PathBuf;
+use std::fs;
+use std::path::{Path, PathBuf};
 use std::process::{Command, Output};
 
 fn veyra_binary() -> PathBuf {
@@ -10,6 +11,65 @@ fn fixture(name: &str) -> PathBuf {
         .join("tests")
         .join("fixtures")
         .join(name)
+}
+
+fn run_script_in_directory(script: &Path, working_directory: &Path) -> Output {
+    Command::new(veyra_binary())
+        .arg(script)
+        .current_dir(working_directory)
+        .output()
+        .expect("Failed to execute Veyra")
+}
+
+fn run_source_in_directory(
+    project_directory: &Path,
+    working_directory: &Path,
+    source: &str,
+) -> Output {
+    let script = project_directory.join("main.vey");
+
+    fs::write(&script, source).expect("Failed to write test script");
+
+    run_script_in_directory(&script, working_directory)
+}
+
+fn create_vpm_package(
+    project_directory: &Path,
+    directory_name: &str,
+    package_name: &str,
+    module_name: &str,
+    entry: &str,
+    module_source: &str,
+) -> PathBuf {
+    let package_directory = project_directory
+        .join("veyra_packages")
+        .join(directory_name);
+
+    fs::create_dir_all(&package_directory).expect("Failed to create test package directory");
+
+    let entry_path = package_directory.join(entry);
+
+    if let Some(parent) = entry_path.parent() {
+        fs::create_dir_all(parent).expect("Failed to create package entry directory");
+    }
+
+    fs::write(&entry_path, module_source).expect("Failed to write package entry");
+
+    let manifest = format!(
+        r#"{{
+  "name": "{}",
+  "module": "{}",
+  "version": "0.1.0",
+  "entry": "{}",
+  "dependencies": {{}}
+}}"#,
+        package_name, module_name, entry
+    );
+
+    fs::write(package_directory.join("veyra.json"), manifest)
+        .expect("Failed to write package manifest");
+
+    package_directory
 }
 
 fn run_script(name: &str) -> Output {
@@ -538,4 +598,235 @@ fn short_circuit_invalid_syntax() {
             combined
         );
     }
+}
+
+#[test]
+fn vpm_import_uses_manifest_module_and_entry() {
+    let project = tempfile::tempdir().expect("Failed to create temporary project");
+
+    create_vpm_package(
+        project.path(),
+        "example-package",
+        "example-package",
+        "example",
+        "src/entry.veymod",
+        r#"
+set PACKAGE_VERSION = "0.1.0"
+
+add greet(name)
+    return f"Hello, {name}!"
+end
+"#,
+    );
+
+    let output = run_source_in_directory(
+        project.path(),
+        project.path(),
+        r#"
+mod example
+say example.PACKAGE_VERSION
+say example.greet("World")
+"#,
+    );
+
+    assert!(
+        output.status.success(),
+        "Package import failed:\n{}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+
+    assert_eq!(
+        String::from_utf8_lossy(&output.stdout).trim(),
+        "0.1.0\nHello, World!"
+    );
+}
+
+#[test]
+fn vpm_nested_package_import_works_from_another_working_directory() {
+    let project = tempfile::tempdir().expect("Failed to create temporary project");
+    let other_directory = tempfile::tempdir().expect("Failed to create secondary directory");
+
+    create_vpm_package(
+        project.path(),
+        "outer-package",
+        "outer-package",
+        "outer",
+        "outer.veymod",
+        r#"
+mod helper
+set RESULT = helper.VALUE
+"#,
+    );
+
+    create_vpm_package(
+        project.path(),
+        "helper-package",
+        "helper-package",
+        "helper",
+        "nested/helper.veymod",
+        r#"set VALUE = "nested package found""#,
+    );
+
+    let output = run_source_in_directory(
+        project.path(),
+        other_directory.path(),
+        "mod outer\nsay outer.RESULT\n",
+    );
+
+    assert!(
+        output.status.success(),
+        "Nested package import failed:\n{}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+
+    assert_eq!(
+        String::from_utf8_lossy(&output.stdout).trim(),
+        "nested package found"
+    );
+}
+
+#[test]
+fn regular_module_takes_precedence_over_vpm_package() {
+    let project = tempfile::tempdir().expect("Failed to create temporary project");
+
+    create_vpm_package(
+        project.path(),
+        "example-package",
+        "example-package",
+        "example",
+        "entry.veymod",
+        r#"set ORIGIN = "package""#,
+    );
+
+    fs::write(
+        project.path().join("example.veymod"),
+        r#"set ORIGIN = "regular module""#,
+    )
+    .expect("Failed to write regular module");
+
+    let output = run_source_in_directory(
+        project.path(),
+        project.path(),
+        "mod example\nsay example.ORIGIN\n",
+    );
+
+    assert!(
+        output.status.success(),
+        "Regular module import failed:\n{}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+
+    assert_eq!(
+        String::from_utf8_lossy(&output.stdout).trim(),
+        "regular module"
+    );
+}
+
+#[test]
+fn duplicate_vpm_module_names_are_reported() {
+    let project = tempfile::tempdir().expect("Failed to create temporary project");
+
+    create_vpm_package(
+        project.path(),
+        "first-package",
+        "first-package",
+        "shared",
+        "entry.veymod",
+        r#"set VALUE = "first""#,
+    );
+
+    create_vpm_package(
+        project.path(),
+        "second-package",
+        "second-package",
+        "shared",
+        "entry.veymod",
+        r#"set VALUE = "second""#,
+    );
+
+    let output = run_source_in_directory(project.path(), project.path(), "mod shared\n");
+
+    assert!(!output.status.success());
+
+    let combined = format!(
+        "{}{}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr)
+    );
+
+    assert!(
+        combined.contains("Multiple VPM packages provide module 'shared'"),
+        "Expected an ambiguity error, got:\n{}",
+        combined
+    );
+}
+
+#[test]
+fn vpm_package_entry_rejects_parent_directory_components() {
+    let project = tempfile::tempdir().expect("Failed to create temporary project");
+
+    create_vpm_package(
+        project.path(),
+        "example-package",
+        "example-package",
+        "example",
+        "../outside.veymod",
+        r#"set VALUE = "outside""#,
+    );
+
+    let output = run_source_in_directory(project.path(), project.path(), "mod example\n");
+
+    assert!(!output.status.success());
+
+    let combined = format!(
+        "{}{}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr)
+    );
+
+    assert!(
+        combined.contains("Invalid package entry path"),
+        "Expected an invalid entry path error, got:\n{}",
+        combined
+    );
+}
+
+#[cfg(unix)]
+#[test]
+fn vpm_package_entry_symlink_cannot_escape_package_directory() {
+    use std::os::unix::fs::symlink;
+
+    let project = tempfile::tempdir().expect("Failed to create temporary project");
+
+    let package = create_vpm_package(
+        project.path(),
+        "example-package",
+        "example-package",
+        "example",
+        "entry.veymod",
+        r#"set VALUE = "placeholder""#,
+    );
+
+    let outside_module = project.path().join("outside.veymod");
+    fs::write(&outside_module, r#"set VALUE = "outside""#).expect("Failed to write outside module");
+
+    let entry = package.join("entry.veymod");
+    fs::remove_file(&entry).expect("Failed to remove placeholder entry");
+    symlink(&outside_module, &entry).expect("Failed to create test symlink");
+
+    let output = run_source_in_directory(project.path(), project.path(), "mod example\n");
+
+    assert!(!output.status.success());
+
+    let combined = format!(
+        "{}{}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr)
+    );
+
+    assert!(
+        combined.contains("escapes its installation directory"),
+        "Expected a package boundary error, got:\n{}",
+        combined
+    );
 }

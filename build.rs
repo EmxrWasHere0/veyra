@@ -1,6 +1,5 @@
 fn main() {
-    let manifest = std::fs::read_to_string("Cargo.toml")
-        .expect("Failed to read Cargo.toml");
+    let manifest = std::fs::read_to_string("Cargo.toml").expect("Failed to read Cargo.toml");
 
     let codename = manifest
         .lines()

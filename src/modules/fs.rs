@@ -1,9 +1,9 @@
 use crate::modules::VeyraModule;
 use crate::runtime::Value;
 
-use tempfile::Builder;
 use std::fs;
 use std::path::{Path, PathBuf};
+use tempfile::Builder;
 
 pub struct FsModule;
 
@@ -31,8 +31,8 @@ fn path_text(path: &Path) -> String {
 }
 
 fn copy_directory(source: &Path, destination: &Path) -> Result<(), String> {
-    let metadata = fs::symlink_metadata(source)
-        .map_err(|error| format!("fs.copytree error: {}", error))?;
+    let metadata =
+        fs::symlink_metadata(source).map_err(|error| format!("fs.copytree error: {}", error))?;
 
     if metadata.file_type().is_symlink() {
         return Err(format!(
@@ -48,14 +48,10 @@ fn copy_directory(source: &Path, destination: &Path) -> Result<(), String> {
         ));
     }
 
-    fs::create_dir(destination)
-        .map_err(|error| format!("fs.copytree error: {}", error))?;
+    fs::create_dir(destination).map_err(|error| format!("fs.copytree error: {}", error))?;
 
-    for entry in fs::read_dir(source)
-        .map_err(|error| format!("fs.copytree error: {}", error))?
-    {
-        let entry =
-            entry.map_err(|error| format!("fs.copytree error: {}", error))?;
+    for entry in fs::read_dir(source).map_err(|error| format!("fs.copytree error: {}", error))? {
+        let entry = entry.map_err(|error| format!("fs.copytree error: {}", error))?;
 
         let source_path = entry.path();
         let destination_path = destination.join(entry.file_name());
@@ -92,15 +88,11 @@ fn replace_directory(source: &Path, destination: &Path) -> Result<(), String> {
         .map_err(|error| format!("fs.replace_tree error: {}", error))?;
 
     if source_metadata.file_type().is_symlink() {
-        return Err(
-            "fs.replace_tree error: source cannot be a symbolic link".into()
-        );
+        return Err("fs.replace_tree error: source cannot be a symbolic link".into());
     }
 
     if !source_metadata.is_dir() {
-        return Err(
-            "fs.replace_tree error: source is not a directory".into()
-        );
+        return Err("fs.replace_tree error: source is not a directory".into());
     }
 
     let source_root = source
@@ -118,37 +110,27 @@ fn replace_directory(source: &Path, destination: &Path) -> Result<(), String> {
 
     let destination_name = destination
         .file_name()
-        .ok_or_else(|| {
-            "fs.replace_tree error: invalid destination path".to_string()
-        })?;
+        .ok_or_else(|| "fs.replace_tree error: invalid destination path".to_string())?;
 
     let destination_root = parent_root.join(destination_name);
 
     if destination_root.starts_with(&source_root) {
-        return Err(
-            "fs.replace_tree error: destination cannot be inside source directory".into()
-        );
+        return Err("fs.replace_tree error: destination cannot be inside source directory".into());
     }
 
     if source_root.starts_with(&destination_root) {
-        return Err(
-            "fs.replace_tree error: source cannot be inside destination directory".into()
-        );
+        return Err("fs.replace_tree error: source cannot be inside destination directory".into());
     }
 
     // Inspect the destination without following symbolic links.
     let destination_exists = match fs::symlink_metadata(&destination_root) {
         Ok(metadata) => {
             if metadata.file_type().is_symlink() {
-                return Err(
-                    "fs.replace_tree error: destination cannot be a symbolic link".into()
-                );
+                return Err("fs.replace_tree error: destination cannot be a symbolic link".into());
             }
 
             if !metadata.is_dir() {
-                return Err(
-                    "fs.replace_tree error: destination is not a directory".into()
-                );
+                return Err("fs.replace_tree error: destination is not a directory".into());
             }
 
             true
@@ -488,7 +470,7 @@ impl VeyraModule for FsModule {
 
                 if destination_absolute.starts_with(&source_absolute) {
                     return Err(
-                        "fs.copytree error: destination cannot be inside source directory".into()
+                        "fs.copytree error: destination cannot be inside source directory".into(),
                     );
                 }
 

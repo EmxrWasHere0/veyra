@@ -317,10 +317,7 @@ fn repl_input_complete(source: &str) -> bool {
 
         if matches!(keyword, "if" | "while" | "repeat" | "try" | "test" | "func") {
             block_depth += 1;
-        } else if keyword == "add"
-            && line.contains('(')
-            && !line.contains("=>")
-        {
+        } else if keyword == "add" && line.contains('(') && !line.contains("=>") {
             block_depth += 1;
         } else if keyword == "end" {
             block_depth = block_depth.saturating_sub(1);

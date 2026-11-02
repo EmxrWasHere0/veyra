@@ -435,12 +435,7 @@ impl Runtime {
         Err(format!("Undefined variable '{}'", name))
     }
 
-    fn compound_assign(
-        &mut self,
-        name: &str,
-        operator: &str,
-        right: Value,
-    ) -> Result<(), String> {
+    fn compound_assign(&mut self, name: &str, operator: &str, right: Value) -> Result<(), String> {
         let base_operator = match operator {
             "+=" => "+",
             "-=" => "-",
@@ -524,10 +519,7 @@ impl Runtime {
                 *position += 1;
 
                 if *position >= tokens.len() || tokens[*position].kind != Tok::Id {
-                    return Err(token_error(
-                        token,
-                        "Expected channel name after '?'",
-                    ));
+                    return Err(token_error(token, "Expected channel name after '?'"));
                 }
 
                 *position += 1;
@@ -558,10 +550,7 @@ impl Runtime {
         Ok(())
     }
 
-    fn syntax_unary(
-        tokens: &[Token],
-        position: &mut usize,
-    ) -> Result<(), String> {
+    fn syntax_unary(tokens: &[Token], position: &mut usize) -> Result<(), String> {
         if *position >= tokens.len() {
             return Err("Expected expression".into());
         }
@@ -576,10 +565,7 @@ impl Runtime {
         Self::syntax_postfix(tokens, position)
     }
 
-    fn syntax_postfix(
-        tokens: &[Token],
-        position: &mut usize,
-    ) -> Result<(), String> {
+    fn syntax_postfix(tokens: &[Token], position: &mut usize) -> Result<(), String> {
         Self::syntax_primary(tokens, position)?;
 
         while *position < tokens.len() {
@@ -594,9 +580,7 @@ impl Runtime {
                         Self::syntax_expr(tokens, position, 0)?;
                     }
 
-                    if *position < tokens.len()
-                        && tokens[*position].kind == Tok::Colon
-                    {
+                    if *position < tokens.len() && tokens[*position].kind == Tok::Colon {
                         *position += 1;
 
                         if *position < tokens.len()
@@ -606,14 +590,10 @@ impl Runtime {
                             Self::syntax_expr(tokens, position, 0)?;
                         }
 
-                        if *position < tokens.len()
-                            && tokens[*position].kind == Tok::Colon
-                        {
+                        if *position < tokens.len() && tokens[*position].kind == Tok::Colon {
                             *position += 1;
 
-                            if *position < tokens.len()
-                                && tokens[*position].kind != Tok::RBracket
-                            {
+                            if *position < tokens.len() && tokens[*position].kind != Tok::RBracket {
                                 Self::syntax_expr(tokens, position, 0)?;
                             }
                         }
@@ -627,9 +607,7 @@ impl Runtime {
 
                     Self::syntax_expect(tokens, position, Tok::Id)?;
 
-                    if *position < tokens.len()
-                        && tokens[*position].kind == Tok::LParen
-                    {
+                    if *position < tokens.len() && tokens[*position].kind == Tok::LParen {
                         Self::syntax_arguments(tokens, position)?;
                     }
                 }
@@ -641,10 +619,7 @@ impl Runtime {
         Ok(())
     }
 
-    fn syntax_primary(
-        tokens: &[Token],
-        position: &mut usize,
-    ) -> Result<(), String> {
+    fn syntax_primary(tokens: &[Token], position: &mut usize) -> Result<(), String> {
         if *position >= tokens.len() {
             return Err("Expected expression".into());
         }
@@ -659,17 +634,13 @@ impl Runtime {
             Tok::Id => {
                 *position += 1;
 
-                if *position < tokens.len()
-                    && tokens[*position].kind == Tok::Dot
-                {
+                if *position < tokens.len() && tokens[*position].kind == Tok::Dot {
                     *position += 1;
 
                     Self::syntax_expect(tokens, position, Tok::Id)?;
                 }
 
-                if *position < tokens.len()
-                    && tokens[*position].kind == Tok::LParen
-                {
+                if *position < tokens.len() && tokens[*position].kind == Tok::LParen {
                     Self::syntax_arguments(tokens, position)?;
                 }
             }
@@ -685,14 +656,10 @@ impl Runtime {
             Tok::LBracket => {
                 *position += 1;
 
-                while *position < tokens.len()
-                    && tokens[*position].kind != Tok::RBracket
-                {
+                while *position < tokens.len() && tokens[*position].kind != Tok::RBracket {
                     Self::syntax_expr(tokens, position, 0)?;
 
-                    if *position < tokens.len()
-                        && tokens[*position].kind == Tok::Comma
-                    {
+                    if *position < tokens.len() && tokens[*position].kind == Tok::Comma {
                         *position += 1;
                     } else {
                         break;
@@ -705,18 +672,14 @@ impl Runtime {
             Tok::LBrace => {
                 *position += 1;
 
-                while *position < tokens.len()
-                    && tokens[*position].kind != Tok::RBrace
-                {
+                while *position < tokens.len() && tokens[*position].kind != Tok::RBrace {
                     Self::syntax_expr(tokens, position, 0)?;
 
                     Self::syntax_expect(tokens, position, Tok::Colon)?;
 
                     Self::syntax_expr(tokens, position, 0)?;
 
-                    if *position < tokens.len()
-                        && tokens[*position].kind == Tok::Comma
-                    {
+                    if *position < tokens.len() && tokens[*position].kind == Tok::Comma {
                         *position += 1;
                     } else {
                         break;
@@ -732,9 +695,7 @@ impl Runtime {
                 Self::syntax_expect(tokens, position, Tok::LParen)?;
 
                 // Validate lambda parameters without evaluating default values.
-                while *position < tokens.len()
-                    && tokens[*position].kind != Tok::RParen
-                {
+                while *position < tokens.len() && tokens[*position].kind != Tok::RParen {
                     // Variadic parameter.
                     let variadic = if tokens[*position].kind == Tok::Spread {
                         *position += 1;
@@ -747,9 +708,7 @@ impl Runtime {
                     Self::syntax_expect(tokens, position, Tok::Id)?;
 
                     // Optional default value.
-                    if *position < tokens.len()
-                        && tokens[*position].text == "="
-                    {
+                    if *position < tokens.len() && tokens[*position].text == "=" {
                         if variadic {
                             return Err(token_error(
                                 &tokens[*position],
@@ -763,9 +722,7 @@ impl Runtime {
                     }
 
                     // Parameter separator.
-                    if *position < tokens.len()
-                        && tokens[*position].kind == Tok::Comma
-                    {
+                    if *position < tokens.len() && tokens[*position].kind == Tok::Comma {
                         *position += 1;
 
                         // Variadic parameters must be last.
@@ -801,20 +758,13 @@ impl Runtime {
         Ok(())
     }
 
-    fn syntax_arguments(
-        tokens: &[Token],
-        position: &mut usize,
-    ) -> Result<(), String> {
+    fn syntax_arguments(tokens: &[Token], position: &mut usize) -> Result<(), String> {
         Self::syntax_expect(tokens, position, Tok::LParen)?;
 
-        while *position < tokens.len()
-            && tokens[*position].kind != Tok::RParen
-        {
+        while *position < tokens.len() && tokens[*position].kind != Tok::RParen {
             Self::syntax_expr(tokens, position, 0)?;
 
-            if *position < tokens.len()
-                && tokens[*position].kind == Tok::Comma
-            {
+            if *position < tokens.len() && tokens[*position].kind == Tok::Comma {
                 *position += 1;
             } else {
                 break;
@@ -824,11 +774,7 @@ impl Runtime {
         Self::syntax_expect(tokens, position, Tok::RParen)
     }
 
-    fn syntax_expect(
-        tokens: &[Token],
-        position: &mut usize,
-        expected: Tok,
-    ) -> Result<(), String> {
+    fn syntax_expect(tokens: &[Token], position: &mut usize, expected: Tok) -> Result<(), String> {
         if *position >= tokens.len() {
             return Err(format!("Expected {:?}", expected));
         }
@@ -838,8 +784,7 @@ impl Runtime {
                 &tokens[*position],
                 format!(
                     "Expected {:?}, found '{}'",
-                    expected,
-                    tokens[*position].text
+                    expected, tokens[*position].text
                 ),
             ));
         }
@@ -879,11 +824,7 @@ impl Runtime {
         Ok(result)
     }
 
-    fn postfix(
-        &mut self,
-        tokens: &[Token],
-        position: &mut usize,
-    ) -> Result<Value, String> {
+    fn postfix(&mut self, tokens: &[Token], position: &mut usize) -> Result<Value, String> {
         let mut value = self.primary(tokens, position)?;
 
         while *position < tokens.len() {
@@ -974,12 +915,7 @@ impl Runtime {
                         let indices = Self::slice_indices(chars.len(), start, end, step)
                             .map_err(|error| token_error(&index_token, error))?;
 
-                        Value::Text(
-                            indices
-                                .into_iter()
-                                .map(|index| chars[index])
-                                .collect(),
-                        )
+                        Value::Text(indices.into_iter().map(|index| chars[index]).collect())
                     }
 
                     _ => {
@@ -991,9 +927,8 @@ impl Runtime {
                 };
             } else {
                 // Normal indexing: value[index]
-                let index = first.ok_or_else(|| {
-                    token_error(&bracket_token, "Empty index expression")
-                })?;
+                let index =
+                    first.ok_or_else(|| token_error(&bracket_token, "Empty index expression"))?;
 
                 expect_token(tokens, position, Tok::RBracket)
                     .map_err(|error| token_error(&bracket_token, error))?;
@@ -1181,10 +1116,7 @@ impl Runtime {
                 *position += 1;
 
                 if *position >= tokens.len() || tokens[*position].kind != Tok::Id {
-                    return Err(token_error(
-                        token,
-                        "Expected channel name after '?'",
-                    ));
+                    return Err(token_error(token, "Expected channel name after '?'"));
                 }
 
                 let name = tokens[*position].text.clone();
@@ -1224,11 +1156,7 @@ impl Runtime {
             };
 
             if skip_right {
-                Self::skip_expression(
-                    tokens,
-                    position,
-                    op_precedence + 1,
-                )?;
+                Self::skip_expression(tokens, position, op_precedence + 1)?;
 
                 left = match op {
                     "and" => Value::Bool(false),
@@ -1256,11 +1184,7 @@ impl Runtime {
         Ok(left)
     }
 
-    fn unary(
-        &mut self,
-        tokens: &[Token],
-        position: &mut usize,
-    ) -> Result<Value, String> {
+    fn unary(&mut self, tokens: &[Token], position: &mut usize) -> Result<Value, String> {
         if *position >= tokens.len() {
             return Err("Expected expression".into());
         }
@@ -1276,10 +1200,7 @@ impl Runtime {
             return match (op.as_str(), value) {
                 ("-", Value::Num(n)) => Ok(Value::Num(-n)),
                 ("+", Value::Num(n)) => Ok(Value::Num(n)),
-                _ => Err(token_error(
-                    token,
-                    "Unary operator requires num",
-                )),
+                _ => Err(token_error(token, "Unary operator requires num")),
             };
         }
 
@@ -1682,10 +1603,7 @@ impl Runtime {
                     entries
                         .iter()
                         .map(|(key, value)| {
-                            Value::List(vec![
-                                Value::Text(key.clone()),
-                                value.clone(),
-                            ])
+                            Value::List(vec![Value::Text(key.clone()), value.clone()])
                         })
                         .collect(),
                 ))
@@ -1835,35 +1753,26 @@ impl Runtime {
                     }
 
                     return match self.get(&name) {
-                        Some(Value::Func(func)) => {
-                            self.call_tagged(&func, arguments)
-                                .map_err(|error| token_error(&token, error))
-                        }
+                        Some(Value::Func(func)) => self
+                            .call_tagged(&func, arguments)
+                            .map_err(|error| token_error(&token, error)),
 
                         Some(Value::Native(native)) => {
-                            let values = arguments
-                                .into_iter()
-                                .map(|argument| argument.0)
-                                .collect();
+                            let values = arguments.into_iter().map(|argument| argument.0).collect();
 
                             self.call_native(native, values)
                                 .map_err(|error| token_error(&token, error))
                         }
 
                         Some(_) => {
-                            Err(token_error(
-                                &token,
-                                format!("'{}' is not a function", name),
-                            ))
+                            Err(token_error(&token, format!("'{}' is not a function", name)))
                         }
 
-                        None => {
-                            Err(token_error(
-                                &token,
-                                format!("Undefined function '{}'", name),
-                            ))
-                        }
-                    }
+                        None => Err(token_error(
+                            &token,
+                            format!("Undefined function '{}'", name),
+                        )),
+                    };
                 }
 
                 if let Some(value) = self.get(&name) {
@@ -3629,7 +3538,6 @@ impl Runtime {
 
     fn find_module_file(&self, name: &str) -> Result<PathBuf, String> {
         let filename = format!("{}.veymod", name);
-
         let script_dir = PathBuf::from(&self.script_dir);
 
         let mut directories = vec![
@@ -3657,9 +3565,8 @@ impl Runtime {
         #[cfg(target_os = "macos")]
         {
             if let Some(home) = std::env::var_os("HOME") {
-                directories.push(
-                    PathBuf::from(home).join("Library/Application Support/vey/modules"),
-                );
+                directories
+                    .push(PathBuf::from(home).join("Library/Application Support/vey/modules"));
             }
         }
 
@@ -3687,7 +3594,7 @@ impl Runtime {
             }
         }
 
-        // Resolve regular Veyra modules first.
+        // Resolve regular Veyra modules before VPM packages.
         for directory in &directories {
             let path = directory.join(&filename);
 
@@ -3696,91 +3603,217 @@ impl Runtime {
             }
         }
 
-        // Resolve VPM packages from the project package directories.
-        let package_directories = [
-            script_dir.join("veyra_packages"),
-            PathBuf::from("./veyra_packages"),
-        ];
+        // Search beside the current module, then find the nearest containing
+        // project package directory. This also supports imports from .veymod files
+        // inside veyra_packages/ when the process runs from another directory.
+        let mut package_directories = vec![script_dir.join("veyra_packages")];
+
+        let mut ancestor = Some(script_dir.as_path());
+
+        while let Some(directory) = ancestor {
+            if directory
+                .file_name()
+                .and_then(|component| component.to_str())
+                == Some("veyra_packages")
+            {
+                package_directories.push(directory.to_path_buf());
+                break;
+            }
+
+            let candidate = directory.join("veyra_packages");
+
+            if candidate.is_dir() {
+                package_directories.push(candidate);
+                break;
+            }
+
+            ancestor = directory.parent();
+        }
+
+        package_directories.push(PathBuf::from("./veyra_packages"));
+
+        let mut canonical_roots = std::collections::HashSet::new();
+        let mut matches: Vec<(PathBuf, PathBuf)> = Vec::new();
 
         for package_root in package_directories {
             if !package_root.is_dir() {
                 continue;
             }
 
-            let entries = std::fs::read_dir(&package_root)
-                .map_err(|error| format!(
-                    "Cannot read package directory '{}': {}",
+            let canonical_package_root = package_root.canonicalize().map_err(|error| {
+                format!(
+                    "Cannot resolve package directory '{}': {}",
                     package_root.display(),
                     error
-                ))?;
+                )
+            })?;
+
+            if !canonical_roots.insert(canonical_package_root.clone()) {
+                continue;
+            }
+
+            let directory_entries =
+                std::fs::read_dir(&canonical_package_root).map_err(|error| {
+                    format!(
+                        "Cannot read package directory '{}': {}",
+                        canonical_package_root.display(),
+                        error
+                    )
+                })?;
+
+            let mut entries = Vec::new();
+
+            for entry in directory_entries {
+                entries.push(entry.map_err(|error| {
+                    format!(
+                        "Cannot read package directory '{}': {}",
+                        canonical_package_root.display(),
+                        error
+                    )
+                })?);
+            }
+
+            // Make package discovery deterministic.
+            entries.sort_by_key(|entry| entry.file_name());
 
             for entry in entries {
-                let entry = entry.map_err(|error| error.to_string())?;
                 let package_path = entry.path();
 
-                if !package_path.is_dir() {
+                let package_metadata =
+                    std::fs::symlink_metadata(&package_path).map_err(|error| {
+                        format!(
+                            "Cannot inspect package directory '{}': {}",
+                            package_path.display(),
+                            error
+                        )
+                    })?;
+
+                if package_metadata.file_type().is_symlink() {
+                    return Err(format!(
+                        "Package directory '{}' cannot be a symbolic link",
+                        package_path.display()
+                    ));
+                }
+
+                if !package_metadata.is_dir() {
                     continue;
                 }
 
                 let manifest_path = package_path.join("veyra.json");
 
-                if !manifest_path.is_file() {
-                    continue;
+                let manifest_metadata = match std::fs::symlink_metadata(&manifest_path) {
+                    Ok(metadata) => metadata,
+                    Err(error) if error.kind() == std::io::ErrorKind::NotFound => continue,
+                    Err(error) => {
+                        return Err(format!(
+                            "Cannot inspect package manifest '{}': {}",
+                            manifest_path.display(),
+                            error
+                        ));
+                    }
+                };
+
+                if manifest_metadata.file_type().is_symlink() {
+                    return Err(format!(
+                        "Package manifest '{}' cannot be a symbolic link",
+                        manifest_path.display()
+                    ));
                 }
 
-                let manifest_source = std::fs::read_to_string(&manifest_path)
-                    .map_err(|error| format!(
+                if !manifest_metadata.is_file() {
+                    return Err(format!(
+                        "Package manifest '{}' is not a file",
+                        manifest_path.display()
+                    ));
+                }
+
+                let manifest_source = std::fs::read_to_string(&manifest_path).map_err(|error| {
+                    format!(
                         "Cannot read package manifest '{}': {}",
                         manifest_path.display(),
                         error
-                    ))?;
+                    )
+                })?;
 
                 let manifest: serde_json::Value =
-                    serde_json::from_str(&manifest_source)
-                        .map_err(|error| format!(
+                    serde_json::from_str(&manifest_source).map_err(|error| {
+                        format!(
                             "Invalid package manifest '{}': {}",
                             manifest_path.display(),
                             error
-                        ))?;
+                        )
+                    })?;
 
-                let module_name = manifest
-                    .get("module")
-                    .and_then(|value| value.as_str());
+                if !manifest.is_object() {
+                    return Err(format!(
+                        "Invalid package manifest '{}': expected a JSON object",
+                        manifest_path.display()
+                    ));
+                }
 
-                if module_name != Some(name) {
+                let module_value = match manifest.get("module") {
+                    Some(value) => value,
+                    None => continue,
+                };
+
+                let module_name = module_value.as_str().ok_or_else(|| {
+                    format!(
+                        "Invalid package manifest '{}': field 'module' must be text",
+                        manifest_path.display()
+                    )
+                })?;
+
+                if module_name != name {
                     continue;
                 }
 
                 let entry_file = manifest
                     .get("entry")
                     .and_then(|value| value.as_str())
-                    .ok_or_else(|| format!(
-                        "Package '{}' has no entry file",
-                        package_path.display()
-                    ))?;
+                    .ok_or_else(|| {
+                        format!(
+                            "Package '{}' has no valid entry file",
+                            package_path.display()
+                        )
+                    })?;
 
                 let relative_entry = Path::new(entry_file);
 
-                if relative_entry.is_absolute()
-                    || relative_entry.components().any(|component| {
-                        !matches!(
-                            component,
-                            std::path::Component::Normal(_)
-                        )
-                    })
+                let has_dot_component = entry_file
+                    .split(|character| character == '/' || character == '\\')
+                    .any(|component| component == "." || component == "..");
+
+                if entry_file.is_empty()
+                    || relative_entry.is_absolute()
+                    || has_dot_component
+                    || relative_entry
+                        .components()
+                        .any(|component| !matches!(component, std::path::Component::Normal(_)))
                     || relative_entry.extension().and_then(|ext| ext.to_str()) != Some("veymod")
                 {
                     return Err(format!(
-                        "Invalid package entry path '{}'",
-                        entry_file
+                        "Invalid package entry path '{}' in manifest '{}'",
+                        entry_file,
+                        manifest_path.display()
                     ));
                 }
 
-                let package_root = package_path
-                    .canonicalize()
-                    .map_err(|error| error.to_string())?;
+                let canonical_package_path = package_path.canonicalize().map_err(|error| {
+                    format!(
+                        "Cannot resolve package directory '{}': {}",
+                        package_path.display(),
+                        error
+                    )
+                })?;
 
-                let module_file = package_root.join(relative_entry);
+                if !canonical_package_path.starts_with(&canonical_package_root) {
+                    return Err(format!(
+                        "Package directory '{}' escapes its package root",
+                        package_path.display()
+                    ));
+                }
+
+                let module_file = canonical_package_path.join(relative_entry);
 
                 if !module_file.is_file() {
                     return Err(format!(
@@ -3789,19 +3822,41 @@ impl Runtime {
                     ));
                 }
 
-                let resolved_file = module_file
-                    .canonicalize()
-                    .map_err(|error| error.to_string())?;
+                let resolved_file = module_file.canonicalize().map_err(|error| {
+                    format!(
+                        "Cannot resolve package module file '{}': {}",
+                        module_file.display(),
+                        error
+                    )
+                })?;
 
-                if !resolved_file.starts_with(&package_root) {
-                    return Err("Package entry escapes its installation directory".into());
+                if !resolved_file.starts_with(&canonical_package_path) {
+                    return Err(format!(
+                        "Package entry escapes its installation directory: '{}'",
+                        module_file.display()
+                    ));
                 }
 
-                return Ok(resolved_file);
+                matches.push((canonical_package_path, resolved_file));
             }
         }
 
-        Err(format!("Module '{}' not found", name))
+        match matches.len() {
+            0 => Err(format!("Module '{}' not found", name)),
+            1 => Ok(matches.remove(0).1),
+            _ => {
+                let package_paths = matches
+                    .iter()
+                    .map(|(package_path, _)| package_path.display().to_string())
+                    .collect::<Vec<_>>()
+                    .join(", ");
+
+                Err(format!(
+                    "Multiple VPM packages provide module '{}': {}",
+                    name, package_paths
+                ))
+            }
+        }
     }
 
     fn load_veyra_module(&mut self, name: &str) -> Result<(), String> {
@@ -3837,10 +3892,7 @@ impl Runtime {
         }
 
         // Parse and execute the module without skipping state restoration.
-        let result = match crate::lexer::parse_lines(
-            &source,
-            &path.to_string_lossy(),
-        ) {
+        let result = match crate::lexer::parse_lines(&source, &path.to_string_lossy()) {
             Ok(lines) => self.run(&lines),
             Err(error) => Err(error),
         };
@@ -4233,12 +4285,7 @@ fn token_error(token: &Token, message: impl AsRef<str>) -> String {
         return message.to_string();
     }
 
-    format!(
-        "[position:{}:{}] {}",
-        token.line,
-        token.column,
-        message
-    )
+    format!("[position:{}:{}] {}", token.line, token.column, message)
 }
 
 fn format_error(line: &Line, error: String) -> String {
@@ -4252,17 +4299,12 @@ fn format_error(line: &Line, error: String) -> String {
     }
 
     // Extract an explicit token position when available.
-    let explicit_position = error
-        .strip_prefix("[position:")
-        .and_then(|value| {
-            let (location, _) = value.split_once(']')?;
-            let (line, column) = location.split_once(':')?;
+    let explicit_position = error.strip_prefix("[position:").and_then(|value| {
+        let (location, _) = value.split_once(']')?;
+        let (line, column) = location.split_once(':')?;
 
-            Some((
-                line.parse::<usize>().ok()?,
-                column.parse::<usize>().ok()?,
-            ))
-        });
+        Some((line.parse::<usize>().ok()?, column.parse::<usize>().ok()?))
+    });
 
     // Remove the internal position marker from the error message.
     let message = if explicit_position.is_some() {
@@ -4296,9 +4338,9 @@ fn format_error(line: &Line, error: String) -> String {
 
     // Prefer explicit positions over inferred token locations.
     let token = if let Some((token_line, token_column)) = explicit_position {
-        line.tokens.iter().find(|token| {
-            token.line == token_line && token.column == token_column
-        })
+        line.tokens
+            .iter()
+            .find(|token| token.line == token_line && token.column == token_column)
     } else {
         error_token.or_else(|| line.tokens.first())
     };
@@ -4319,12 +4361,7 @@ fn format_error(line: &Line, error: String) -> String {
         .unwrap_or(1)
         .max(1);
 
-    let location = format!(
-        "{}:{}:{}",
-        line.source,
-        error_line,
-        error_column
-    );
+    let location = format!("{}:{}:{}", line.source, error_line, error_column);
 
     let source_line = std::fs::read_to_string(line.source.as_str())
         .ok()
