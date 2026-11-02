@@ -18,6 +18,8 @@ A dynamically typed, interpreted programming language written in Rust.
 
 [Documentation](docs/) · [Package Manager](vpm/) · [VSCode Extension](veyra-vscode/) · [Examples](examples/) · [Issues](https://github.com/EmxrWasHere0/veyra/issues)
 
+[Security Policy](SECURITY.md) · [How To Contribute](CONTRIBUTING.md) · [Code of Conduct](CODE_OF_CONDUCT.md) · [AI Assistance](AI_ASSISTANCE.md)
+
 </div>
 
 ---
