@@ -3636,7 +3636,30 @@ impl Runtime {
         let mut matches: Vec<(PathBuf, PathBuf)> = Vec::new();
 
         for package_root in package_directories {
-            if !package_root.is_dir() {
+            let root_metadata = match std::fs::symlink_metadata(&package_root) {
+                Ok(metadata) => metadata,
+
+                Err(error) if error.kind() == std::io::ErrorKind::NotFound => {
+                    continue;
+                }
+
+                Err(error) => {
+                    return Err(format!(
+                        "Cannot inspect package directory '{}': {}",
+                        package_root.display(),
+                        error
+                    ));
+                }
+            };
+
+            if root_metadata.file_type().is_symlink() {
+                return Err(format!(
+                    "Package directory '{}' cannot be a symbolic link",
+                    package_root.display()
+                ));
+            }
+
+            if !root_metadata.is_dir() {
                 continue;
             }
 

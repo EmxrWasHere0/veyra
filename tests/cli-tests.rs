@@ -1,6 +1,7 @@
 use std::fs;
+use std::io::Write;
 use std::path::{Path, PathBuf};
-use std::process::{Command, Output};
+use std::process::{Command, Output, Stdio};
 
 fn veyra_binary() -> PathBuf {
     PathBuf::from(env!("CARGO_BIN_EXE_veyra"))
@@ -11,6 +12,26 @@ fn fixture(name: &str) -> PathBuf {
         .join("tests")
         .join("fixtures")
         .join(name)
+}
+
+fn run_repl_in_directory(working_directory: &Path, input: &str) -> Output {
+    let mut child = Command::new(veyra_binary())
+        .current_dir(working_directory)
+        .stdin(Stdio::piped())
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped())
+        .spawn()
+        .expect("Failed to start Veyra REPL");
+
+    let mut stdin = child.stdin.take().expect("Missing REPL stdin");
+    stdin
+        .write_all(input.as_bytes())
+        .expect("Failed to send REPL input");
+    drop(stdin);
+
+    child
+        .wait_with_output()
+        .expect("Failed to wait for Veyra REPL")
 }
 
 fn run_script_in_directory(script: &Path, working_directory: &Path) -> Output {
@@ -163,9 +184,6 @@ fn uncaught_throw() {
         stderr
     );
 }
-
-use std::io::Write;
-use std::process::Stdio;
 
 #[test]
 fn list_slicing() {
@@ -827,6 +845,430 @@ fn vpm_package_entry_symlink_cannot_escape_package_directory() {
     assert!(
         combined.contains("escapes its installation directory"),
         "Expected a package boundary error, got:\n{}",
+        combined
+    );
+}
+
+#[test]
+fn malformed_module_import_restores_repl_state() {
+    let project = tempfile::tempdir().expect("Failed to create temporary project");
+
+    fs::write(
+        project.path().join("broken_parse.veymod"),
+        "add unfinished()\n    return 1\n",
+    )
+    .expect("Failed to write malformed module");
+
+    fs::write(
+        project.path().join("healthy.veymod"),
+        r#"set VALUE = "healthy-import-ok""#,
+    )
+    .expect("Failed to write healthy module");
+
+    let output = run_repl_in_directory(
+        project.path(),
+        concat!(
+            "add caller_state = \"caller-survived\"\n",
+            "mod broken_parse\n",
+            "say caller_state\n",
+            "mod broken_parse\n",
+            "say caller_state\n",
+            "mod healthy\n",
+            "say healthy.VALUE\n",
+            "exit\n",
+        ),
+    );
+
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    let combined = format!("{stdout}{stderr}");
+
+    assert!(
+        combined.matches("broken_parse.veymod").count() >= 2,
+        "The malformed module should fail on both import attempts:\n{}",
+        combined
+    );
+
+    assert!(
+        !combined.contains("Circular module import detected: 'broken_parse'"),
+        "A failed import left the module marked as loading:\n{}",
+        combined
+    );
+
+    assert!(
+        stdout.matches("caller-survived").count() >= 2,
+        "The caller's REPL state was not preserved:\n{}",
+        combined
+    );
+
+    assert!(
+        stdout.contains("healthy-import-ok"),
+        "The REPL could not import a valid module after the failure:\n{}",
+        combined
+    );
+}
+
+#[test]
+fn runtime_module_error_restores_repl_state() {
+    let project = tempfile::tempdir().expect("Failed to create temporary project");
+
+    fs::write(project.path().join("broken_runtime.veymod"), "say 1 / 0\n")
+        .expect("Failed to write runtime-failing module");
+
+    fs::write(
+        project.path().join("healthy.veymod"),
+        r#"set VALUE = "healthy-import-ok""#,
+    )
+    .expect("Failed to write healthy module");
+
+    let output = run_repl_in_directory(
+        project.path(),
+        concat!(
+            "add caller_state = \"caller-survived\"\n",
+            "mod broken_runtime\n",
+            "say caller_state\n",
+            "mod broken_runtime\n",
+            "say caller_state\n",
+            "mod healthy\n",
+            "say healthy.VALUE\n",
+            "exit\n",
+        ),
+    );
+
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    let combined = format!("{stdout}{stderr}");
+
+    assert!(
+        combined.matches("Division by zero").count() >= 2,
+        "The failing module should execute and fail on both import attempts:\n{}",
+        combined
+    );
+
+    assert!(
+        !combined.contains("Circular module import detected: 'broken_runtime'"),
+        "A failed import left the module marked as loading:\n{}",
+        combined
+    );
+
+    assert!(
+        stdout.matches("caller-survived").count() >= 2,
+        "The caller's REPL state was not preserved:\n{}",
+        combined
+    );
+
+    assert!(
+        stdout.contains("healthy-import-ok"),
+        "The REPL could not import a valid module after the failure:\n{}",
+        combined
+    );
+}
+
+#[test]
+fn circular_module_import_is_reported() {
+    let project = tempfile::tempdir().expect("Failed to create temporary project");
+
+    fs::write(project.path().join("a.veymod"), "mod b\nset A = \"a\"\n")
+        .expect("Failed to write module a");
+
+    fs::write(project.path().join("b.veymod"), "mod a\nset B = \"b\"\n")
+        .expect("Failed to write module b");
+
+    let output = run_source_in_directory(project.path(), project.path(), "mod a\n");
+
+    assert!(!output.status.success(), "Circular import should fail");
+
+    let combined = format!(
+        "{}{}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr)
+    );
+
+    assert!(
+        combined.contains("Circular module import detected: 'a'"),
+        "Expected a circular import error, got:\n{}",
+        combined
+    );
+}
+
+#[cfg(unix)]
+#[test]
+fn vpm_package_root_symlink_is_rejected() {
+    use std::os::unix::fs::symlink;
+
+    let project = tempfile::tempdir().expect("Failed to create temporary project");
+    let external = tempfile::tempdir().expect("Failed to create external directory");
+
+    create_vpm_package(
+        external.path(),
+        "example-package",
+        "example-package",
+        "example",
+        "entry.veymod",
+        r#"set VALUE = "external""#,
+    );
+
+    let external_package_root = external.path().join("veyra_packages");
+    let project_package_root = project.path().join("veyra_packages");
+
+    symlink(&external_package_root, &project_package_root)
+        .expect("Failed to create package-root symlink");
+
+    let output = run_source_in_directory(project.path(), project.path(), "mod example\n");
+
+    assert!(!output.status.success());
+
+    let combined = format!(
+        "{}{}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr)
+    );
+
+    assert!(
+        combined.contains("cannot be a symbolic link"),
+        "Expected the package-root symlink to be rejected:\n{}",
+        combined
+    );
+}
+
+#[test]
+fn vpm_package_star_import_exports_public_members_only() {
+    let project = tempfile::tempdir().expect("Failed to create temporary project");
+
+    create_vpm_package(
+        project.path(),
+        "example-package",
+        "example-package",
+        "example",
+        "src/entry.veymod",
+        r#"
+set VERSION = "1.2.3"
+
+add greet(name)
+    return f"Hello, {name}!"
+end
+
+add _secret()
+    return "hidden"
+end
+"#,
+    );
+
+    let output = run_source_in_directory(
+        project.path(),
+        project.path(),
+        r#"
+mod example *
+
+say VERSION
+say greet("World")
+
+try
+    say _secret()
+catch error
+    say "private"
+end
+"#,
+    );
+
+    assert!(
+        output.status.success(),
+        "Star import failed:\n{}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+
+    assert_eq!(
+        String::from_utf8_lossy(&output.stdout).trim(),
+        "1.2.3\nHello, World!\nprivate"
+    );
+}
+
+#[test]
+fn vpm_package_selective_import_works() {
+    let project = tempfile::tempdir().expect("Failed to create temporary project");
+
+    create_vpm_package(
+        project.path(),
+        "example-package",
+        "example-package",
+        "example",
+        "entry.veymod",
+        r#"
+set VERSION = "2.0.0"
+
+add greet(name)
+    return f"Welcome, {name}!"
+end
+
+add unused()
+    return "unused"
+end
+"#,
+    );
+
+    let output = run_source_in_directory(
+        project.path(),
+        project.path(),
+        r#"
+mod example [greet, VERSION]
+
+say greet("Veyra")
+say VERSION
+"#,
+    );
+
+    assert!(
+        output.status.success(),
+        "Selective package import failed:\n{}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+
+    assert_eq!(
+        String::from_utf8_lossy(&output.stdout).trim(),
+        "Welcome, Veyra!\n2.0.0"
+    );
+}
+
+#[test]
+fn vpm_package_recursion_and_callbacks_work() {
+    let project = tempfile::tempdir().expect("Failed to create temporary project");
+
+    create_vpm_package(
+        project.path(),
+        "transform-package",
+        "transform-package",
+        "transform",
+        "transform.veymod",
+        r#"
+add factorial(n)
+    if n <= 1
+        return 1
+    end
+
+    return n * factorial(n - 1)
+end
+
+add apply(values, callback)
+    return values.map(callback)
+end
+"#,
+    );
+
+    let output = run_source_in_directory(
+        project.path(),
+        project.path(),
+        r#"
+mod transform
+
+add double(value)
+    return value * 2
+end
+
+say transform.factorial(5)
+say transform.apply([1, 2, 3], double)
+"#,
+    );
+
+    assert!(
+        output.status.success(),
+        "Package recursion or callback failed:\n{}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+
+    assert_eq!(
+        String::from_utf8_lossy(&output.stdout).trim(),
+        "120\n[2, 4, 6]"
+    );
+}
+
+#[test]
+fn veyra_path_still_finds_regular_modules() {
+    let project = tempfile::tempdir().expect("Failed to create temporary project");
+    let custom_modules = tempfile::tempdir().expect("Failed to create custom module directory");
+
+    fs::write(
+        custom_modules.path().join("external_module.veymod"),
+        r#"set VALUE = "found through VEYRA_PATH""#,
+    )
+    .expect("Failed to write external module");
+
+    let script = project.path().join("main.vey");
+    fs::write(&script, "mod external_module\nsay external_module.VALUE\n")
+        .expect("Failed to write test script");
+
+    let output = Command::new(veyra_binary())
+        .arg(&script)
+        .current_dir(project.path())
+        .env("VEYRA_PATH", custom_modules.path().as_os_str())
+        .output()
+        .expect("Failed to execute Veyra");
+
+    assert!(
+        output.status.success(),
+        "VEYRA_PATH import failed:\n{}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+
+    assert_eq!(
+        String::from_utf8_lossy(&output.stdout).trim(),
+        "found through VEYRA_PATH"
+    );
+}
+
+#[test]
+fn malformed_vpm_manifest_reports_an_error() {
+    let project = tempfile::tempdir().expect("Failed to create temporary project");
+    let package = project.path().join("veyra_packages").join("broken-package");
+
+    fs::create_dir_all(&package).expect("Failed to create package directory");
+    fs::write(package.join("veyra.json"), "{ invalid json")
+        .expect("Failed to write malformed manifest");
+
+    let output = run_source_in_directory(project.path(), project.path(), "mod example\n");
+
+    assert!(!output.status.success());
+
+    let combined = format!(
+        "{}{}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr)
+    );
+
+    assert!(
+        combined.contains("Invalid package manifest"),
+        "Expected a manifest error, got:\n{}",
+        combined
+    );
+}
+
+#[test]
+fn missing_vpm_entry_file_reports_an_error() {
+    let project = tempfile::tempdir().expect("Failed to create temporary project");
+
+    let package = create_vpm_package(
+        project.path(),
+        "example-package",
+        "example-package",
+        "example",
+        "entry.veymod",
+        r#"set VALUE = "present""#,
+    );
+
+    fs::remove_file(package.join("entry.veymod")).expect("Failed to remove package entry");
+
+    let output = run_source_in_directory(project.path(), project.path(), "mod example\n");
+
+    assert!(!output.status.success());
+
+    let combined = format!(
+        "{}{}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr)
+    );
+
+    assert!(
+        combined.contains("Package module file") && combined.contains("not found"),
+        "Expected a missing package entry error, got:\n{}",
         combined
     );
 }
