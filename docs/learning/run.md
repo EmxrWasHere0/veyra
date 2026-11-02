@@ -4,7 +4,7 @@ Veyra is an interpreted programming language written in Rust.
 
 The interpreter executes Veyra source files directly, without requiring each program to be compiled into a standalone executable.
 
-This guide explains how to run scripts, use the interactive REPL, execute tests, and work with Veyra's command-line interface.
+This guide explains how to run scripts, use the interactive REPL, execute tests, manage local packages with VPM, and work with Veyra's command-line interface.
 
 Veyra 0.2.8 improves REPL stability, introduces compound assignment operators, adds short-circuit evaluation, and provides more precise runtime error locations.
 
@@ -602,7 +602,152 @@ Arguments: ["first", "second"]
 Argument count: 2
 ```
 
-## 9. Running Programs in VSCode
+## 9. Using Packages with VPM
+
+Veyra supports reusable `.veymod` packages through the Veyra Package Manager (VPM).
+
+VPM 0.1.0 can initialize projects, install local packages, update existing installations, remove dependencies, and reinstall packages declared in `veyra.json`.
+
+The Python implementation is currently the recommended version.
+
+### Requirements
+
+VPM requires Python 3.10 or newer.
+
+The Python implementation uses only the standard library.
+
+### Initializing a Project
+
+Create a project directory:
+
+```bash
+mkdir my-project
+cd my-project
+```
+
+Initialize it using VPM:
+
+```bash
+python /path/to/vpm/python/vpm.py init my-project
+```
+
+This creates:
+
+```text
+my-project/
+├── main.vey
+└── veyra.json
+```
+
+The `init` command initializes the current directory rather than creating a new directory automatically.
+
+### Installing a Local Package
+
+Suppose you have a package in `../example-package/`.
+
+Its directory contains:
+
+```text
+example-package/
+├── veyra.json
+└── example.veymod
+```
+
+The package manifest:
+
+```json
+{
+  "name": "example-package",
+  "module": "example",
+  "version": "0.1.0",
+  "entry": "example.veymod",
+  "dependencies": {}
+}
+```
+
+Install the package:
+
+```bash
+python /path/to/vpm/python/vpm.py add ../example-package
+```
+
+VPM copies the package into:
+
+```text
+veyra_packages/example-package/
+```
+
+It also registers the package in the project's `veyra.json` manifest.
+
+### Importing an Installed Package
+
+Create or update `main.vey`:
+
+```veyra
+mod example
+
+say example.PACKAGE_VERSION
+say example.greet("World")
+```
+
+The package's `example.veymod` might contain:
+
+```veyra
+set PACKAGE_VERSION = "0.1.0"
+
+add greet(name)
+    return f"Hello, {name}!"
+end
+```
+
+Run the project:
+
+```bash
+veyra main.vey
+```
+
+Expected output:
+
+```text
+0.1.0
+Hello, World!
+```
+
+The interpreter resolves `mod example` through the installed package's `module` field.
+
+The package directory name and import name do not have to match.
+
+### Managing Dependencies
+
+List installed dependencies:
+
+```bash
+python /path/to/vpm/python/vpm.py list
+```
+
+Reinstall dependencies declared in `veyra.json`:
+
+```bash
+python /path/to/vpm/python/vpm.py install
+```
+
+Remove a package:
+
+```bash
+python /path/to/vpm/python/vpm.py remove example-package
+```
+
+The original local package source is not deleted when removing an installed package.
+
+### Current Limitations
+
+VPM 0.1.0 supports local packages only.
+
+GitHub installation, lockfiles, semantic version resolution, and transitive dependencies are planned for future versions.
+
+See the [VPM documentation](../../vpm/README.md) for additional details.
+
+## 10. Running Programs in VSCode
 
 The Veyra VSCode extension supports syntax highlighting, snippets, and REPL integration.
 
@@ -624,7 +769,7 @@ veyra hello.vey
 
 For installation and usage instructions, see [VSCode Extension](extension.md).
 
-## 10. Runtime Errors
+## 11. Runtime Errors
 
 Veyra introduced source locations and function tracebacks in version 0.2.6.
 
@@ -657,7 +802,7 @@ Errors inside functions can also include a traceback showing the function call c
 
 For more information, see [Error Handling](error-handling.md).
 
-## 11. Troubleshooting
+## 12. Troubleshooting
 
 ### Cargo Is Not Recognized
 
@@ -693,7 +838,20 @@ Check that the module exists in one of Veyra's module search directories.
 
 You can also configure additional directories using `VEYRA_PATH`.
 
-See [Modules](modules.md).
+For packages installed through VPM, verify that:
+
+- The package exists in `veyra_packages/`.
+- The package contains a valid `veyra.json` manifest.
+- The manifest's `module` field matches the name used in `mod`.
+- The manifest's `entry` field points to an existing `.veymod` file.
+
+If a registered package is missing, reinstall local dependencies:
+
+```bash
+python /path/to/vpm/python/vpm.py install
+```
+
+See [Modules](modules.md) and the [VPM documentation](../../vpm/README.md).
 
 ### Runtime Error
 
@@ -712,3 +870,4 @@ Continue learning Veyra:
 - [Modules](modules.md)
 - [Error Handling](error-handling.md)
 - [VSCode Extension](extension.md)
+- [Veyra Package Manager](../../vpm/README.md)

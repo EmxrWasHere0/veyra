@@ -55,6 +55,33 @@
 - **User-defined modules** using `.veymod` files.
 - **Flexible imports** — Import an entire module, all exported members, or selected members.
 - **Module search paths** — Project, user, and system module directories, with additional paths through `VEYRA_PATH`.
+- **VPM package imports** — Automatically discover installed packages in `veyra_packages/`.
+- **Manifest-based module resolution** — Use package manifests to resolve import names and `.veymod` entry files.
+- **Package module isolation** — Installed `.veymod` packages use the same isolated execution and export rules as regular user-defined modules.
+
+### Package Manager (VPM)
+
+Veyra includes the **Veyra Package Manager (VPM)** for managing reusable `.veymod` packages.
+
+VPM 0.1.0 provides:
+
+- **Project initialization** — Create `veyra.json` and `main.vey` using `vpm init`.
+- **Local package installation** — Install packages from local directories using `vpm add`.
+- **Package updates** — Replace previously installed packages with updated local versions.
+- **Package removal** — Remove registered dependencies using `vpm remove`.
+- **Dependency installation** — Reinstall declared local dependencies using `vpm install`.
+- **Dependency listing** — Display registered packages and their source paths using `vpm list`.
+- **Manifest management** — Store project and package metadata in `veyra.json`.
+- **Filesystem safeguards** — Validate package names, reject symbolic links, and check installation paths.
+- **Staged package replacement** — Prepare new packages before replacing existing installations.
+- **Rollback support** — Restore previous package contents when supported installation or manifest operations fail.
+- **Atomic manifest replacement** — Write project manifests through temporary files before replacing them.
+
+The Python implementation is the primary supported version. An experimental Veyra implementation is also available, but its development is currently paused.
+
+VPM 0.1.0 supports local packages only. Remote installation, lockfiles, and automatic dependency resolution are planned for future releases.
+
+See the [VPM documentation](../vpm/README.md) for usage instructions.
 
 ### Developer Experience
 
@@ -64,7 +91,7 @@
 - **Column-based runtime errors** — Error messages include source filenames, line numbers, column numbers, and source context.
 - **Precise token highlighting** — Error markers identify problematic identifiers, operators, indexes, and other expression tokens when available.
 - **Function and lambda tracebacks** — Show the call chain and preserve source locations when errors occur.
-- **Automated regression tests** using Cargo.
+- **Automated regression tests** — Cargo tests for the interpreter and Python `unittest` tests for VPM.
 - **CLI commands** for running scripts, executing tests, and displaying version information.
 - **VSCode extension** with syntax highlighting, snippets, automatic indentation, code folding, and REPL integration.
 - **VSCode interpolation highlighting** for embedded expressions and functional collection methods.

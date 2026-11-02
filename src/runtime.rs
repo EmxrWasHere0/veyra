@@ -1,5 +1,5 @@
 use std::collections::{HashMap, HashSet};
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::rc::Rc;
 
 use crate::lexer::{lex, Tok, Token};
@@ -3657,8 +3657,9 @@ impl Runtime {
         #[cfg(target_os = "macos")]
         {
             if let Some(home) = std::env::var_os("HOME") {
-                directories
-                    .push(PathBuf::from(home).join("Library/Application Support/vey/modules"));
+                directories.push(
+                    PathBuf::from(home).join("Library/Application Support/vey/modules"),
+                );
             }
         }
 
@@ -3673,8 +3674,6 @@ impl Runtime {
         #[cfg(unix)]
         {
             directories.push(PathBuf::from("/usr/share/vey/modules"));
-
-            // Backward compatibility with existing installations.
             directories.push(PathBuf::from("/usr/share/vey/libs"));
         }
 
@@ -3688,11 +3687,117 @@ impl Runtime {
             }
         }
 
-        for directory in directories {
+        // Resolve regular Veyra modules first.
+        for directory in &directories {
             let path = directory.join(&filename);
 
             if path.is_file() {
                 return Ok(path);
+            }
+        }
+
+        // Resolve VPM packages from the project package directories.
+        let package_directories = [
+            script_dir.join("veyra_packages"),
+            PathBuf::from("./veyra_packages"),
+        ];
+
+        for package_root in package_directories {
+            if !package_root.is_dir() {
+                continue;
+            }
+
+            let entries = std::fs::read_dir(&package_root)
+                .map_err(|error| format!(
+                    "Cannot read package directory '{}': {}",
+                    package_root.display(),
+                    error
+                ))?;
+
+            for entry in entries {
+                let entry = entry.map_err(|error| error.to_string())?;
+                let package_path = entry.path();
+
+                if !package_path.is_dir() {
+                    continue;
+                }
+
+                let manifest_path = package_path.join("veyra.json");
+
+                if !manifest_path.is_file() {
+                    continue;
+                }
+
+                let manifest_source = std::fs::read_to_string(&manifest_path)
+                    .map_err(|error| format!(
+                        "Cannot read package manifest '{}': {}",
+                        manifest_path.display(),
+                        error
+                    ))?;
+
+                let manifest: serde_json::Value =
+                    serde_json::from_str(&manifest_source)
+                        .map_err(|error| format!(
+                            "Invalid package manifest '{}': {}",
+                            manifest_path.display(),
+                            error
+                        ))?;
+
+                let module_name = manifest
+                    .get("module")
+                    .and_then(|value| value.as_str());
+
+                if module_name != Some(name) {
+                    continue;
+                }
+
+                let entry_file = manifest
+                    .get("entry")
+                    .and_then(|value| value.as_str())
+                    .ok_or_else(|| format!(
+                        "Package '{}' has no entry file",
+                        package_path.display()
+                    ))?;
+
+                let relative_entry = Path::new(entry_file);
+
+                if relative_entry.is_absolute()
+                    || relative_entry.components().any(|component| {
+                        !matches!(
+                            component,
+                            std::path::Component::Normal(_)
+                        )
+                    })
+                    || relative_entry.extension().and_then(|ext| ext.to_str()) != Some("veymod")
+                {
+                    return Err(format!(
+                        "Invalid package entry path '{}'",
+                        entry_file
+                    ));
+                }
+
+                let package_root = package_path
+                    .canonicalize()
+                    .map_err(|error| error.to_string())?;
+
+                let module_file = package_root.join(relative_entry);
+
+                if !module_file.is_file() {
+                    return Err(format!(
+                        "Package module file '{}' not found",
+                        module_file.display()
+                    ));
+                }
+
+                let resolved_file = module_file
+                    .canonicalize()
+                    .map_err(|error| error.to_string())?;
+
+                if !resolved_file.starts_with(&package_root) {
+                    return Err("Package entry escapes its installation directory".into());
+                }
+
+                return Ok(resolved_file);
             }
         }
 
@@ -3713,17 +3818,13 @@ impl Runtime {
 
         // Module execution is isolated from the caller's variables.
         let saved_scopes = std::mem::replace(&mut self.scopes, vec![HashMap::new()]);
-
         let saved_consts = std::mem::replace(&mut self.consts, vec![HashSet::new()]);
-
         let saved_tags = std::mem::replace(&mut self.tags, vec![HashMap::new()]);
 
         let saved_functions = std::mem::take(&mut self.functions);
-
         let saved_imports = std::mem::take(&mut self.imported_names);
 
         let saved_module = self.active_module.take();
-
         self.active_module = Some(name.to_string());
 
         let saved_script_dir = self.script_dir.clone();
@@ -3735,34 +3836,40 @@ impl Runtime {
             self.script_dir = parent.to_string_lossy().to_string();
         }
 
-        // During initialization, module-local imports are collected
-        // using the normal import table.
-        let lines = crate::lexer::parse_lines(&source, &path.to_string_lossy())?;
-
-        let result = self.run(&lines);
+        // Parse and execute the module without skipping state restoration.
+        let result = match crate::lexer::parse_lines(
+            &source,
+            &path.to_string_lossy(),
+        ) {
+            Ok(lines) => self.run(&lines),
+            Err(error) => Err(error),
+        };
 
         let mut constants = HashMap::new();
         let mut private = HashMap::new();
 
-        if let Some(scope) = self.scopes.first() {
-            let consts = self.consts.first().cloned().unwrap_or_default();
+        if result.is_ok() {
+            if let Some(scope) = self.scopes.first() {
+                let consts = self.consts.first().cloned().unwrap_or_default();
 
-            for (key, value) in scope {
-                if consts.contains(key) {
-                    constants.insert(key.clone(), value.clone());
-                } else {
-                    private.insert(key.clone(), value.clone());
+                for (key, value) in scope {
+                    if consts.contains(key) {
+                        constants.insert(key.clone(), value.clone());
+                    } else {
+                        private.insert(key.clone(), value.clone());
+                    }
                 }
             }
         }
 
         let functions = std::mem::take(&mut self.functions);
-
         let imports = std::mem::take(&mut self.imported_names);
 
+        // Restore the caller's runtime state on both success and failure.
         self.scopes = saved_scopes;
         self.consts = saved_consts;
         self.tags = saved_tags;
+
         self.functions = saved_functions;
         self.imported_names = saved_imports;
 
@@ -3774,6 +3881,7 @@ impl Runtime {
 
         self.loading_modules.remove(name);
 
+        // Do not register a module that failed to initialize.
         result.map_err(|error| format!("{}: {}", path.display(), error))?;
 
         self.veyra_modules.insert(

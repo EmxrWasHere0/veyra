@@ -16,6 +16,8 @@ By the end of this lesson, you will know how to:
 - Configure module search paths.
 - Use the `VEYRA_PATH` environment variable.
 - Handle module-related errors.
+- Import packages installed through VPM.
+- Understand manifest-based module resolution.
 
 ## 1. Built-in Modules
 
@@ -300,12 +302,16 @@ The search locations include:
 1. The directory containing the running script.
 2. The script directory's `modules/` folder.
 3. The script directory's `lib/` folder.
-4. The current working directory.
-5. The working directory's `modules/` folder.
-6. The working directory's `lib/` folder.
-7. Additional directories configured through `VEYRA_PATH`.
-8. User-level module directories.
-9. System-level module directories.
+4. The script directory's `veyra_packages/` folder (VPM packages).
+5. The current working directory.
+6. The working directory's `modules/` folder.
+7. The working directory's `lib/` folder.
+8. The working directory's `veyra_packages/` folder (VPM packages).
+9. Additional directories configured through `VEYRA_PATH`.
+10. User-level module directories.
+11. System-level module directories.
+
+When searching `veyra_packages/`, Veyra reads each subdirectory's `veyra.json` manifest to match the requested import name against the package's `module` field. This allows package directory names and import names to differ.
 
 The exact user and system module directories depend on the operating system.
 
@@ -344,7 +350,135 @@ mod calculator
 
 You do not need to specify the full path when importing a module located in a configured search directory.
 
-## 9. Importing User-Defined Module Members
+## 9. Package Modules (VPM)
+
+Veyra supports reusable packages installed through the Veyra Package Manager (VPM).
+
+Installed packages behave like user-defined `.veymod` modules but are discovered through their `veyra.json` manifests rather than their filenames.
+
+### Installing a Package
+
+Use VPM to install a local package:
+
+```bash
+python /path/to/vpm/python/vpm.py add ../example-package
+```
+
+This copies the package into the project's `veyra_packages/` directory:
+
+```text
+my-project/
+├── main.vey
+├── veyra.json
+└── veyra_packages/
+    └── example-package/
+        ├── veyra.json
+        └── example.veymod
+```
+
+### Package Manifests
+
+Every VPM package contains a `veyra.json` manifest:
+
+```json
+{
+  "name": "example-package",
+  "module": "example",
+  "version": "0.1.0",
+  "entry": "example.veymod",
+  "dependencies": {}
+}
+```
+
+Important fields:
+
+- `name`: The package identifier used by VPM for installation and removal.
+- `module`: The name used when importing the package in Veyra code.
+- `entry`: The `.veymod` file that serves as the package's entry point.
+
+The `name` and `module` fields do not have to match.
+
+For example, a package named `my-json-utils` could use `jsonutils` as its module name.
+
+### Importing a Package
+
+Use the `module` field value with the standard `mod` keyword:
+
+```veyra
+mod example
+
+say example.PACKAGE_VERSION
+say example.greet("World")
+```
+
+The interpreter searches `veyra_packages/` for a subdirectory whose `veyra.json` manifest contains `"module": "example"`.
+
+It then loads the file specified in the `entry` field.
+
+### Package Import Styles
+
+Packages support the same import styles as regular modules.
+
+Regular import:
+
+```veyra
+mod example
+
+say example.greet("World")
+```
+
+Import all members:
+
+```veyra
+mod example *
+
+say greet("World")
+```
+
+Selective import:
+
+```veyra
+mod example [greet, PACKAGE_VERSION]
+
+say PACKAGE_VERSION
+say greet("World")
+```
+
+### Package Module Isolation
+
+Packages follow the same isolation rules as user-defined `.veymod` modules.
+
+- Constants declared with `set` are exported.
+- Functions declared with `add name(...)` are exported.
+- Names beginning with `_` are private.
+- Mutable variables are not automatically exported.
+- Module functions retain their module context for callbacks and recursion.
+
+### Package vs. Regular Module Resolution
+
+When resolving `mod example`, Veyra first searches for a regular `example.veymod` file in the standard module directories.
+
+If no matching file is found, Veyra searches `veyra_packages/` for a package whose manifest declares `"module": "example"`.
+
+This means a regular `.veymod` file in the project directory takes precedence over an installed package with the same module name.
+
+### Troubleshooting Package Imports
+
+If `mod example` fails with "Module not found":
+
+1. Verify the package is installed in `veyra_packages/`.
+2. Check that the package contains a valid `veyra.json` manifest.
+3. Confirm the manifest's `module` field matches the import name.
+4. Confirm the manifest's `entry` field points to an existing `.veymod` file.
+5. Reinstall dependencies if the package directory is missing:
+
+```bash
+python /path/to/vpm/python/vpm.py install
+```
+
+See the [VPM documentation](../../vpm/README.md) for complete package management instructions.
+
+## 10. Importing User-Defined Module Members
 
 User-defined modules support the same import syntax as built-in modules.
 
@@ -374,7 +508,7 @@ say add_numbers(2, 3)
 
 Private members beginning with `_` are not exported.
 
-## 10. Handling Module Errors
+## 11. Handling Module Errors
 
 Module imports or function calls may fail.
 
@@ -404,7 +538,7 @@ Veyra provides source locations and function tracebacks for debugging runtime er
 
 These diagnostic features were introduced in version 0.2.6.
 
-## 11. Using String Interpolation with Modules
+## 12. Using String Interpolation with Modules
 
 Veyra 0.2.7 supports string interpolation, which can simplify formatted output involving module values.
 
@@ -438,21 +572,26 @@ Module access rules remain unchanged:
 - Constants are accessed without parentheses.
 - Functions are called with parentheses.
 
-## 12. Built-in vs. User-Defined Modules
+## 13. Built-in vs. User-Defined Modules
 
-| Feature                | Built-in Modules          | User-Defined Modules  |
-| ---------------------- | ------------------------- | --------------------- |
-| Implementation         | Rust                      | Veyra                 |
-| File format            | Compiled into interpreter | `.veymod`             |
-| Import keyword         | `mod`                     | `mod`                 |
-| Selective imports      | Supported                 | Supported             |
-| Star imports           | Supported                 | Supported             |
-| Runtime interpretation | No                        | Yes                   |
-| Module isolation       | Module-specific           | Isolated environments |
+| Feature                | Built-in Modules          | User-Defined Modules  | VPM Packages          |
+| ---------------------- | ------------------------- | --------------------- | --------------------- |
+| Implementation         | Rust                      | Veyra                 | Veyra                 |
+| File format            | Compiled into interpreter | `.veymod`             | `.veymod`             |
+| Discovery              | Name-based                | Filename-based        | Manifest-based        |
+| Import keyword         | `mod`                     | `mod`                 | `mod`                 |
+| Selective imports      | Supported                 | Supported             | Supported             |
+| Star imports           | Supported                 | Supported             | Supported             |
+| Runtime interpretation | No                        | Yes                   | Yes                   |
+| Module isolation       | Module-specific           | Isolated environments | Isolated environments |
+| Installation           | Built-in                  | Manual                | VPM                   |
+| Configuration          | None                      | None                  | `veyra.json`          |
+
+All three types use the same import syntax.
 
 Both types of modules use the same import syntax.
 
-## 13. Practice Exercises
+## 14. Practice Exercises
 
 ### Exercise 1: Import a Built-in Module
 
@@ -496,6 +635,14 @@ Import `system` or `math`.
 
 Use an interpolated string to display a module constant or function result.
 
+### Exercise 9: Package Import
+
+Install a local package using VPM.
+
+Import the package in a Veyra program and call one of its exported functions.
+
+Verify that the package's `module` field matches the name used in `mod`.
+
 ## What's Next?
 
 Continue learning Veyra:
@@ -505,3 +652,4 @@ Continue learning Veyra:
 - [Error Handling](error-handling.md)
 - [Input and Output](io.md)
 - [Variables and Types](variables.md)
+- [Veyra Package Manager](../../vpm/README.md)

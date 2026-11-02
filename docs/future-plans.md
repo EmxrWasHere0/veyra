@@ -2,11 +2,48 @@
 
 Veyra is an experimental programming language that continues to evolve.
 
-Version 0.2.8 expands the language with compound assignment operators, short-circuit evaluation, improved REPL stability, and column-based error diagnostics.
+Version 0.2.8 introduced compound assignment operators, short-circuit evaluation, improved REPL stability, and column-based error diagnostics.
 
-Veyra also supports string interpolation, functional list methods, JSONData operations, user-defined modules, built-in libraries, and automated regression tests.
+Development has since expanded into the Veyra ecosystem with **VPM 0.1.0**, a local package manager for reusable `.veymod` modules.
+
+VPM supports project initialization, local package installation, updates, removal, and dependency management. The interpreter can discover installed packages through their `veyra.json` manifests.
 
 The following ideas are being considered for future development.
+
+## Package Manager (VPM)
+
+The Veyra Package Manager is being developed to make reusable modules easier to distribute and manage.
+
+VPM 0.1.0 provides a working foundation for local package management.
+
+The Python implementation is the primary development focus. An experimental Veyra implementation is also available, but its development is currently paused.
+
+See the [VPM documentation](../vpm/README.md) for current usage instructions.
+
+### VPM 0.2.0 — Remote Packages
+
+Planned improvements include:
+
+- Installing packages from GitHub repositories.
+- Selecting package versions through Git tags or commits.
+- Generating `veyra.lock` files.
+- Verifying downloaded package contents using SHA-256.
+- Caching downloaded packages.
+- Secure extraction of downloaded archives.
+
+Remote package installation must validate paths, archive entries, package manifests, and downloaded content before installation.
+
+### VPM 0.3.0 — Dependency Resolution
+
+Planned improvements include:
+
+- Installing transitive dependencies.
+- Supporting semantic version constraints.
+- Detecting dependency version conflicts.
+- Resolving compatible dependency versions.
+- Improving dependency installation consistency.
+
+These features are planned directions and may change during development.
 
 ## Language Improvements
 
@@ -88,9 +125,11 @@ Documentation should reflect the behavior of the current interpreter rather than
 
 ### Testing Improvements
 
-Veyra includes automated regression tests using Cargo.
+Veyra includes automated interpreter regression tests using Cargo.
 
-Version 0.2.8 expands coverage for compound assignment, short-circuit evaluation, interpolation edge cases, and error diagnostics.
+Version 0.2.8 expanded coverage for compound assignment, short-circuit evaluation, interpolation edge cases, and error diagnostics.
+
+VPM also includes a Python `unittest` suite with 17 regression tests covering package installation, updates, removal, path validation, symbolic link handling, and rollback behavior.
 
 Future testing improvements may focus on:
 
@@ -102,6 +141,10 @@ Future testing improvements may focus on:
 - Error handling and tracebacks.
 - REPL input completion.
 - Cross-platform compatibility.
+- Package manifest validation.
+- Package installation rollback.
+- Package import resolution.
+- Cross-platform package management.
 
 Additional automated REPL tests and parser consistency checks may also be explored.
 

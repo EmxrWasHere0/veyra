@@ -2,6 +2,10 @@
 
 <div align="center">
   <img src="media/veyra-banner.png" alt="Veyra Banner">
+
+  <img src="https://img.shields.io/badge/version-v0.2.8-purple?style=for-the-badge" alt="Static Banner">
+  <img src="https://img.shields.io/badge/vpm-v0.1.0_beta-purple?style=for-the-badge" alt="Static Banner">
+
 </div>
 
 <div align="center">
@@ -12,7 +16,7 @@
 
 A dynamically typed, interpreted programming language written in Rust.
 
-[Documentation](docs/) · [VSCode Extension](veyra-vscode/) · [Examples](examples/) · [Issues](https://github.com/EmxrWasHere0/veyra/issues)
+[Documentation](docs/) · [Package Manager](vpm/) · [VSCode Extension](veyra-vscode/) · [Examples](examples/) · [Issues](https://github.com/EmxrWasHere0/veyra/issues)
 
 </div>
 
@@ -61,6 +65,7 @@ Veyra started as a learning project and continues to evolve as an experiment in 
 - **JSONData operations** — Object merging, key-value iteration, and the `+` operator.
 - **Error handling** — `try`, `catch`, and `throw`.
 - **Modules** — Built-in Rust modules and user-defined `.veymod` modules.
+- **Package management** — Install and manage local Veyra packages using VPM.
 - **Testing** — Test blocks, assertions, and automated regression tests.
 - **REPL** — Interactive execution with persistent variables and functions.
 - **Developer tools** — Source-aware runtime errors, function tracebacks, and VSCode support.
@@ -182,6 +187,38 @@ say math.sqrt(144)
 
 Veyra also supports user-defined `.veymod` modules.
 
+## Package Manager (VPM)
+
+Veyra includes **VPM**, a package manager for reusable `.veymod` modules.
+
+VPM 0.1.0 supports local package installation, updates, removal, and dependency management.
+
+Initialize a project:
+
+```bash
+python /path/to/vpm/python/vpm.py init my-project
+```
+
+Install a local package:
+
+```bash
+python /path/to/vpm/python/vpm.py add ../example-package
+```
+
+Import the installed package in Veyra:
+
+```veyra
+mod example
+
+say example.greet("World")
+```
+
+Packages are installed into `veyra_packages/` and configured through `veyra.json`.
+
+VPM is currently in beta. Remote package installation and dependency resolution are planned for future releases.
+
+See the [VPM documentation](vpm/README.md) for installation instructions, commands, and package development.
+
 ## Documentation
 
 Detailed language documentation is maintained separately from this README.
@@ -208,7 +245,7 @@ Build and install the extension:
 cd veyra-vscode
 npm install
 npx vsce package
-code --install-extension veyra-0.2.7.vsix
+code --install-extension veyra-0.2.8.vsix
 ```
 
 You can then open the Command Palette and run:
@@ -226,6 +263,13 @@ Run the automated tests:
 
 ```bash
 cargo test
+```
+
+Run the VPM regression tests:
+
+```bash
+cd vpm
+python -m unittest discover -s tests -v
 ```
 
 Build an optimized interpreter:

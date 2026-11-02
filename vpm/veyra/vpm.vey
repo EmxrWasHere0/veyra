@@ -1,0 +1,255 @@
+# Veyra Package Manager
+# v0.0.1 Beta
+# This package manager requires Veyra in order to run
+
+# If you don't have Veyra installed, `vpm` also has a Python version at:
+# (project_root)/vpm/python/vpm.py
+# It is highly recommended to use the Python version of `vpm`.
+
+mod fs
+mod json
+mod system
+
+add load_manifest(manifest_path)
+    if not fs.exists(manifest_path)
+        throw "Project manifest 'veyra.json' not found"
+    end
+
+    return json.parse(fs.read(manifest_path))
+end
+
+add save_manifest(data, manifest_path)
+    fs.write(manifest_path, json.stringify(data))
+end
+
+add init_project(name, manifest_path)
+    if fs.exists(manifest_path)
+        throw "Project already contains a veyra.json manifest"
+    end
+
+    add manifest = {
+        "name": name,
+        "version": "0.1.0",
+        "entry": "main.vey",
+        "dependencies": {}
+    }
+
+    save_manifest(manifest, manifest_path)
+
+    if not fs.exists("main.vey")
+        fs.write("main.vey", "say \"Hello from Veyra!\"\n")
+    end
+
+    say f"Initialized Veyra project '{name}'"
+end
+
+add list_packages(manifest_path)
+    add manifest = load_manifest(manifest_path)
+    add dependencies = json.get(manifest, "dependencies")
+    add names = json.keys(dependencies)
+
+    if names.len() == 0
+        say "No dependencies installed"
+        return
+    end
+
+    say "Project dependencies:"
+
+    repeat name in names
+        say f"  - {name}"
+    end
+end
+
+add validate_package_name(name)
+    if type(name) != "text"
+        throw "Package name must be text"
+    end
+
+    if name.len() == 0
+        throw "Package name cannot be empty"
+    end
+
+    add letters = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
+    add allowed = letters + "0123456789_-"
+
+    if not (name[0] in letters)
+        throw f"Invalid package name '{name}'"
+    end
+
+    repeat character in name
+        if not (character in allowed)
+            throw f"Invalid package name '{name}'"
+        end
+    end
+
+    return name
+end
+
+add add_package(source, manifest_path, package_dir)
+    add project = load_manifest(manifest_path)
+
+    if not fs.is_dir(source)
+        throw f"Package source directory not found: '{source}'"
+    end
+
+    add source_absolute = fs.absolute(source)
+    add package_manifest_path = fs.join(source_absolute, "veyra.json")
+
+    if not fs.is_file(package_manifest_path)
+        throw "Package manifest 'veyra.json' not found"
+    end
+
+    add package = json.parse(fs.read(package_manifest_path))
+    add name = validate_package_name(json.get(package, "name"))
+
+    add dependencies = json.get(project, "dependencies")
+    add destination = fs.join(package_dir, name)
+
+    fs.mkdirs(package_dir)
+
+    fs.replace_tree(source_absolute, destination)
+
+    dependencies[name] = {
+        "path": source_absolute
+    }
+
+    project["dependencies"] = dependencies
+
+    save_manifest(project, manifest_path)
+
+    say f"Installed package '{name}'"
+end
+
+add remove_package(name, manifest_path, package_dir)
+    add project = load_manifest(manifest_path)
+    add dependencies = json.get(project, "dependencies")
+
+    validate_package_name(name)
+
+    if not json.has(dependencies, name)
+        throw f"Package '{name}' is not registered"
+    end
+
+    add updated = {}
+
+    repeat key in json.keys(dependencies)
+        if key != name
+            updated[key] = json.get(dependencies, key)
+        end
+    end
+
+    add destination = fs.join(package_dir, name)
+
+    if fs.is_dir(destination)
+        fs.rmtree(destination)
+    end
+
+    project["dependencies"] = updated
+    save_manifest(project, manifest_path)
+
+    say f"Removed package '{name}'"
+end
+
+add install_packages(manifest_path, package_dir)
+    add project = load_manifest(manifest_path)
+    add dependencies = json.get(project, "dependencies")
+    add names = json.keys(dependencies)
+
+    if names.len() == 0
+        say "No dependencies to install"
+        return
+    end
+
+    fs.mkdirs(package_dir)
+
+    repeat name in names
+        validate_package_name(name)
+
+        add dependency = json.get(dependencies, name)
+        add source = json.get(dependency, "path")
+
+        if type(source) != "text"
+            throw f"Invalid source path for package '{name}'"
+        end
+
+        if not fs.is_dir(source)
+            throw f"Package source directory not found: '{source}'"
+        end
+
+        add source_absolute = fs.absolute(source)
+        add package_manifest_path = fs.join(source_absolute, "veyra.json")
+
+        if not fs.is_file(package_manifest_path)
+            throw f"Package manifest not found for '{name}'"
+        end
+
+        add package = json.parse(fs.read(package_manifest_path))
+        add actual_name = validate_package_name(json.get(package, "name"))
+
+        if actual_name != name
+            throw f"Package name mismatch: expected '{name}', found '{actual_name}'"
+        end
+
+        add destination = fs.join(package_dir, name)
+
+        fs.replace_tree(source_absolute, destination)
+
+        say f"Installed package '{name}'"
+    end
+end
+
+add main()
+    add args = system.args()
+    add manifest_path = "veyra.json"
+    add package_dir = "veyra_packages"
+
+    if args.len() == 0
+        say "VPM 0.1.0"
+        say "Usage: veyra vpm.vey <command> [arguments]"
+        say "Commands: init, add, remove, install, list"
+        return
+    end
+
+    add command = args[0]
+
+    if command == "init"
+        if args.len() < 2
+            throw "Usage: veyra vpm.vey init <project-name>"
+        end
+
+        init_project(args[1], manifest_path)
+        return
+    end
+
+    if command == "add"
+        if args.len() < 2
+            throw "Usage: veyra vpm.vey add <package-path>"
+        end
+
+        add_package(args[1], manifest_path, package_dir)
+        return
+    end
+
+    if command == "remove"
+        if args.len() < 2
+            throw "Usage: veyra vpm.vey remove <package-name>"
+        end
+
+        remove_package(args[1], manifest_path, package_dir)
+        return
+    end
+
+    if command == "install"
+        install_packages(manifest_path, package_dir)
+        return
+    end
+
+    if command == "list"
+        list_packages(manifest_path)
+        return
+    end
+
+    throw f"Unknown or unsupported command '{command}'"
+end
+
+main()
