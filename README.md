@@ -3,7 +3,7 @@
 <div align="center">
   <img src="media/veyra-banner.png" alt="Veyra Banner">
 
-  <img src="https://img.shields.io/badge/version-v0.2.8-purple?style=for-the-badge" alt="Static Banner">
+  <img src="https://img.shields.io/badge/version-v0.2.9-purple?style=for-the-badge" alt="Static Banner">
   <img src="https://img.shields.io/badge/vpm-v0.1.0_beta-purple?style=for-the-badge" alt="Static Banner">
 
 </div>
@@ -245,7 +245,7 @@ Build and install the extension:
 cd veyra-vscode
 npm install
 npx vsce package
-code --install-extension veyra-0.2.8.vsix
+code --install-extension veyra-0.2.9.vsix
 ```
 
 You can then open the Command Palette and run:
