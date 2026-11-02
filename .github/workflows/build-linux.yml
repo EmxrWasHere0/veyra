@@ -1,4 +1,4 @@
-name: Build Veyra Installer - Linux
+name: Veyra Installer Executable Builder - Linux
 
 on:
   workflow_dispatch:

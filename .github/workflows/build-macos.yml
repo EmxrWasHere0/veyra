@@ -1,4 +1,4 @@
-name: Build Veyra Installer - macOS
+name: Veyra Installer Executable Builder - macOS
 
 on:
   workflow_dispatch:
